@@ -1,4 +1,4 @@
-//! MinetestConnection
+//! LuantiConnection
 //!
 //!
 //!
@@ -11,11 +11,11 @@ use anyhow::bail;
 use anyhow::Result;
 
 /// This is owned by the driver
-pub struct MinetestConnection {
+pub struct LuantiConnection {
     peer: Peer,
 }
 
-impl MinetestConnection {
+impl LuantiConnection {
     pub fn new(peer: Peer) -> Self {
         Self { peer: peer }
     }
@@ -46,5 +46,5 @@ impl MinetestConnection {
     }
 }
 
-/// This is owned by the MinetestServer
-pub struct MinetestConnectionRecord {}
+/// This is owned by the luanti_protocol
+pub struct LuantiConnectionRecord {}

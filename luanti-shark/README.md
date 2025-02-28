@@ -1,19 +1,22 @@
-# Minetest-shark
+# Luanti-shark
 
-Minetest proxy with detailed inspection of protocol
+Luanti proxy with detailed inspection of protocol
 
 Example usage:
+
 ```
-$ cargo install minetest-shark
+cargo install luanti-shark
 ```
+
 ```
 # Listen on port 40000, forward to localhost port 30000, verbosity 1
 $ mtshark -l 40000 -t 127.0.0.1:30000 -v
 ```
+
 ```
-MinetestServer starting on 0.0.0.0:40000
-MinetestServer started
-MinetestServer accepted connection
+LuantiServer starting on 0.0.0.0:40000
+LuantiServer started
+LuantiServer accepted connection
 [P1] New client connected from 127.0.0.1:34997
 [1] C->S  Null
 [1] C->S  Init
@@ -31,13 +34,14 @@ MinetestServer accepted connection
 ...
 ```
 
+```sh
+mtshark -l 40000 -t 127.0.0.1:30000 -vv
 ```
-$ mtshark -l 40000 -t 127.0.0.1:30000 -vv
-```
-```
-MinetestServer starting on 0.0.0.0:40000
-MinetestServer started
-MinetestServer accepted connection
+
+```sh
+LuantiServer starting on 0.0.0.0:40000
+LuantiServer started
+LuantiServer accepted connection
 [P1] New client connected from 127.0.0.1:56772
 [1] C->S  Null(
     NullSpec,
@@ -75,10 +79,10 @@ MinetestServer accepted connection
 ```
 
 # Verbosity levels
+
 ```
 default   Shows connects/disconnects only
 -v        Command names
 -vv       Command contents (except for bulk commands)
 -vvv      Everything
 ```
-

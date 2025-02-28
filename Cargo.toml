@@ -1,10 +1,6 @@
 [workspace]
 
-members = [
-    "minetest-protocol",
-    "minetest-protocol-derive",
-    "minetest-shark",
-]
+members = ["luanti-protocol", "luanti-protocol-derive", "luanti-shark"]
 
 [profile.dev]
 panic = "unwind"

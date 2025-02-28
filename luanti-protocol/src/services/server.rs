@@ -1,8 +1,8 @@
 //!
-//! For now, the MinetestServer is just a wrapper around a MinetestSocket,
-//! and a MinetestConnection is just a wrapper around a SocketPeer.
+//! For now, the LuantiServer is just a wrapper around a LuantiSocket,
+//! and a LuantiConnection is just a wrapper around a SocketPeer.
 //!
-//! In the future it may provide its own abstraction above the Minetest Commands.
+//! In the future it may provide its own abstraction above the Luanti Commands.
 
 use std::net::SocketAddr;
 use std::time::Duration;
@@ -10,17 +10,17 @@ use tokio::sync::mpsc::unbounded_channel;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::mpsc::UnboundedSender;
 
-use super::conn::MinetestConnection;
-use super::socket::MinetestSocket;
+use super::conn::LuantiConnection;
+use super::socket::LuantiSocket;
 
-pub struct MinetestServer {
-    accept_rx: UnboundedReceiver<MinetestConnection>,
+pub struct LuantiServer {
+    accept_rx: UnboundedReceiver<LuantiConnection>,
 }
 
-impl MinetestServer {
+impl LuantiServer {
     pub fn new(bind_addr: SocketAddr) -> Self {
         let (accept_tx, accept_rx) = unbounded_channel();
-        let runner = MinetestServerRunner {
+        let runner = LuantiServerRunner {
             bind_addr: bind_addr,
             accept_tx: accept_tx,
         };
@@ -32,37 +32,37 @@ impl MinetestServer {
         }
     }
 
-    pub async fn accept(&mut self) -> MinetestConnection {
+    pub async fn accept(&mut self) -> LuantiConnection {
         self.accept_rx.recv().await.unwrap()
     }
 }
 
-struct MinetestServerRunner {
+struct LuantiServerRunner {
     bind_addr: SocketAddr,
-    accept_tx: UnboundedSender<MinetestConnection>,
+    accept_tx: UnboundedSender<LuantiConnection>,
 }
 
-impl MinetestServerRunner {
+impl LuantiServerRunner {
     async fn run(self) {
-        println!("MinetestServer starting on {}", self.bind_addr.to_string());
+        println!("LuantiServer starting on {}", self.bind_addr.to_string());
         let mut socket = loop {
-            match MinetestSocket::new(self.bind_addr, true).await {
+            match LuantiSocket::new(self.bind_addr, true).await {
                 Ok(socket) => break socket,
                 Err(err) => {
-                    println!("MinetestServer: bind failed: {}", err);
+                    println!("LuantiServer: bind failed: {}", err);
                     println!("Retrying in 5 seconds");
                     tokio::time::sleep(Duration::from_millis(5000)).await;
                 }
             };
         };
-        println!("MinetestServer started");
+        println!("LuantiServer started");
         loop {
             let t = socket.accept().await.unwrap();
-            println!("MinetestServer accepted connection");
-            let conn = MinetestConnection::new(t);
+            println!("LuantiServer accepted connection");
+            let conn = LuantiConnection::new(t);
             match self.accept_tx.send(conn) {
                 Ok(_) => (),
-                Err(_) => println!("Unexpected send fail in MinetestServer"),
+                Err(_) => println!("Unexpected send fail in LuantiServer"),
             }
         }
     }

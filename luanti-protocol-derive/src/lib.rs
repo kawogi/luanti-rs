@@ -19,8 +19,8 @@ use syn::Index;
 use syn::Type;
 use syn::TypeParam;
 
-#[proc_macro_derive(MinetestSerialize, attributes(wrap))]
-pub fn minetest_serialize(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+#[proc_macro_derive(LuantiSerialize, attributes(wrap))]
+pub fn luanti_serialize(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = input.ident;
     let serialize_body = make_serialize_body(&name, &input.data);
@@ -43,8 +43,8 @@ pub fn minetest_serialize(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     proc_macro::TokenStream::from(expanded)
 }
 
-#[proc_macro_derive(MinetestDeserialize, attributes(wrap))]
-pub fn minetest_deserialize(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+#[proc_macro_derive(LuantiDeserialize, attributes(wrap))]
+pub fn luanti_deserialize(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = input.ident;
     let deserialize_body = make_deserialize_body(&name, &input.data);

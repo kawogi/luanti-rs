@@ -8,8 +8,8 @@ use super::ser::SerializeResult;
 use super::ser::Serializer;
 use super::types::*;
 use anyhow::bail;
-use minetest_protocol_derive::MinetestDeserialize;
-use minetest_protocol_derive::MinetestSerialize;
+use luanti_protocol_derive::LuantiDeserialize;
+use luanti_protocol_derive::LuantiSerialize;
 use std::ops::Deref;
 
 #[macro_export]
@@ -80,14 +80,14 @@ macro_rules! implicit_from {
 #[macro_export]
 macro_rules! proto_struct {
     ($spec_ty: ident { }) => {
-        #[derive(Debug, Clone, PartialEq, Default, MinetestSerialize, MinetestDeserialize)]
+        #[derive(Debug, Clone, PartialEq, Default, LuantiSerialize, LuantiDeserialize)]
         pub struct $spec_ty;
     };
     ($spec_ty: ident {
         $($fname: ident: $ftype: ty $([$attr:meta])? ),+
     }) => {
         $crate::as_item! {
-            #[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+            #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
             pub struct $spec_ty {
                $( $(#[$attr])? pub $fname: $ftype),+
             }

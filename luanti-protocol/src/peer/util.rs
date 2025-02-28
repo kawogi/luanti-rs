@@ -1,4 +1,4 @@
-// Minetest uses 16-bit sequence numbers that wrap around.
+// Luanti uses 16-bit sequence numbers that wrap around.
 // To simplify reasoning about sequence numbers, translate
 // them into 64-bit unique ids.
 pub(crate) fn rel_to_abs(base: u64, seqnum: u16) -> u64 {

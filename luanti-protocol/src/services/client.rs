@@ -2,22 +2,22 @@ use std::net::SocketAddr;
 
 use anyhow::bail;
 
-use super::socket::MinetestSocket;
+use super::socket::LuantiSocket;
 use crate::peer::peer::Peer;
 use crate::wire::command::*;
 
-pub struct MinetestClient {
+pub struct LuantiClient {
     remote_peer: Peer,
 }
 
-impl MinetestClient {
+impl LuantiClient {
     pub async fn connect(connect_to: SocketAddr) -> anyhow::Result<Self> {
         let bind_addr = if connect_to.is_ipv4() {
             "0.0.0.0:0".parse()?
         } else {
             "[::]:0".parse()?
         };
-        let mut socket = MinetestSocket::new(bind_addr, false).await?;
+        let mut socket = LuantiSocket::new(bind_addr, false).await?;
 
         // Send a null packet to server.
         // It should answer back, establishing a peer ids.

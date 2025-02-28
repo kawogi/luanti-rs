@@ -1,6 +1,6 @@
-//! Minetest data types used inside of Commands / Packets.
+//! Luanti data types used inside of Commands / Packets.
 //!
-//! Derive macros MinetestSerialize and MinetestDeserialize are used to
+//! Derive macros LuantiSerialize and LuantiDeserialize are used to
 //! produce ser/deser methods for many of the structs below. The order of
 //! the fields inside the struct determines the order in which they are
 //! serialized/deserialized, so be careful modifying anything below.
@@ -11,8 +11,8 @@
 //! TODO(paradust): Having an assert!-like macro that generates Serialize/Deserialize
 //! errors instead of aborts may be helpful for cleaning this up.
 use anyhow::bail;
-use minetest_protocol_derive::MinetestDeserialize;
-use minetest_protocol_derive::MinetestSerialize;
+use luanti_protocol_derive::LuantiDeserialize;
+use luanti_protocol_derive::LuantiSerialize;
 
 use crate::itos;
 
@@ -107,7 +107,7 @@ impl ProtocolContext {
     }
 }
 
-/// Rust String's must be valid UTF8. But Minetest's strings can contain arbitrary
+/// Rust String's must be valid UTF8. But Luanti's strings can contain arbitrary
 /// binary data. The only way to store arbitrary bytes is with something like Vec<u8>,
 /// which is not String-like. This provides a String-like alternative, that looks nice
 /// in debug output.
@@ -388,7 +388,7 @@ impl Deserialize for WString {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct v2f {
     pub x: f32,
     pub y: f32,
@@ -401,7 +401,7 @@ impl v2f {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, Copy, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct v3f {
     pub x: f32,
     pub y: f32,
@@ -445,7 +445,7 @@ impl Div<f32> for v3f {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct v2u32 {
     pub x: u32,
     pub y: u32,
@@ -458,7 +458,7 @@ impl v2u32 {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct v2s16 {
     pub x: s16,
     pub y: s16,
@@ -471,7 +471,7 @@ impl v2s16 {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct v3s16 {
     pub x: s16,
     pub y: s16,
@@ -485,7 +485,7 @@ impl v3s16 {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct v2s32 {
     pub x: s32,
     pub y: s32,
@@ -498,7 +498,7 @@ impl v2s32 {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct v3s32 {
     pub x: s32,
     pub y: s32,
@@ -515,7 +515,7 @@ impl v3s32 {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct SColor {
     pub r: u8,
     pub g: u8,
@@ -730,7 +730,7 @@ impl<T: Deserialize> Deserialize for Option16<T> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AddedObject {
     pub id: u16,
     pub typ: u8,
@@ -738,8 +738,8 @@ pub struct AddedObject {
     pub init_data: GenericInitData,
 }
 
-/// This corresponds to GenericCAO::Initialize in minetest
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+/// This corresponds to GenericCAO::Initialize in Luanti
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct GenericInitData {
     pub version: u8,
     pub name: String,
@@ -752,7 +752,7 @@ pub struct GenericInitData {
     pub messages: Vec<ActiveObjectCommand>,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct ActiveObjectMessage {
     pub id: u16,
     #[wrap(Wrapped16<ActiveObjectCommand>)]
@@ -864,12 +864,12 @@ impl Deserialize for ActiveObjectCommand {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AOCSetProperties {
     pub newprops: ObjectProperties,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct ObjectProperties {
     pub version: u8, // must be 4
     pub hp_max: u16,
@@ -912,7 +912,7 @@ pub struct ObjectProperties {
     pub rotate_selectionbox: Option<bool>,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AOCUpdatePosition {
     pub position: v3f,
     pub velocity: v3f,
@@ -923,12 +923,12 @@ pub struct AOCUpdatePosition {
     pub update_interval: f32,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AOCSetTextureMod {
     pub modifier: String,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AOCSetSprite {
     pub base_pos: v2s16,
     pub anum_num_frames: u16,
@@ -936,7 +936,7 @@ pub struct AOCSetSprite {
     pub select_horiz_by_yawpitch: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AOCSetPhysicsOverride {
     pub override_speed: f32,
     pub override_jump: f32,
@@ -946,27 +946,27 @@ pub struct AOCSetPhysicsOverride {
     pub not_new_move: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AOCSetAnimation {
-    pub range: v2f, // this is always casted to v2s32 by minetest for some reason
+    pub range: v2f, // this is always casted to v2s32 by Luanti for some reason
     pub speed: f32,
     pub blend: f32,
     pub no_loop: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AOCSetAnimationSpeed {
     pub speed: f32,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AOCSetBonePosition {
     pub bone: String,
     pub position: v3f,
     pub rotation: v3f,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AOCAttachTo {
     pub parent_id: s16,
     pub bone: String,
@@ -975,25 +975,25 @@ pub struct AOCAttachTo {
     pub force_visible: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AOCPunched {
     pub hp: u16,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AOCUpdateArmorGroups {
     // name -> rating
     #[wrap(Array16<Pair<String, s16>>)]
     pub ratings: Vec<(String, s16)>,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AOCSpawnInfant {
     pub child_id: u16,
     pub typ: u8,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AOCObsolete1 {}
 
 /// An array of items with no specified length.
@@ -1121,20 +1121,20 @@ impl<T: Deserialize> Deserialize for Array32<T> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct MediaFileData {
     pub name: String,
     #[wrap(BinaryData32)]
     pub data: Vec<u8>,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct MediaAnnouncement {
     pub name: String,
     pub sha1_base64: String,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct SkyColor {
     pub day_sky: SColor,
     pub day_horizon: SColor,
@@ -1145,7 +1145,7 @@ pub struct SkyColor {
     pub indoors: SColor,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct SunParams {
     pub visible: bool,
     pub texture: String,
@@ -1155,14 +1155,14 @@ pub struct SunParams {
     pub scale: f32,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct MoonParams {
     pub visible: bool,
     pub texture: String,
     pub tonemap: String,
     pub scale: f32,
 }
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct StarParams {
     pub visible: bool,
     pub count: u32,
@@ -1171,7 +1171,7 @@ pub struct StarParams {
     pub day_opacity: Option<f32>,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct MinimapMode {
     pub typ: u16,
     pub label: String,
@@ -1692,7 +1692,7 @@ impl<T: Deserialize> Deserialize for ZStdCompressed<T> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct ItemdefList {
     pub itemdef_manager_version: u8,
     #[wrap(Array16<Wrapped16<ItemDef>>)]
@@ -1701,7 +1701,7 @@ pub struct ItemdefList {
     pub aliases: Vec<ItemAlias>,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub enum ItemType {
     None,
     Node,
@@ -1709,7 +1709,7 @@ pub enum ItemType {
     Tool,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct ToolGroupCap {
     pub uses: s16,
     pub maxlevel: s16,
@@ -1718,7 +1718,7 @@ pub struct ToolGroupCap {
     pub times: Vec<(s16, f32)>,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct ToolCapabilities {
     pub version: u8,
     pub full_punch_interval: f32,
@@ -1732,7 +1732,7 @@ pub struct ToolCapabilities {
     pub punch_attack_uses: Option<u16>,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct SimpleSoundSpec {
     pub name: String,
     pub gain: f32,
@@ -1740,7 +1740,7 @@ pub struct SimpleSoundSpec {
     pub fade: f32,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct ItemDef {
     pub version: u8,
     pub item_type: ItemType,
@@ -1769,7 +1769,7 @@ pub struct ItemDef {
     pub sound_use_air: Option<SimpleSoundSpec>,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct ItemAlias {
     pub name: String,
     pub convert_to: String,
@@ -1960,14 +1960,14 @@ impl Deserialize for TileAnimationParams {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub enum AlignStyle {
     Node,
     World,
     UserDefined,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub enum DrawType {
     Normal,
     AirLike,
@@ -1989,7 +1989,7 @@ pub enum DrawType {
     PlantLikeRooted,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct ContentFeatures {
     pub version: u8,
     pub name: String,
@@ -2112,32 +2112,32 @@ impl Deserialize for NodeBox {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct aabb3f {
     pub min_edge: v3f,
     pub max_edge: v3f,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct NodeBoxLeveled {
     #[wrap(Array16<aabb3f>)]
     pub fixed: Vec<aabb3f>,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct NodeBoxFixed {
     #[wrap(Array16<aabb3f>)]
     pub fixed: Vec<aabb3f>,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct NodeBoxWallmounted {
     pub wall_top: aabb3f,
     pub wall_bottom: aabb3f,
     pub wall_side: aabb3f,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct NodeBoxConnected {
     #[wrap(Array16<aabb3f>)]
     pub fixed: Vec<aabb3f>,
@@ -2171,7 +2171,7 @@ pub struct NodeBoxConnected {
     pub disconnected_sides: Vec<aabb3f>,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub enum AlphaMode {
     Blend,
     Clip,
@@ -2490,7 +2490,7 @@ impl Deserialize for MapNodesBulk {
 
 /// The default serialization is used for single nodes.
 /// But for transferring entire blocks, MapNodeBulk is used instead.
-#[derive(Debug, Clone, Copy, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct MapNode {
     pub param0: u16,
     pub param1: u8,
@@ -2577,7 +2577,7 @@ impl Deserialize for AbsNodeMetadataList {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AbsBlockPos {
     pos: v3s16,
 }
@@ -2634,14 +2634,14 @@ impl Deserialize for BlockPos {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct NodeMetadata {
     #[wrap(Array32<StringVar>)]
     pub stringvars: Vec<StringVar>,
     pub inventory: Inventory,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct StringVar {
     pub name: String,
     #[wrap(BinaryData32)]
@@ -2664,7 +2664,7 @@ pub enum InventoryEntry {
 
 /// Inventory is sent as a "almost" line-based text format.
 /// Unfortutely there's no way to simplify this code, it has to mirror
-/// the way Minetest does it exactly, because it is so arbitrary.
+/// the way Luanti does it exactly, because it is so arbitrary.
 impl Serialize for Inventory {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
@@ -2997,7 +2997,7 @@ impl Deserialize for ItemStackMetadata {
 
 /// This is the way ADD_PARTICLESPAWNER is serialized.
 /// It seems to be an older version of ParticleParameters
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AddParticleSpawnerLegacy {
     pub amount: u16,
     pub time: f32,
@@ -3027,7 +3027,7 @@ pub struct AddParticleSpawnerLegacy {
     pub extra: Option<AddParticleSpawnerExtra>,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AddParticleSpawnerExtra {
     pub pos_start_bias: f32,
     pub vel_start_bias: f32,
@@ -3094,7 +3094,7 @@ impl Deserialize for Attractor {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct PointAttractor {
     pub attract: TweenedParameter<RangedParameter<f32>>,
     pub origin: TweenedParameter<v3f>,
@@ -3102,7 +3102,7 @@ pub struct PointAttractor {
     pub kill: u8,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct LineAttractor {
     pub attract: TweenedParameter<RangedParameter<f32>>,
     pub origin: TweenedParameter<v3f>,
@@ -3112,7 +3112,7 @@ pub struct LineAttractor {
     pub direction_attachment: u16,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct PlaneAttractor {
     pub attract: TweenedParameter<RangedParameter<f32>>,
     pub origin: TweenedParameter<v3f>,
@@ -3241,7 +3241,7 @@ impl Deserialize for ServerParticleTexture {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub enum TweenStyle {
     Fwd,
     Rev,
@@ -3249,7 +3249,7 @@ pub enum TweenStyle {
     Flicker,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct TweenedParameter<T: Serialize + Deserialize>
 where
     T: Serialize<Input = T>,
@@ -3264,7 +3264,7 @@ where
 
 /// This is the send format used by SendSpawnParticle
 /// See ParticleParameters::serialize
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct ParticleParameters {
     pub pos: v3f,
     pub vel: v3f,
@@ -3288,7 +3288,7 @@ pub struct ParticleParameters {
     pub bounce: Option<RangedParameter<f32>>,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct RangedParameter<T: Serialize + Deserialize>
 where
     T: Serialize<Input = T>,
@@ -3299,7 +3299,7 @@ where
     pub bias: f32,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct RangedParameterLegacy<T: Serialize + Deserialize>
 where
     T: Serialize<Input = T>,
@@ -3309,14 +3309,14 @@ where
     pub max: T,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct Lighting {
     pub shadow_intensity: f32,
     pub saturation: f32,
     pub exposure: AutoExposure,
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AutoExposure {
     pub luminance_min: f32,
     pub luminance_max: f32,
@@ -3438,7 +3438,7 @@ impl Deserialize for HudFlags {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, MinetestSerialize, MinetestDeserialize)]
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub enum InteractAction {
     StartDigging,
     StopDigging,
@@ -3574,7 +3574,7 @@ impl Serialize for InventoryAction {
                 ser.write_bytes(itos!(count))?;
                 ser.write_bytes(b" ")?;
                 InventoryLocation::serialize(craft_inv, ser)?;
-                // This extra space is present in Minetest
+                // This extra space is present in Luanti
                 ser.write_bytes(b" ")?;
             }
             InventoryAction::Drop {

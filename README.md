@@ -1,2 +1,3 @@
-# minetest-rs
-Minetest Libraries &amp; Tools written in Rust
+# luanti-rs
+
+Luanti Libraries and Tools written in Rust

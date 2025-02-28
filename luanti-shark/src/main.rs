@@ -3,12 +3,12 @@ mod proxy;
 use anyhow::bail;
 use clap::ArgGroup;
 use clap::Parser;
-use minetest_protocol::audit_on;
-use proxy::MinetestProxy;
+use luanti_protocol::audit_on;
+use proxy::LuantiProxy;
 use std::net::SocketAddr;
 use std::time::Duration;
 
-/// mtshark - Minetest proxy that gives detailed inspection of protocol
+/// mtshark - Luanti proxy that gives detailed inspection of protocol
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 #[command(group(ArgGroup::new("source").required(true).args(["listen", "bind"])))]
@@ -65,7 +65,7 @@ async fn real_main() -> anyhow::Result<()> {
         bail!("One of --listen or --bind must be specified");
     };
 
-    let _proxy = MinetestProxy::new(bind_addr, args.target, args.verbose);
+    let _proxy = LuantiProxy::new(bind_addr, args.target, args.verbose);
     loop {
         tokio::time::sleep(Duration::from_secs(3600)).await;
     }

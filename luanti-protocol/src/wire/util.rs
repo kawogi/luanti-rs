@@ -1,5 +1,5 @@
 //!
-//! The crazy exotic serialization methods Minetest uses
+//! The crazy exotic serialization methods Luanti uses
 //!
 
 use std::str::FromStr;
@@ -230,7 +230,7 @@ impl<'a> MiniReader<'a> {
 
     pub fn take(&mut self, count: usize) -> anyhow::Result<&'a [u8]> {
         if self.pos + count > self.input.len() {
-            bail!("Minetest JSON string ended prematurely");
+            bail!("Luanti JSON string ended prematurely");
         }
         let result = &self.input[self.pos..self.pos + count];
         self.pos += count;
@@ -262,7 +262,7 @@ pub fn deserialize_json_string(input: &[u8]) -> Result<(Vec<u8>, usize), anyhow:
                     // "Unicode"
                     let codepoint = r.take(4)?;
                     if codepoint[0] != b'0' || codepoint[1] != b'0' {
-                        bail!("Unsupported unicode in Minetest JSON");
+                        bail!("Unsupported unicode in Luanti JSON");
                     }
                     let hi = from_hex(codepoint[2])?;
                     let lo = from_hex(codepoint[3])?;
@@ -274,7 +274,7 @@ pub fn deserialize_json_string(input: &[u8]) -> Result<(Vec<u8>, usize), anyhow:
             result.push(ch);
         }
     }
-    bail!("Minetest JSON string ended prematurely");
+    bail!("Luanti JSON string ended prematurely");
 }
 
 /// This is needed to handle the crazy inventory parsing.

@@ -2,7 +2,7 @@
 //! Peer
 //!
 //! Turns a datagram stream (e.g. from a UdpSocket) into a stream
-//! of Minetest Commands, and vice versa.
+//! of Luanti Commands, and vice versa.
 //!
 //! This handles reliable transport, as well as packet splitting and
 //! split packet reconstruction.
@@ -64,7 +64,7 @@ pub enum PeerError {
 pub type ChannelNum = u8;
 pub type FullSeqNum = u64;
 
-// This is held by the driver that interfaces with the MinetestSocket
+// This is held by the driver that interfaces with the LuantiSocket
 pub struct Peer {
     remote_addr: SocketAddr,
     remote_is_server: bool,
@@ -100,7 +100,7 @@ impl Peer {
     }
 }
 
-// This is owned by the MinetestSocket
+// This is owned by the LuantiSocket
 pub struct PeerIO {
     relay: UnboundedSender<SocketToPeer>,
 }
@@ -148,7 +148,7 @@ pub fn new_peer(
 
 impl PeerIO {
     /// Parse the packet and send it to the runner
-    /// Called by the MinetestSocket when a packet arrives for us
+    /// Called by the LuantiSocket when a packet arrives for us
     ///
     pub fn send(&mut self, data: &[u8]) {
         // TODO: Add backpressure
@@ -314,8 +314,8 @@ pub struct PeerRunner {
     from_controller: UnboundedReceiver<Command>,
     to_controller: UnboundedSender<Result<Command>>,
 
-    // This is the peer id in the Minetest protocol
-    // Minetest's server uses these to keep track of clients, but we use the remote_addr.
+    // This is the peer id in the Luanti protocol
+    // Luanti's server uses these to keep track of clients, but we use the remote_addr.
     // Just use a randomly generated, not necessarily unique value, and keep it consistent.
     // Special ids: 0 is unassigned, and 1 for the server.
     remote_peer_id: PeerId,

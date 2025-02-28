@@ -1,13 +1,13 @@
 [package]
-name = "minetest-shark"
+name = "luanti-shark"
 version = "0.1.4"
 edition = "2021"
 authors = ["paradust"]
 license = "MIT"
 readme = "README.md"
-repository = "https://github.com/paradust7/minetest-rs"
-description = "Minetest proxy with detailed inspection of protocol"
-keywords = ["minetest", "proxy", "shark"]
+repository = "https://github.com/kawogi/luanti-rs"
+description = "Luanti proxy with detailed inspection of protocol"
+keywords = ["luanti", "minetest", "proxy", "shark"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -18,7 +18,7 @@ test = false
 bench = false
 
 [dependencies]
-minetest-protocol = { version = "0.1.4", path = "../minetest-protocol" }
+luanti-protocol = { version = "0.1.4", path = "../luanti-protocol" }
 anyhow = { version = "1.0.69", features = ["backtrace"] }
 tokio = { version = "1.21.2", features = ["full"] }
 clap = { version = "4.1.8", features = ["derive"] }

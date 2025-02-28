@@ -19,7 +19,7 @@ use crate::peer::peer::PeerIO;
 const MAX_DATAGRAM_SIZE: usize = 65536;
 
 ///
-/// MinetestSocket
+/// LuantiSocket
 ///
 /// Handles the raw UDP socket, protocol validation, separating packets by peer,
 /// reliable packet send, and split packets.
@@ -27,14 +27,14 @@ const MAX_DATAGRAM_SIZE: usize = 65536;
 /// The actual contents of the communication, including authentication/handshaking,
 /// are not handled at this layer.
 ///
-pub struct MinetestSocket {
+pub struct LuantiSocket {
     accept_rx: UnboundedReceiver<Peer>,
     knock_tx: UnboundedSender<SocketAddr>,
     for_server: bool,
 }
 
-impl MinetestSocket {
-    /// Create a new MinetestSocket and bind to address.
+impl LuantiSocket {
+    /// Create a new LuantiSocket and bind to address.
     /// The address may be V4 or V6.
     /// To select a random bind port, use 0.0.0.0:0 or [::]:0
     pub async fn new(bind_addr: SocketAddr, for_server: bool) -> Result<Self, Error> {
@@ -42,12 +42,12 @@ impl MinetestSocket {
         let (peer_tx, peer_rx) = unbounded_channel();
         let (accept_tx, accept_rx) = unbounded_channel();
         let (knock_tx, knock_rx) = unbounded_channel();
-        let minetest_socket = Self {
+        let luanti_socket = Self {
             accept_rx,
             knock_tx,
             for_server,
         };
-        let minetest_socket_runner = MinetestSocketRunner {
+        let luanti_socket_runner = LuantiSocketRunner {
             socket,
             peers: HashMap::new(),
             peer_tx,
@@ -57,8 +57,8 @@ impl MinetestSocket {
             knock_rx,
             for_server,
         };
-        tokio::spawn(async move { minetest_socket_runner.run().await });
-        Ok(minetest_socket)
+        tokio::spawn(async move { luanti_socket_runner.run().await });
+        Ok(luanti_socket)
     }
 
     /// Returns None when the server has shutdown.
@@ -86,7 +86,7 @@ impl MinetestSocket {
     }
 }
 
-pub struct MinetestSocketRunner {
+pub struct LuantiSocketRunner {
     socket: UdpSocket,
     peers: HashMap<SocketAddr, PeerIO>,
     peer_tx: UnboundedSender<PeerToSocket>,
@@ -97,13 +97,13 @@ pub struct MinetestSocketRunner {
     for_server: bool,
 }
 
-impl MinetestSocketRunner {
+impl LuantiSocketRunner {
     pub async fn run(mut self) {
         // Top-level error handler
         match self.run_inner().await {
             Ok(_) => (),
             Err(err) => {
-                println!("MinetestSocket abnormal exit: {:?}", err);
+                println!("LuantiSocket abnormal exit: {:?}", err);
             }
         }
     }

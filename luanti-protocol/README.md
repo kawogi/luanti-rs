@@ -1,18 +1,19 @@
-# minetest-protocol
-Pure Rust implementation of the Minetest protocol.
+# luanti-protocol
+
+Pure Rust implementation of the Luanti protocol.
 
 Supported functionality:
 
 - Serialization &amp; deserialization of packets and commands
-- Minetest commands as strongly-typed struct's and enums
+- Luanti commands as strongly-typed struct's and enums
 - The peer protocol
-    - Channels
-    - Packet splitting &amp; split packet reconstruction
-    - Reliable packet retries &amp; ACK tracking
-    - peer_id tracking
+  - Channels
+  - Packet splitting &amp; split packet reconstruction
+  - Reliable packet retries &amp; ACK tracking
+  - peer_id tracking
 
 This is a library and does not contain any programs. For an
-example of how to use this library, see the `minetest-shark` crate.
+example of how to use this library, see the `luanti-shark` crate.
 
 # Work in progress
 

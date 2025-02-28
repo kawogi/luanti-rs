@@ -1,13 +1,13 @@
 [package]
-name = "minetest-protocol"
+name = "luanti-protocol"
 version = "0.1.4"
 edition = "2021"
 authors = ["paradust"]
 license = "MIT"
 readme = "README.md"
-repository = "https://github.com/paradust7/minetest-rs"
-description = "Minetest protocol implemented in Rust"
-keywords = ["minetest", "protocol", "debug"]
+repository = "https://github.com/kawowgi/luanti-rs"
+description = "Luanti protocol implemented in Rust"
+keywords = ["luanti", "minetest", "protocol", "debug"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -15,7 +15,7 @@ keywords = ["minetest", "protocol", "debug"]
 anyhow = { version = "1.0.69", features = ["backtrace"] }
 thiserror = "1.0.38"
 rand = "0.8.5"
-minetest-protocol-derive = { version = "0.1.4", path = "../minetest-protocol-derive" }
+luanti-protocol-derive = { version = "0.1.4", path = "../luanti-protocol-derive" }
 miniz_oxide = "0.6.2"
 zstd-safe = { version = "6.0.4", features = ["std"] }
 tokio = { version = "1.21.2", features = ["full"] }
