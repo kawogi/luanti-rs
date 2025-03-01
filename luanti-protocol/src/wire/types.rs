@@ -672,7 +672,7 @@ where
     type Input = Option<T::Input>;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         match value {
-            Some(ref v) => <T as Serialize>::serialize(v, ser),
+            Some(v) => <T as Serialize>::serialize(v, ser),
             None => Ok(()),
         }
     }
@@ -1347,18 +1347,44 @@ impl AccessDeniedCode {
         use AccessDeniedCode::*;
         match self {
             WrongPassword => "Invalid password",
-            UnexpectedData => "Your client sent something the server didn't expect.  Try reconnecting or updating your client.",
-            Singleplayer => "The server is running in simple singleplayer mode.  You cannot connect.",
-            WrongVersion => "Your client's version is not supported.\nPlease contact the server administrator.",
+            UnexpectedData => {
+                "Your client sent something the server didn't expect.  Try reconnecting or updating your client."
+            }
+            Singleplayer => {
+                "The server is running in simple singleplayer mode.  You cannot connect."
+            }
+            WrongVersion => {
+                "Your client's version is not supported.\nPlease contact the server administrator."
+            }
             WrongCharsInName => "Player name contains disallowed characters",
             WrongName => "Player name not allowed",
             TooManyUsers => "Too many users",
             EmptyPassword => "Empty passwords are disallowed.  Set a password and try again.",
-            AlreadyConnected => "Another client is connected with this name.  If your client closed unexpectedly, try again in a minute.",
+            AlreadyConnected => {
+                "Another client is connected with this name.  If your client closed unexpectedly, try again in a minute."
+            }
             ServerFail => "Internal server error",
-            CustomString(msg) => if msg.is_empty() { "unknown" } else { msg },
-            Shutdown(msg, _) => if msg.is_empty() { "Server shutting down" } else { msg },
-            Crash(msg, _) => if msg.is_empty() { "The server has experienced an internal error.  You will now be disconnected." } else { msg },
+            CustomString(msg) => {
+                if msg.is_empty() {
+                    "unknown"
+                } else {
+                    msg
+                }
+            }
+            Shutdown(msg, _) => {
+                if msg.is_empty() {
+                    "Server shutting down"
+                } else {
+                    msg
+                }
+            }
+            Crash(msg, _) => {
+                if msg.is_empty() {
+                    "The server has experienced an internal error.  You will now be disconnected."
+                } else {
+                    msg
+                }
+            }
         }
     }
 }
