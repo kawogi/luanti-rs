@@ -1,8 +1,11 @@
+//! Luanti protocol implemented in Rust
+
 mod proxy;
 
 use anyhow::bail;
 use clap::ArgGroup;
 use clap::Parser;
+use log::info;
 use luanti_protocol::audit_on;
 use proxy::LuantiProxy;
 use std::net::SocketAddr;
@@ -42,13 +45,18 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn real_main() -> anyhow::Result<()> {
+    // TODO make this configurable through command line arguments
+    env_logger::builder()
+        .filter_level(log::LevelFilter::Trace)
+        .init();
+
     let args = Args::parse();
 
     if args.audit {
         audit_on();
-        println!("Auditing is ON.");
-        println!("Proxy will terminate if an invalid packet is received,");
-        println!("or if serialization/deserialization do not match exactly.");
+        info!("Auditing is ON.");
+        info!("Proxy will terminate if an invalid packet is received,");
+        info!("or if serialization/deserialization do not match exactly.");
     }
 
     let bind_addr: SocketAddr = if let Some(listen_port) = args.listen {

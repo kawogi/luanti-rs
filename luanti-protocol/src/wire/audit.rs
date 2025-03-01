@@ -11,6 +11,7 @@
 
 use anyhow::Result;
 use anyhow::bail;
+use log::error;
 
 use super::command::CommandRef;
 use super::command::ToClientCommand;
@@ -35,10 +36,10 @@ pub fn audit_command<Cmd: CommandRef>(context: ProtocolContext, orig: &[u8], com
     match serialize_commandref(command, &mut ser) {
         Ok(_) => (),
         Err(err) => {
-            println!("AUDIT: Reserialization failed");
-            println!("AUDIT: ORIGINAL = {:?}", orig);
-            println!("AUDIT: PARSED = {:?}", command);
-            println!("ERR = {:?}", err);
+            error!("AUDIT: Reserialization failed");
+            error!("AUDIT: ORIGINAL = {:?}", orig);
+            error!("AUDIT: PARSED = {:?}", command);
+            error!("ERR = {:?}", err);
             std::process::exit(1);
         }
     }
@@ -47,11 +48,11 @@ pub fn audit_command<Cmd: CommandRef>(context: ProtocolContext, orig: &[u8], com
     match audit_command_inner(context, orig, reser, command) {
         Ok(_) => (),
         Err(err) => {
-            println!("AUDIT: Unknown error occurred auditing of command");
-            println!("AUDIT: PARSED = {:?}", command);
-            println!("AUDIT: ORIGINAL     = {:?}", orig);
-            println!("AUDIT: RESERIALIZED = {:?}", reser);
-            println!("ERR = {:?}", err);
+            error!("AUDIT: Unknown error occurred auditing of command");
+            error!("AUDIT: PARSED = {:?}", command);
+            error!("AUDIT: ORIGINAL     = {:?}", orig);
+            error!("AUDIT: RESERIALIZED = {:?}", reser);
+            error!("ERR = {:?}", err);
             std::process::exit(1);
         }
     }
@@ -162,13 +163,13 @@ fn audit_command_inner<Cmd: CommandRef>(
 
 fn do_compare<Cmd: CommandRef>(what: &str, reser: &[u8], orig: &[u8], command: &Cmd) {
     if reser != orig {
-        println!(
+        error!(
             "AUDIT: Mismatch between original and re-serialized ({})",
             what
         );
-        println!("AUDIT: ORIGINAL     = {:?}", orig);
-        println!("AUDIT: RESERIALIZED = {:?}", reser);
-        println!("AUDIT: PARSED = {:?}", command);
+        error!("AUDIT: ORIGINAL     = {:?}", orig);
+        error!("AUDIT: RESERIALIZED = {:?}", reser);
+        error!("AUDIT: PARSED = {:?}", command);
         std::process::exit(1);
     }
 }
@@ -177,7 +178,7 @@ fn zlib_decompress_to_vec(compressed: &[u8]) -> Vec<u8> {
     match miniz_oxide::inflate::decompress_to_vec_zlib(compressed) {
         Ok(uncompressed) => uncompressed,
         Err(_) => {
-            println!("AUDIT: Decompression failed unexpectedly");
+            error!("AUDIT: Decompression failed unexpectedly");
             std::process::exit(1);
         }
     }

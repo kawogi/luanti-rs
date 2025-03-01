@@ -1,6 +1,6 @@
-extern crate proc_macro2;
-extern crate quote;
-extern crate syn;
+//! Derive macros for luanti-protocol
+
+#![expect(missing_docs, reason = "//TODO")]
 
 use proc_macro2::Ident;
 use proc_macro2::Literal;

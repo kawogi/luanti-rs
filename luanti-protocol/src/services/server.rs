@@ -4,6 +4,9 @@
 //!
 //! In the future it may provide its own abstraction above the Luanti Commands.
 
+use log::error;
+use log::info;
+use log::warn;
 use std::net::SocketAddr;
 use std::time::Duration;
 use tokio::sync::mpsc::UnboundedReceiver;
@@ -44,25 +47,25 @@ struct LuantiServerRunner {
 
 impl LuantiServerRunner {
     async fn run(self) {
-        println!("LuantiServer starting on {}", self.bind_addr.to_string());
+        info!("LuantiServer starting on {}", self.bind_addr.to_string());
         let mut socket = loop {
             match LuantiSocket::new(self.bind_addr, true).await {
                 Ok(socket) => break socket,
                 Err(err) => {
-                    println!("LuantiServer: bind failed: {}", err);
-                    println!("Retrying in 5 seconds");
+                    warn!("LuantiServer: bind failed: {}", err);
+                    info!("Retrying in 5 seconds");
                     tokio::time::sleep(Duration::from_millis(5000)).await;
                 }
             };
         };
-        println!("LuantiServer started");
+        info!("LuantiServer started");
         loop {
             let t = socket.accept().await.unwrap();
-            println!("LuantiServer accepted connection");
+            info!("LuantiServer accepted connection");
             let conn = LuantiConnection::new(t);
             match self.accept_tx.send(conn) {
                 Ok(_) => (),
-                Err(_) => println!("Unexpected send fail in LuantiServer"),
+                Err(_) => error!("Unexpected send fail in LuantiServer"),
             }
         }
     }

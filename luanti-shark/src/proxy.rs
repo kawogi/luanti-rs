@@ -19,6 +19,9 @@
 //! commands in both directions, in a human-readable format.
 use anyhow::Result;
 
+use log::error;
+use log::info;
+use log::trace;
 use luanti_protocol::CommandDirection;
 use luanti_protocol::CommandRef;
 use luanti_protocol::LuantiClient;
@@ -57,7 +60,7 @@ impl LuantiProxyRunner {
                 conn = server.accept() => {
                     let id = next_id;
                     next_id += 1;
-                    println!("[P{}] New client connected from {:?}", id, conn.remote_addr());
+                    info!("[P{}] New client connected from {:?}", id, conn.remote_addr());
                     let client = LuantiClient::connect(self.forwarding_addr).await.expect("Connect failed");
                     ProxyAdapterRunner::spawn(id, conn, client, self.verbosity);
                 },
@@ -97,9 +100,9 @@ impl ProxyAdapterRunner {
                     true
                 };
                 if show_err {
-                    println!("[{}] Disconnected: {:?}", self.id, err)
+                    error!("[{}] Disconnected: {:?}", self.id, err)
                 } else {
-                    println!("[{}] Disconnected", self.id)
+                    error!("[{}] Disconnected", self.id)
                 }
             }
         }
@@ -147,8 +150,8 @@ impl ProxyAdapterRunner {
         }
         match verbosity {
             0 => (),
-            1 => println!("{} {}", prefix, command.command_name()),
-            2.. => println!("{} {:#?}", prefix, command),
+            1 => trace!("{} {}", prefix, command.command_name()),
+            2.. => trace!("{} {:#?}", prefix, command),
         }
     }
 }

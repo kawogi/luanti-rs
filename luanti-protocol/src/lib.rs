@@ -1,3 +1,7 @@
+//! Luanti protocol implemented in Rust
+
+#![expect(missing_docs, reason = "//TODO")]
+
 pub mod peer;
 pub mod services;
 pub mod wire;

@@ -3,6 +3,7 @@ use std::collections::VecDeque;
 use std::io::Error;
 use std::net::SocketAddr;
 
+use log::error;
 use tokio::io::Interest;
 use tokio::io::Ready;
 use tokio::net::UdpSocket;
@@ -103,7 +104,7 @@ impl LuantiSocketRunner {
         match self.run_inner().await {
             Ok(_) => (),
             Err(err) => {
-                println!("LuantiSocket abnormal exit: {:?}", err);
+                error!("LuantiSocket abnormal exit: {:?}", err);
             }
         }
     }

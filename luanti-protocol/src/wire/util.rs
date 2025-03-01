@@ -366,6 +366,7 @@ mod tests {
     use std::ops::Range;
 
     use super::*;
+    use log::error;
     use rand::Rng;
     use rand::RngCore;
     use rand::thread_rng;
@@ -403,11 +404,11 @@ mod tests {
             let (result, consumed) =
                 deserialize_json_string_if_needed(&serialized_plus_junk).unwrap();
             if input != result {
-                println!("input = {:?}", input);
-                println!("serialized = {:?}", serialized);
-                println!("serialized_plus_junk = {:?}", serialized_plus_junk);
-                println!("result = {:?}", result);
-                println!("consumed = {}", consumed);
+                error!("input = {:?}", input);
+                error!("serialized = {:?}", serialized);
+                error!("serialized_plus_junk = {:?}", serialized_plus_junk);
+                error!("result = {:?}", result);
+                error!("consumed = {}", consumed);
                 assert!(false);
             }
             assert_eq!(input, result);

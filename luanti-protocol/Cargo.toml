@@ -11,14 +11,16 @@ readme.workspace = true
 repository.workspace = true
 
 [dependencies]
-anyhow = { workspace = true, features = ["backtrace"] }
-thiserror.workspace = true
-rand.workspace = true
 luanti-protocol-derive.workspace = true
+
+anyhow = { workspace = true, features = ["backtrace"] }
+log.workspace = true
 miniz_oxide.workspace = true
-zstd-safe = { workspace = true, features = ["std"] }
+rand.workspace = true
+thiserror.workspace = true
 tokio = { workspace = true, features = ["full"] }
 tokio-util = { workspace = true, features = ["full"] }
+zstd-safe = { workspace = true, features = ["std"] }
 
 [lints]
 workspace = true

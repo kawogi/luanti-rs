@@ -12,6 +12,7 @@
 //!  
 use anyhow::Result;
 use anyhow::bail;
+use log::warn;
 use rand::Rng;
 use rand::SeedableRng;
 use rand::rngs::StdRng;
@@ -469,17 +470,17 @@ impl PeerRunner {
             if pkt.sender_peer_id == 0 {
                 if self.now > self.connect_time + INEXISTENT_PEER_ID_GRACE {
                     // Malformed, ignore.
-                    println!("Ignoring peer_id 0 packet");
+                    warn!("Ignoring peer_id 0 packet");
                     return Ok(());
                 }
             } else if pkt.sender_peer_id != self.remote_peer_id {
                 // Malformed. Ignore
-                println!("Invalid peer_id on packet");
+                warn!("Invalid peer_id on packet");
                 return Ok(());
             }
         } else {
             if pkt.sender_peer_id != 1 {
-                println!("Server sending from wrong peer id");
+                warn!("Server sending from wrong peer id");
                 return Ok(());
             }
         }
