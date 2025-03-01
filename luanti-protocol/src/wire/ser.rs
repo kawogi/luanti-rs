@@ -189,7 +189,7 @@ impl Serializer for VecSerializer {
 
     fn write_marker(&mut self, length: usize) -> Result<Self::Marker, SerializeError> {
         let marker = (self.data.len(), length);
-        self.data.resize(self.data.len() + length, 0u8);
+        self.data.resize(self.data.len() + length, 0_u8);
         Ok(marker)
     }
 
@@ -209,7 +209,7 @@ impl Serializer for VecSerializer {
         F: FnOnce(&mut [u8]),
     {
         let offset = self.data.len();
-        self.data.resize(offset + length, 0u8);
+        self.data.resize(offset + length, 0_u8);
         write_slice_fn(&mut self.data.as_mut_slice()[offset..offset + length]);
         Ok(())
     }

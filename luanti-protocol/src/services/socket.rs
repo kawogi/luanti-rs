@@ -17,7 +17,7 @@ use crate::peer::peer::Peer;
 use crate::peer::peer::PeerIO;
 use crate::peer::peer::new_peer;
 
-const MAX_DATAGRAM_SIZE: usize = 65536;
+const MAX_DATAGRAM_SIZE: usize = 0x0001_0000;
 
 ///
 /// `LuantiSocket`
@@ -111,7 +111,7 @@ impl LuantiSocketRunner {
 
     pub async fn run_inner(&mut self) -> anyhow::Result<()> {
         let mut knock_closed = false;
-        let mut buf: Vec<u8> = vec![0u8; MAX_DATAGRAM_SIZE];
+        let mut buf: Vec<u8> = vec![0_u8; MAX_DATAGRAM_SIZE];
 
         loop {
             let mut interest = Interest::READABLE;

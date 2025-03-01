@@ -212,7 +212,7 @@ mod tests {
         let mut work_to_do = true;
         while work_to_do {
             work_to_do = false;
-            if inflight.len() < 1000000 {
+            if inflight.len() < 1_000_000 {
                 work_to_do = true;
                 // Send 0 to 99 new packets
                 for _ in 0..rng.gen_range(0..100) {

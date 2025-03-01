@@ -729,7 +729,7 @@ where
     type Input = Option16<T::Input>;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         match value {
-            Option16::None => u16::serialize(&0u16, ser),
+            Option16::None => u16::serialize(&0_u16, ser),
             Option16::Some(value) => {
                 let mut buf = VecSerializer::new(ser.context(), 64);
                 <T as Serialize>::serialize(value, &mut buf)?;
@@ -1234,11 +1234,11 @@ pub struct PlayerPos {
 impl Serialize for PlayerPos {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        let s_position = (value.position * 100f32).as_v3s32();
-        let s_speed = (value.speed * 100f32).as_v3s32();
-        let s_pitch = (value.pitch * 100f32).round() as s32;
-        let s_yaw = (value.yaw * 100f32).round() as s32;
-        let s_fov = (value.fov * 80f32).round() as u8;
+        let s_position = (value.position * 100_f32).as_v3s32();
+        let s_speed = (value.speed * 100_f32).as_v3s32();
+        let s_pitch = (value.pitch * 100_f32).round() as s32;
+        let s_yaw = (value.yaw * 100_f32).round() as s32;
+        let s_fov = (value.fov * 80_f32).round() as u8;
 
         v3s32::serialize(&s_position, ser)?;
         v3s32::serialize(&s_speed, ser)?;
@@ -1262,12 +1262,12 @@ impl Deserialize for PlayerPos {
         let s_fov = u8::deserialize(deser)?;
         let wanted_range = u8::deserialize(deser)?;
         Ok(PlayerPos {
-            position: s_position.as_v3f() / 100f32,
-            speed: s_speed.as_v3f() / 100f32,
-            pitch: (s_pitch as f32) / 100f32,
-            yaw: (s_yaw as f32) / 100f32,
+            position: s_position.as_v3f() / 100_f32,
+            speed: s_speed.as_v3f() / 100_f32,
+            pitch: (s_pitch as f32) / 100_f32,
+            yaw: (s_yaw as f32) / 100_f32,
             keys_pressed: keys_pressed,
-            fov: (s_fov as f32) / 80f32,
+            fov: (s_fov as f32) / 80_f32,
             wanted_range: wanted_range,
         })
     }
@@ -1727,7 +1727,7 @@ impl<T: Serialize> Serialize for ZStdCompressed<T> {
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         // Serialize 'value' into a temporary buffer
         // TODO(paradust): Performance concern, could stream instead
-        let mut tmp = VecSerializer::new(ser.context(), 65536);
+        let mut tmp = VecSerializer::new(ser.context(), 0x0001_0000);
         <T as Serialize>::serialize(value, &mut tmp)?;
         let tmp = tmp.take();
         match zstd_compress(&tmp, |chunk| {
@@ -1744,7 +1744,7 @@ impl<T: Deserialize> Deserialize for ZStdCompressed<T> {
     type Output = T::Output;
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self::Output> {
         // Decompress to a temporary buffer
-        let mut tmp: Vec<u8> = Vec::with_capacity(65536);
+        let mut tmp: Vec<u8> = Vec::with_capacity(0x0001_0000);
         match zstd_decompress(deser.peek_all(), |chunk| {
             tmp.extend_from_slice(chunk);
             Ok(())
@@ -2331,7 +2331,7 @@ impl Serialize for MapBlock {
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         let ver = ser.context().ser_fmt;
         let real_ser = ser;
-        let mut tmp_ser = VecSerializer::new(real_ser.context(), 32768);
+        let mut tmp_ser = VecSerializer::new(real_ser.context(), 0x8000);
         let ser = &mut tmp_ser;
         let header = MapBlockHeader {
             is_underground: value.is_underground,
@@ -2344,7 +2344,7 @@ impl Serialize for MapBlock {
             MapNodesBulk::serialize(&value.nodes, ser)?;
         } else {
             // Serialize and compress using zlib
-            let mut inner = VecSerializer::new(ser.context(), 32768);
+            let mut inner = VecSerializer::new(ser.context(), 0x8000);
             MapNodesBulk::serialize(&value.nodes, &mut inner)?;
             let compressed = compress_zlib(&inner.take());
             ser.write_bytes(&compressed)?;
@@ -2353,7 +2353,7 @@ impl Serialize for MapBlock {
             NodeMetadataList::serialize(&value.node_metadata, ser)?;
         } else {
             // Serialize and compress using zlib
-            let mut inner = VecSerializer::new(ser.context(), 32768);
+            let mut inner = VecSerializer::new(ser.context(), 0x8000);
             NodeMetadataList::serialize(&value.node_metadata, &mut inner)?;
             let compressed = compress_zlib(&inner.take());
             ser.write_bytes(&compressed)?;
@@ -3508,7 +3508,7 @@ impl Deserialize for HudFlags {
     type Output = Self;
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         let value = u32::deserialize(deser)?;
-        if (value & !0b111111111) != 0 {
+        if (value & !0b1_1111_1111) != 0 {
             bail!("Invalid HudFlags: {}", value);
         }
         Ok(HudFlags::from_u32(value))
@@ -3758,7 +3758,7 @@ impl Deserialize for InventoryLocation {
             if coords.len() != 3 {
                 bail!("Corrupted nodemeta InventoryLocation");
             }
-            let mut xyz = [0i16; 3];
+            let mut xyz = [0_i16; 3];
             for (i, &n) in coords.iter().enumerate() {
                 xyz[i] = stoi(n)?;
             }

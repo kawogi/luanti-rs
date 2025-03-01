@@ -62,8 +62,8 @@ where
     F: FnMut(&[u8]) -> Result<()>,
 {
     let mut ctx = zstd_safe::CCtx::create();
-    const BUFSIZE: usize = 16384;
-    let mut buf = [0u8; BUFSIZE];
+    const BUFSIZE: usize = 0x4000;
+    let mut buf = [0_u8; BUFSIZE];
     let mut input_buffer = InBuffer {
         src: &input,
         pos: 0,
@@ -108,8 +108,8 @@ where
     F: FnMut(&[u8]) -> Result<()>,
 {
     let mut ctx = zstd_safe::DCtx::create();
-    const BUFSIZE: usize = 16384;
-    let mut buf = [0u8; BUFSIZE];
+    const BUFSIZE: usize = 0x4000;
+    let mut buf = [0_u8; BUFSIZE];
 
     let mut input_buffer = InBuffer {
         src: &input,
@@ -379,7 +379,7 @@ mod tests {
     fn rand_bytes(range: Range<usize>) -> Vec<u8> {
         let mut rng = thread_rng();
         let length = rng.gen_range(range);
-        let mut input = vec![0u8; length];
+        let mut input = vec![0_u8; length];
         rng.fill_bytes(input.as_mut_slice());
         input
     }

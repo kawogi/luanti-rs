@@ -85,15 +85,15 @@ mod tests {
 
     #[test]
     fn reliable_receiver_test() {
-        let mut receiver = ReliableReceiver::new();
-
         // Generate random reliable packets
 
         // The plan:
         // 1) Feed in 30000 reliable packets in a random order
         // 2) Pull them out as they become available.
         // 3) Do this 5 times to test wrapping seqnum. (doing this in chunks guarantees the window never exceeds 30000)
-        const CHUNK_LEN: u32 = 30000u32;
+        const CHUNK_LEN: u32 = 30000_u32;
+
+        let mut receiver = ReliableReceiver::new();
         let mut offset: u32 = 0;
         for _ in 0..5 {
             let mut pkts: Vec<ReliableBody> = (offset..offset + CHUNK_LEN)

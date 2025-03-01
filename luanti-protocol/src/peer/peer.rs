@@ -415,7 +415,7 @@ impl PeerRunner {
         self.update_now();
 
         // 10 years ought to be enough
-        let never = self.now + Duration::from_secs(315576000);
+        let never = self.now + Duration::from_secs(315_576_000);
 
         loop {
             // Before select, make sure everything ready to send has been sent,
@@ -485,7 +485,7 @@ impl PeerRunner {
             if self.remote_peer_id == 0 {
                 // Assign a peer id
                 self.local_peer_id = 1;
-                self.remote_peer_id = self.rng.gen_range(2..65535);
+                self.remote_peer_id = self.rng.gen_range(2..0xFFFF);
 
                 // Tell the client about it
                 let set_peer_id = SetPeerIdBody::new(self.remote_peer_id).into_inner();
