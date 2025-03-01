@@ -1,6 +1,11 @@
 //! Derive macros for luanti-protocol
 
-#![expect(missing_docs, reason = "//TODO")]
+#![expect(
+    missing_docs,
+    clippy::missing_panics_doc,
+    clippy::missing_errors_doc,
+    reason = "//TODO add documentation"
+)]
 
 use proc_macro2::Ident;
 use proc_macro2::Literal;

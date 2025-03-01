@@ -1,6 +1,11 @@
 //! Luanti protocol implemented in Rust
 
-#![expect(missing_docs, reason = "//TODO")]
+#![expect(
+    missing_docs,
+    clippy::missing_panics_doc,
+    clippy::missing_errors_doc,
+    reason = "//TODO add documentation"
+)]
 
 pub mod peer;
 pub mod services;
