@@ -36,9 +36,11 @@ pub struct AckBody {
 }
 
 impl AckBody {
+    #[must_use]
     pub fn new(seqnum: u16) -> Self {
         AckBody { seqnum }
     }
+    #[must_use]
     pub fn into_inner(self) -> InnerBody {
         InnerBody::Control(ControlBody::Ack(self))
     }
@@ -66,10 +68,12 @@ pub struct SetPeerIdBody {
 }
 
 impl SetPeerIdBody {
+    #[must_use]
     pub fn new(peer_id: u16) -> Self {
         Self { peer_id }
     }
 
+    #[must_use]
     pub fn into_inner(self) -> InnerBody {
         InnerBody::Control(ControlBody::SetPeerId(self))
     }
@@ -100,6 +104,7 @@ pub enum ControlBody {
 }
 
 impl ControlBody {
+    #[must_use]
     pub fn into_inner(self) -> InnerBody {
         InnerBody::Control(self)
     }
@@ -238,6 +243,7 @@ pub enum InnerBody {
 }
 
 impl InnerBody {
+    #[must_use]
     pub fn command_ref(&self) -> Option<&Command> {
         match self {
             InnerBody::Original(body) => Some(&body.command),
@@ -245,6 +251,7 @@ impl InnerBody {
         }
     }
 
+    #[must_use]
     pub fn into_reliable(self, seqnum: u16) -> PacketBody {
         PacketBody::Reliable(ReliableBody {
             seqnum: seqnum,
@@ -252,6 +259,7 @@ impl InnerBody {
         })
     }
 
+    #[must_use]
     pub fn into_unreliable(self) -> PacketBody {
         PacketBody::Inner(self)
     }
@@ -259,6 +267,7 @@ impl InnerBody {
     /// Get a reference to the Command this body contains, if any.
     /// If this is part of a split packet, None will be returned
     /// even though there is a fragment of a Command inside.
+    #[must_use]
     pub fn command(&self) -> Option<&Command> {
         match self {
             InnerBody::Control(_) => None,
@@ -308,6 +317,7 @@ pub enum PacketBody {
 }
 
 impl PacketBody {
+    #[must_use]
     pub fn inner(&self) -> &InnerBody {
         match self {
             PacketBody::Reliable(body) => &body.inner,
@@ -315,6 +325,7 @@ impl PacketBody {
         }
     }
 
+    #[must_use]
     pub fn command_ref(&self) -> Option<&Command> {
         self.inner().command_ref()
     }
@@ -355,6 +366,7 @@ pub struct Packet {
 }
 
 impl Packet {
+    #[must_use]
     pub fn new(sender_peer_id: PeerId, channel: u8, body: PacketBody) -> Self {
         Self {
             protocol_id: PROTOCOL_ID,
@@ -364,10 +376,12 @@ impl Packet {
         }
     }
 
+    #[must_use]
     pub fn inner(&self) -> &InnerBody {
         self.body.inner()
     }
 
+    #[must_use]
     pub fn as_reliable(&self) -> Option<&ReliableBody> {
         match &self.body {
             PacketBody::Reliable(rb) => Some(rb),
@@ -375,6 +389,7 @@ impl Packet {
         }
     }
 
+    #[must_use]
     pub fn as_control(&self) -> Option<&ControlBody> {
         match self.inner() {
             InnerBody::Control(control) => Some(&control),

@@ -16,10 +16,12 @@ pub struct LuantiConnection {
 }
 
 impl LuantiConnection {
+    #[must_use]
     pub fn new(peer: Peer) -> Self {
         Self { peer: peer }
     }
 
+    #[must_use]
     pub fn remote_addr(&self) -> SocketAddr {
         self.peer.remote_addr()
     }

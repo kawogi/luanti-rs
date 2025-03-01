@@ -24,7 +24,6 @@ impl IncomingBuffer {
 
     /// Push a new split packet into the split receiver
     /// If a command has become ready as a result, true is returned.
-    #[must_use]
     fn push(&mut self, now: Instant, body: SplitBody) -> anyhow::Result<bool> {
         if body.chunk_count != self.chunk_count {
             bail!("Split packet corrupt: chunk_count mismatch");
@@ -62,7 +61,6 @@ impl SplitReceiver {
 
     /// Push a split packet for reconstruction
     /// Returns the finished command if it is ready
-    #[must_use]
     pub(super) fn push(
         &mut self,
         now: Instant,

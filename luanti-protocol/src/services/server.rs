@@ -21,6 +21,7 @@ pub struct LuantiServer {
 }
 
 impl LuantiServer {
+    #[must_use]
     pub fn new(bind_addr: SocketAddr) -> Self {
         let (accept_tx, accept_rx) = unbounded_channel();
         let runner = LuantiServerRunner {

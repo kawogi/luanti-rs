@@ -157,6 +157,7 @@ pub struct VecSerializer {
 }
 
 impl VecSerializer {
+    #[must_use]
     pub fn new(context: ProtocolContext, initial_capacity: usize) -> Self {
         Self {
             context,
@@ -164,6 +165,7 @@ impl VecSerializer {
         }
     }
 
+    #[must_use]
     pub fn take(self) -> Vec<u8> {
         self.data
     }
@@ -221,11 +223,13 @@ pub struct MockSerializer {
 }
 
 impl MockSerializer {
+    #[must_use]
     pub fn new(context: ProtocolContext) -> Self {
         Self { context, count: 0 }
     }
 
     /// How many bytes have been written so far
+    #[must_use]
     pub fn len(&self) -> usize {
         self.count
     }

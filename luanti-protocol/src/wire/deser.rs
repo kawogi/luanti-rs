@@ -50,6 +50,7 @@ pub struct Deserializer<'a> {
 }
 
 impl<'a> Deserializer<'a> {
+    #[must_use]
     pub fn new(context: ProtocolContext, data: &'a [u8]) -> Self {
         Self { context, data }
     }
@@ -63,14 +64,17 @@ impl<'a> Deserializer<'a> {
         })
     }
 
+    #[must_use]
     pub fn context(&self) -> ProtocolContext {
         self.context
     }
 
+    #[must_use]
     pub fn direction(&self) -> CommandDirection {
         self.context.dir
     }
 
+    #[must_use]
     pub fn remaining(&self) -> usize {
         self.data.len()
     }

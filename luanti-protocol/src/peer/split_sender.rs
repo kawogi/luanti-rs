@@ -23,7 +23,6 @@ impl SplitSender {
 
     /// Push a Command for transmission
     /// This will possibly split it into 1 or more packets.
-    #[must_use]
     pub(super) fn push(
         &mut self,
         context: ProtocolContext,

@@ -178,6 +178,7 @@ where
     Ok(())
 }
 
+#[must_use]
 pub fn to_hex(index: u8) -> u8 {
     const HEX_CHARS: &[u8; 16] = b"0123456789abcdef";
     HEX_CHARS[index as usize]
@@ -277,12 +278,14 @@ pub fn deserialize_json_string(input: &[u8]) -> Result<(Vec<u8>, usize), anyhow:
 }
 
 /// This is needed to handle the crazy inventory parsing.
+#[must_use]
 pub fn split_by_whitespace(line: &[u8]) -> Vec<&[u8]> {
     line.split(|ch| *ch == b' ' || *ch == b'\n')
         .filter(|item| item.len() > 0)
         .collect()
 }
 
+#[must_use]
 pub fn skip_whitespace(line: &[u8]) -> &[u8] {
     match line.iter().position(|ch| *ch != b' ' && *ch != b'\n') {
         Some(pos) => &line[pos..],
@@ -294,6 +297,7 @@ pub fn skip_whitespace(line: &[u8]) -> &[u8] {
 /// and the remainder (which may still have whitespace)
 ///
 /// Returns None when the remainder is empty or all whitespace.
+#[must_use]
 pub fn next_word(line: &[u8]) -> Option<(&[u8], &[u8])> {
     let line = skip_whitespace(line);
     match line.iter().position(|ch| *ch == b' ' || *ch == b'\n') {
@@ -308,6 +312,7 @@ pub fn next_word(line: &[u8]) -> Option<(&[u8], &[u8])> {
     }
 }
 
+#[must_use]
 pub fn compress_zlib(uncompressed: &[u8]) -> Vec<u8> {
     miniz_oxide::deflate::compress_to_vec_zlib(uncompressed, 6)
 }

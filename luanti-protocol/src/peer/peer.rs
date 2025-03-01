@@ -75,10 +75,13 @@ pub struct Peer {
 }
 
 impl Peer {
+    #[must_use]
     pub fn remote_addr(&self) -> SocketAddr {
         self.remote_addr
     }
 
+    /// Returns the is server of this [`Peer`].
+    #[must_use]
     pub fn is_server(&self) -> bool {
         self.remote_is_server
     }
@@ -106,6 +109,7 @@ pub struct PeerIO {
     relay: UnboundedSender<SocketToPeer>,
 }
 
+#[must_use]
 pub fn new_peer(
     remote_addr: SocketAddr,
     remote_is_server: bool,
@@ -152,8 +156,14 @@ impl PeerIO {
     /// Called by the LuantiSocket when a packet arrives for us
     ///
     pub fn send(&mut self, data: &[u8]) {
-        // TODO: Add backpressure
-        let _ = self.relay.send(SocketToPeer::Received(data.to_vec()));
+        //TODO Add backpressure
+        #[expect(
+            clippy::unwrap_used,
+            reason = "// TODO clarify error condition and handling"
+        )]
+        self.relay
+            .send(SocketToPeer::Received(data.to_vec()))
+            .unwrap();
     }
 }
 
@@ -377,16 +387,28 @@ impl PeerRunner {
             };
             if !disconnected_cleanly {
                 // Send a disconnect packet
-                let _ = self
-                    .send_raw(0, (ControlBody::Disconnect).into_inner().into_unreliable())
-                    .await;
+                #[expect(
+                    clippy::unwrap_used,
+                    reason = "// TODO clarify error condition and handling"
+                )]
+                self.send_raw(0, (ControlBody::Disconnect).into_inner().into_unreliable())
+                    .await
+                    .unwrap();
             }
-            let _ = self
-                .to_socket
-                .send(PeerToSocket::PeerIsDisconnected(self.remote_addr));
+            #[expect(
+                clippy::unwrap_used,
+                reason = "// TODO clarify error condition and handling"
+            )]
+            self.to_socket
+                .send(PeerToSocket::PeerIsDisconnected(self.remote_addr))
+                .unwrap();
 
             // Tell the controller why we died
-            let _ = self.to_controller.send(Err(err));
+            #[expect(
+                clippy::unwrap_used,
+                reason = "// TODO clarify error condition and handling"
+            )]
+            self.to_controller.send(Err(err)).unwrap();
         }
     }
 

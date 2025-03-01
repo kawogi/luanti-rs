@@ -61,6 +61,7 @@ pub enum CommandDirection {
 }
 
 impl CommandDirection {
+    #[must_use]
     pub fn for_send(remote_is_server: bool) -> Self {
         use CommandDirection::*;
         match remote_is_server {
@@ -69,10 +70,12 @@ impl CommandDirection {
         }
     }
 
+    #[must_use]
     pub fn for_receive(remote_is_server: bool) -> Self {
         Self::for_send(remote_is_server).flip()
     }
 
+    #[must_use]
     pub fn flip(&self) -> Self {
         use CommandDirection::*;
         match self {
@@ -90,6 +93,7 @@ pub struct ProtocolContext {
 }
 
 impl ProtocolContext {
+    #[must_use]
     pub fn latest_for_receive(remote_is_server: bool) -> Self {
         Self {
             dir: CommandDirection::for_receive(remote_is_server),
@@ -98,6 +102,7 @@ impl ProtocolContext {
         }
     }
 
+    #[must_use]
     pub fn latest_for_send(remote_is_server: bool) -> Self {
         Self {
             dir: CommandDirection::for_send(remote_is_server),
@@ -122,18 +127,22 @@ impl std::fmt::Debug for ByteString {
 }
 
 impl ByteString {
+    #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
+    #[must_use]
     pub fn escape_ascii(&self) -> String {
         self.0.escape_ascii().to_string()
     }
@@ -395,6 +404,7 @@ pub struct v2f {
 }
 
 impl v2f {
+    #[must_use]
     pub fn new(x: f32, y: f32) -> Self {
         Self { x, y }
     }
@@ -409,10 +419,12 @@ pub struct v3f {
 }
 
 impl v3f {
+    #[must_use]
     pub fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
     }
 
+    #[must_use]
     pub fn as_v3s32(&self) -> v3s32 {
         v3s32 {
             x: self.x.round() as i32,
@@ -452,6 +464,7 @@ pub struct v2u32 {
 }
 
 impl v2u32 {
+    #[must_use]
     pub fn new(x: u32, y: u32) -> Self {
         Self { x, y }
     }
@@ -465,6 +478,7 @@ pub struct v2s16 {
 }
 
 impl v2s16 {
+    #[must_use]
     pub fn new(x: s16, y: s16) -> Self {
         Self { x, y }
     }
@@ -479,6 +493,7 @@ pub struct v3s16 {
 }
 
 impl v3s16 {
+    #[must_use]
     pub fn new(x: s16, y: s16, z: s16) -> Self {
         Self { x, y, z }
     }
@@ -492,6 +507,7 @@ pub struct v2s32 {
 }
 
 impl v2s32 {
+    #[must_use]
     pub fn new(x: s32, y: s32) -> Self {
         Self { x, y }
     }
@@ -506,6 +522,7 @@ pub struct v3s32 {
 }
 
 impl v3s32 {
+    #[must_use]
     pub fn as_v3f(&self) -> v3f {
         v3f {
             x: self.x as f32,
@@ -532,6 +549,7 @@ impl SColor {
         clippy::min_ident_chars,
         reason = "those identifiers are well-known and clear from the context"
     )]
+    #[must_use]
     pub fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self { r, g, b, a }
     }
@@ -1365,6 +1383,7 @@ impl Deserialize for AccessDeniedCode {
 }
 
 impl AccessDeniedCode {
+    #[must_use]
     pub fn to_str<'a>(&'a self) -> &'a str {
         use AccessDeniedCode::*;
         match self {
@@ -2638,6 +2657,7 @@ pub struct BlockPos {
 }
 
 impl BlockPos {
+    #[must_use]
     pub fn new(x: s16, y: s16, z: s16) -> Self {
         let valid = 0..(MAP_BLOCKSIZE as s16);
         assert!(valid.contains(&x) && valid.contains(&y) && valid.contains(&z));
@@ -2649,10 +2669,12 @@ impl BlockPos {
         }
     }
 
+    #[must_use]
     pub fn from_xyz(pos: v3s16) -> Self {
         Self::new(pos.x, pos.y, pos.z)
     }
 
+    #[must_use]
     pub fn to_xyz(&self) -> v3s16 {
         let x = self.raw % 16;
         let y = (self.raw / 16) % 16;
@@ -3440,6 +3462,7 @@ pub struct HudFlags {
 }
 
 impl HudFlags {
+    #[must_use]
     pub fn to_u32(&self) -> u32 {
         let mut flags: u32 = 0;
         flags |= (self.hotbar_visible as u32) << 0;
@@ -3454,6 +3477,7 @@ impl HudFlags {
         flags
     }
 
+    #[must_use]
     pub fn from_u32(flags: u32) -> Self {
         Self {
             hotbar_visible: (flags & (1 << 0)) != 0,
