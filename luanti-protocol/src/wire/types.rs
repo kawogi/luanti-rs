@@ -2506,7 +2506,7 @@ impl Serialize for MapNodesBulk {
         let nodecount = NODECOUNT as usize;
         // Write all param0 first
         ser.write(2 * nodecount as usize, |buf| {
-            assert!(buf.len() == 2 * nodecount as usize);
+            assert_eq!(buf.len(), 2 * nodecount as usize, "size mismatch");
             for index in 0..nodecount {
                 let bytes = value.nodes[index].param0.to_be_bytes();
                 buf[2 * index] = bytes[0];
@@ -2515,14 +2515,14 @@ impl Serialize for MapNodesBulk {
         })?;
         // Write all param1
         ser.write(nodecount, |buf| {
-            assert!(buf.len() == nodecount);
+            assert_eq!(buf.len(), nodecount, "size mismatch");
             for index in 0..nodecount {
                 buf[index] = value.nodes[index].param1;
             }
         })?;
         // Write all param2
         ser.write(nodecount, |buf| {
-            assert!(buf.len() == nodecount);
+            assert_eq!(buf.len(), nodecount, "size mismatch");
             for i in 0..nodecount {
                 buf[i] = value.nodes[i].param2;
             }
@@ -2660,7 +2660,10 @@ impl BlockPos {
     #[must_use]
     pub fn new(x: s16, y: s16, z: s16) -> Self {
         let valid = 0..(MAP_BLOCKSIZE as s16);
-        assert!(valid.contains(&x) && valid.contains(&y) && valid.contains(&z));
+        assert!(
+            valid.contains(&x) && valid.contains(&y) && valid.contains(&z),
+            "//TODO add proper error message"
+        );
         let x = x as u16;
         let y = y as u16;
         let z = z as u16;

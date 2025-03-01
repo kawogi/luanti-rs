@@ -37,13 +37,17 @@ impl IncomingBuffer {
     }
 
     fn take(self) -> anyhow::Result<Vec<u8>> {
-        assert!(self.chunks.len() == self.chunk_count as usize);
+        assert_eq!(
+            self.chunks.len(),
+            self.chunk_count as usize,
+            "chunk count mismatch"
+        );
         let total_size: usize = self.chunks.iter().map(|(_, chunk)| chunk.len()).sum();
         let mut buf = Vec::with_capacity(total_size);
         for (_, chunk) in self.chunks.iter() {
             buf.extend_from_slice(&chunk);
         }
-        assert!(buf.len() == total_size);
+        assert_eq!(buf.len(), total_size, "buffer length mismatch");
         Ok(buf)
     }
 }

@@ -581,7 +581,7 @@ impl PeerRunner {
     async fn send_command(&mut self, command: Command) -> Result<()> {
         let channel = command.default_channel();
         let reliable = command.default_reliability();
-        assert!((0..=2).contains(&channel));
+        assert!((0..=2).contains(&channel), "channel id out of range");
         self.channels[channel as usize].send(reliable, command)
     }
 

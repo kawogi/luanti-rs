@@ -2,8 +2,8 @@
 
 #![expect(
     missing_docs,
-    clippy::missing_panics_doc,
-    clippy::missing_errors_doc,
+    // clippy::missing_panics_doc,
+    // clippy::missing_errors_doc,
     reason = "//TODO add documentation"
 )]
 

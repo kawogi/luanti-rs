@@ -244,7 +244,7 @@ impl<'a> MiniReader<'a> {
 
 pub fn deserialize_json_string(input: &[u8]) -> Result<(Vec<u8>, usize), anyhow::Error> {
     let mut result: Vec<u8> = Vec::new();
-    assert!(input[0] == b'"');
+    assert_eq!(input[0], b'"', "unexpected start of string");
     let mut reader = MiniReader::new(input, 1);
     while reader.remaining() > 0 {
         let ch = reader.take1()?;

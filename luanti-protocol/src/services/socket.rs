@@ -73,7 +73,7 @@ impl LuantiSocket {
     // be used if incoming connections are expected, or else
     // they will be discarded.
     pub async fn add_peer(&mut self, remote: SocketAddr) -> Peer {
-        assert!(!self.for_server);
+        assert!(!self.for_server, "//TODO add descriptive error message");
         self.knock_tx.send(remote).unwrap();
 
         // Wait for the peer
@@ -189,8 +189,7 @@ impl LuantiSocketRunner {
     fn insert_peer(&mut self, remote_addr: SocketAddr) {
         let (peer, peerio) = new_peer(remote_addr, !self.for_server, self.peer_tx.clone());
         self.peers.insert(remote_addr, peerio);
-        let ok = self.accept_tx.send(peer).is_ok();
-        assert!(ok);
+        self.accept_tx.send(peer).unwrap();
     }
 
     fn remove_peer(&mut self, remote_addr: SocketAddr) {

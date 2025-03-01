@@ -4,7 +4,10 @@
     missing_docs,
     clippy::missing_panics_doc,
     clippy::missing_errors_doc,
-    reason = "//TODO add documentation"
+    clippy::panic,
+    clippy::unwrap_used,
+    clippy::panic_in_result_fn,
+    reason = "//TODO add documentation and improve error handling"
 )]
 
 pub mod peer;

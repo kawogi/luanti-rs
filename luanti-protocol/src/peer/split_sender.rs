@@ -43,7 +43,7 @@ impl SplitSender {
             let mut ser = VecSerializer::new(context, total_size);
             Command::serialize(&command, &mut ser)?;
             let data = ser.take();
-            assert!(data.len() == total_size);
+            assert_eq!(data.len(), total_size, "length mismatch");
             let mut index: usize = 0;
             let mut offset: usize = 0;
             let total_chunks: usize = (total_size + MAX_SPLIT_BODY_SIZE - 1) / MAX_SPLIT_BODY_SIZE;
@@ -58,7 +58,7 @@ impl SplitSender {
                 offset += MAX_SPLIT_BODY_SIZE;
                 index += 1;
             }
-            assert!(index == total_chunks);
+            assert_eq!(index, total_chunks, "size mismatch");
             self.next_seqnum += 1;
         }
         Ok(result)
