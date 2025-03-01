@@ -21,7 +21,7 @@ const RESEND_TIMEOUT_START_MS: u64 = 500;
 //const RESEND_TIMEOUT_MAX_MS: u64 = 3000;
 const RESEND_RESOLUTION: Duration = Duration::from_millis(20);
 
-pub struct ReliableSender {
+pub(super) struct ReliableSender {
     // Next reliable send seqnum
     next_seqnum: u64,
     window_size: u16,
@@ -40,7 +40,7 @@ pub struct ReliableSender {
 }
 
 impl ReliableSender {
-    pub fn new() -> Self {
+    pub(super) fn new() -> Self {
         ReliableSender {
             next_seqnum: SEQNUM_INITIAL as u64,
             window_size: START_RELIABLE_WINDOW_SIZE,
@@ -51,7 +51,7 @@ impl ReliableSender {
         }
     }
 
-    pub fn process_ack(&mut self, ack: AckBody) {
+    pub(super) fn process_ack(&mut self, ack: AckBody) {
         let unacked_base = match self.oldest_unacked() {
             Some(unacked_base) => unacked_base,
             None => {
@@ -63,7 +63,7 @@ impl ReliableSender {
     }
 
     /// Push a packet for reliable send.
-    pub fn push(&mut self, body: InnerBody) {
+    pub(super) fn push(&mut self, body: InnerBody) {
         let seqnum = self.next_seqnum;
         self.next_seqnum += 1;
         let body = body.into_reliable(seqnum as u16);
@@ -81,7 +81,7 @@ impl ReliableSender {
         }
     }
 
-    pub fn next_timeout(&self) -> Option<Instant> {
+    pub(super) fn next_timeout(&self) -> Option<Instant> {
         match self.timeouts.first() {
             Some((when, _)) => Some(*when + RESEND_RESOLUTION),
             None => None,
@@ -100,7 +100,7 @@ impl ReliableSender {
     ///
     /// TODO(paradust): Iterator to make this more efficient
     #[must_use]
-    pub fn pop(&mut self, now: Instant) -> Option<PacketBody> {
+    pub(super) fn pop(&mut self, now: Instant) -> Option<PacketBody> {
         // Prioritize expired resends before making new sends
         self.pop_resend(now).or_else(|| self.pop_queued(now))
     }

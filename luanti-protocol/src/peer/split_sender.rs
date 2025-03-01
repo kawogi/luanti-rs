@@ -10,12 +10,12 @@ use crate::wire::ser::Serialize;
 use crate::wire::ser::VecSerializer;
 use crate::wire::types::ProtocolContext;
 
-pub struct SplitSender {
+pub(super) struct SplitSender {
     next_seqnum: u64,
 }
 
 impl SplitSender {
-    pub fn new() -> Self {
+    pub(super) fn new() -> Self {
         Self {
             next_seqnum: SEQNUM_INITIAL as u64,
         }
@@ -24,7 +24,7 @@ impl SplitSender {
     /// Push a Command for transmission
     /// This will possibly split it into 1 or more packets.
     #[must_use]
-    pub fn push(
+    pub(super) fn push(
         &mut self,
         context: ProtocolContext,
         command: Command,

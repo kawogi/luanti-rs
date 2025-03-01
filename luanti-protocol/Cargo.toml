@@ -19,7 +19,7 @@ miniz_oxide.workspace = true
 rand.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["full"] }
-tokio-util = { workspace = true, features = ["full"] }
+# tokio-util = { workspace = true, features = ["full"] }
 zstd-safe = { workspace = true, features = ["std"] }
 
 [lints]

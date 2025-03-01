@@ -31,10 +31,10 @@ use luanti_protocol::peer::peer::PeerError;
 use luanti_protocol::wire::command::ToClientCommand;
 use std::net::SocketAddr;
 
-pub struct LuantiProxy {}
+pub(crate) struct LuantiProxy;
 
 impl LuantiProxy {
-    pub fn new(bind_addr: SocketAddr, forwarding_addr: SocketAddr, verbosity: u8) -> Self {
+    pub(crate) fn new(bind_addr: SocketAddr, forwarding_addr: SocketAddr, verbosity: u8) -> Self {
         let runner = LuantiProxyRunner {
             bind_addr,
             forwarding_addr,
@@ -69,7 +69,7 @@ impl LuantiProxyRunner {
     }
 }
 
-pub struct ProxyAdapterRunner {
+pub(crate) struct ProxyAdapterRunner {
     id: u64,
     conn: LuantiConnection,
     client: LuantiClient,
@@ -77,7 +77,7 @@ pub struct ProxyAdapterRunner {
 }
 
 impl ProxyAdapterRunner {
-    pub fn spawn(id: u64, conn: LuantiConnection, client: LuantiClient, verbosity: u8) {
+    pub(crate) fn spawn(id: u64, conn: LuantiConnection, client: LuantiClient, verbosity: u8) {
         let runner = ProxyAdapterRunner {
             id,
             conn,
@@ -87,7 +87,7 @@ impl ProxyAdapterRunner {
         tokio::spawn(async move { runner.run().await });
     }
 
-    pub async fn run(mut self) {
+    pub(crate) async fn run(mut self) {
         match self.run_inner().await {
             Ok(_) => (),
             Err(err) => {
@@ -108,7 +108,7 @@ impl ProxyAdapterRunner {
         }
     }
 
-    pub async fn run_inner(&mut self) -> Result<()> {
+    pub(crate) async fn run_inner(&mut self) -> Result<()> {
         loop {
             tokio::select! {
                 t = self.conn.recv() => {
@@ -125,7 +125,7 @@ impl ProxyAdapterRunner {
         }
     }
 
-    pub fn is_bulk_command<Cmd: CommandRef>(&self, command: &Cmd) -> bool {
+    pub(crate) fn is_bulk_command<Cmd: CommandRef>(&self, command: &Cmd) -> bool {
         if let Some(cmd) = command.toclient_ref() {
             match cmd {
                 ToClientCommand::Blockdata(_) => true,
@@ -137,7 +137,7 @@ impl ProxyAdapterRunner {
         }
     }
 
-    pub fn maybe_show<Cmd: CommandRef>(&self, command: &Cmd) {
+    pub(crate) fn maybe_show<Cmd: CommandRef>(&self, command: &Cmd) {
         let dir = match command.direction() {
             CommandDirection::ToClient => "S->C",
             CommandDirection::ToServer => "C->S",

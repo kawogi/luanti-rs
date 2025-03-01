@@ -220,15 +220,15 @@ struct MiniReader<'a> {
 }
 
 impl<'a> MiniReader<'a> {
-    pub fn new(input: &'a [u8], pos: usize) -> Self {
+    pub(crate) fn new(input: &'a [u8], pos: usize) -> Self {
         Self { input, pos }
     }
 
-    pub fn remaining(&self) -> usize {
+    pub(crate) fn remaining(&self) -> usize {
         self.input.len() - self.pos
     }
 
-    pub fn take(&mut self, count: usize) -> anyhow::Result<&'a [u8]> {
+    pub(crate) fn take(&mut self, count: usize) -> anyhow::Result<&'a [u8]> {
         if self.pos + count > self.input.len() {
             bail!("Luanti JSON string ended prematurely");
         }
@@ -237,7 +237,7 @@ impl<'a> MiniReader<'a> {
         Ok(result)
     }
 
-    pub fn take1(&mut self) -> anyhow::Result<u8> {
+    pub(crate) fn take1(&mut self) -> anyhow::Result<u8> {
         self.take(1).map(|ch| ch[0])
     }
 }

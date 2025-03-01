@@ -4,7 +4,7 @@ use crate::wire::packet::ReliableBody;
 use crate::wire::packet::SEQNUM_INITIAL;
 use std::collections::BTreeMap;
 
-pub struct ReliableReceiver {
+pub(super) struct ReliableReceiver {
     // Next sequence number in the reliable stream
     next_seqnum: u64,
 
@@ -15,7 +15,7 @@ pub struct ReliableReceiver {
 }
 
 impl ReliableReceiver {
-    pub fn new() -> Self {
+    pub(super) fn new() -> Self {
         ReliableReceiver {
             next_seqnum: SEQNUM_INITIAL as u64,
             buffer: BTreeMap::new(),
@@ -23,7 +23,7 @@ impl ReliableReceiver {
     }
 
     /// Push a reliable packet (from remote) into the receiver
-    pub fn push(&mut self, body: ReliableBody) {
+    pub(super) fn push(&mut self, body: ReliableBody) {
         let seqnum = rel_to_abs(self.next_seqnum, body.seqnum);
         if seqnum < self.next_seqnum {
             // Packet was already received and processed. Ignore
@@ -37,7 +37,7 @@ impl ReliableReceiver {
     // Pull a single body to be processed, from the reliable stream.
     // These are guaranteed to be in the same order as they were sent.
     // This should be called until exhaustion, after a push.
-    pub fn pop(&mut self) -> Option<InnerBody> {
+    pub(super) fn pop(&mut self) -> Option<InnerBody> {
         match self.buffer.first_key_value().map(|(seqnum, _)| *seqnum) {
             Some(seqnum) => {
                 if seqnum == self.next_seqnum {

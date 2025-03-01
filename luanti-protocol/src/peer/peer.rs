@@ -173,7 +173,10 @@ struct Channel {
 }
 
 impl Channel {
-    pub fn new(remote_is_server: bool, to_controller: UnboundedSender<Result<Command>>) -> Self {
+    pub(crate) fn new(
+        remote_is_server: bool,
+        to_controller: UnboundedSender<Result<Command>>,
+    ) -> Self {
         Self {
             unreliable_out: VecDeque::new(),
             reliable_in: ReliableReceiver::new(),
@@ -187,11 +190,11 @@ impl Channel {
         }
     }
 
-    pub fn update_now(&mut self, now: &Instant) {
+    pub(crate) fn update_now(&mut self, now: &Instant) {
         self.now = *now;
     }
 
-    pub fn update_context(
+    pub(crate) fn update_context(
         &mut self,
         recv_context: &ProtocolContext,
         send_context: &ProtocolContext,
@@ -202,7 +205,7 @@ impl Channel {
 
     /// Process a packet received from remote
     /// Possibly dispatching one or more Commands
-    pub async fn process(&mut self, body: PacketBody) -> anyhow::Result<()> {
+    pub(crate) async fn process(&mut self, body: PacketBody) -> anyhow::Result<()> {
         match body {
             PacketBody::Reliable(rb) => self.process_reliable(rb).await?,
             PacketBody::Inner(ib) => self.process_inner(ib).await?,
@@ -210,7 +213,7 @@ impl Channel {
         Ok(())
     }
 
-    pub async fn process_reliable(&mut self, body: ReliableBody) -> anyhow::Result<()> {
+    pub(crate) async fn process_reliable(&mut self, body: ReliableBody) -> Result<()> {
         self.reliable_in.push(body);
         while let Some(inner) = self.reliable_in.pop() {
             self.process_inner(inner).await?;
@@ -218,7 +221,7 @@ impl Channel {
         Ok(())
     }
 
-    pub async fn process_inner(&mut self, body: InnerBody) -> anyhow::Result<()> {
+    pub(crate) async fn process_inner(&mut self, body: InnerBody) -> anyhow::Result<()> {
         match body {
             InnerBody::Control(body) => self.process_control(body),
             InnerBody::Original(body) => self.process_command(body.command).await,
@@ -233,7 +236,7 @@ impl Channel {
         Ok(())
     }
 
-    pub fn process_control(&mut self, body: ControlBody) {
+    pub(crate) fn process_control(&mut self, body: ControlBody) {
         match body {
             ControlBody::Ack(ack) => {
                 self.reliable_out.process_ack(ack);
@@ -243,7 +246,7 @@ impl Channel {
         }
     }
 
-    pub async fn process_command(&mut self, command: Command) {
+    pub(crate) async fn process_command(&mut self, command: Command) {
         match self.to_controller.send(Ok(command)) {
             Ok(_) => (),
             Err(e) => panic!("Unexpected command channel shutdown: {:?}", e),
@@ -251,7 +254,7 @@ impl Channel {
     }
 
     /// Send command to remote
-    pub fn send(&mut self, reliable: bool, command: Command) -> anyhow::Result<()> {
+    pub(crate) fn send(&mut self, reliable: bool, command: Command) -> anyhow::Result<()> {
         let bodies = self.split_out.push(self.send_context, command)?;
         for body in bodies.into_iter() {
             self.send_inner(reliable, body);
@@ -259,7 +262,7 @@ impl Channel {
         Ok(())
     }
 
-    pub fn send_inner(&mut self, reliable: bool, body: InnerBody) {
+    pub(crate) fn send_inner(&mut self, reliable: bool, body: InnerBody) {
         if reliable {
             self.reliable_out.push(body);
         } else {
@@ -268,7 +271,7 @@ impl Channel {
     }
 
     /// Check if the channel has anything ready to send.
-    pub fn next_send(&mut self, now: Instant) -> Option<PacketBody> {
+    pub(crate) fn next_send(&mut self, now: Instant) -> Option<PacketBody> {
         match self.unreliable_out.pop_front() {
             Some(body) => return Some(PacketBody::Inner(body)),
             None => (),
@@ -281,7 +284,7 @@ impl Channel {
     }
 
     /// Only call after exhausting next_send()
-    pub fn next_timeout(&mut self) -> Option<Instant> {
+    pub(crate) fn next_timeout(&mut self) -> Option<Instant> {
         self.reliable_out.next_timeout()
     }
 }

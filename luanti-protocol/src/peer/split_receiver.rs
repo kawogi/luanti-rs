@@ -7,7 +7,7 @@ use std::time::Instant;
 
 const SPLIT_TIMEOUT: Duration = Duration::from_secs(30);
 
-pub struct IncomingBuffer {
+pub(super) struct IncomingBuffer {
     chunk_count: u16,
     chunks: BTreeMap<u16, Vec<u8>>,
     timeout: Instant,
@@ -49,12 +49,12 @@ impl IncomingBuffer {
     }
 }
 
-pub struct SplitReceiver {
+pub(super) struct SplitReceiver {
     pending: HashMap<u16, IncomingBuffer>,
 }
 
 impl SplitReceiver {
-    pub fn new() -> Self {
+    pub(super) fn new() -> Self {
         Self {
             pending: HashMap::new(),
         }
@@ -63,7 +63,11 @@ impl SplitReceiver {
     /// Push a split packet for reconstruction
     /// Returns the finished command if it is ready
     #[must_use]
-    pub fn push(&mut self, now: Instant, body: SplitBody) -> anyhow::Result<Option<Vec<u8>>> {
+    pub(super) fn push(
+        &mut self,
+        now: Instant,
+        body: SplitBody,
+    ) -> anyhow::Result<Option<Vec<u8>>> {
         let seqnum = body.seqnum;
         let should_take = self
             .pending
