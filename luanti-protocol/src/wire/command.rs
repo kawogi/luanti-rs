@@ -155,7 +155,7 @@ macro_rules! define_protocol {
         $crate::as_item! {
             impl Deserialize for $command_ty {
                 type Output = Self;
-                fn deserialize(deser: &mut Deserializer) -> DeserializeResult<Self> {
+                fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
                     let orig_buffer = deser.peek_all();
                     let command_id = u16::deserialize(deser)?;
                     let dir = deser.direction();
@@ -741,7 +741,7 @@ impl Serialize for Command {
 
 impl Deserialize for Command {
     type Output = Self;
-    fn deserialize(deser: &mut Deserializer) -> DeserializeResult<Self> {
+    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         Ok(match deser.direction() {
             CommandDirection::ToClient => Command::ToClient(ToClientCommand::deserialize(deser)?),
             CommandDirection::ToServer => Command::ToServer(ToServerCommand::deserialize(deser)?),

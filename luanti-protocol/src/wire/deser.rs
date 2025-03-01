@@ -172,5 +172,5 @@ impl<'a> Deserializer<'a> {
 pub trait Deserialize: Sized {
     /// Output should be Self, except for wrapper types.
     type Output;
-    fn deserialize(deser: &mut Deserializer) -> DeserializeResult<Self::Output>;
+    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self::Output>;
 }
