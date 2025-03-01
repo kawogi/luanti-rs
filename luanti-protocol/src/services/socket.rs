@@ -6,15 +6,15 @@ use std::net::SocketAddr;
 use tokio::io::Interest;
 use tokio::io::Ready;
 use tokio::net::UdpSocket;
-use tokio::sync::mpsc::unbounded_channel;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::mpsc::unbounded_channel;
 
 use crate::peer::peer::PeerToSocket;
 
-use crate::peer::peer::new_peer;
 use crate::peer::peer::Peer;
 use crate::peer::peer::PeerIO;
+use crate::peer::peer::new_peer;
 
 const MAX_DATAGRAM_SIZE: usize = 65536;
 

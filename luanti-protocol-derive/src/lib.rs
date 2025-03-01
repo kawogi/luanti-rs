@@ -5,12 +5,9 @@ extern crate syn;
 use proc_macro2::Ident;
 use proc_macro2::Literal;
 use proc_macro2::TokenStream;
+use quote::ToTokens;
 use quote::quote;
 use quote::quote_spanned;
-use quote::ToTokens;
-use syn::parse_macro_input;
-use syn::punctuated::Punctuated;
-use syn::spanned::Spanned;
 use syn::Data;
 use syn::DeriveInput;
 use syn::Field;
@@ -18,6 +15,9 @@ use syn::Generics;
 use syn::Index;
 use syn::Type;
 use syn::TypeParam;
+use syn::parse_macro_input;
+use syn::punctuated::Punctuated;
+use syn::spanned::Spanned;
 
 #[proc_macro_derive(LuantiSerialize, attributes(wrap))]
 pub fn luanti_serialize(input: proc_macro::TokenStream) -> proc_macro::TokenStream {

@@ -4,10 +4,10 @@
 
 use std::str::FromStr;
 
-use anyhow::bail;
 use anyhow::Result;
-use miniz_oxide::inflate::core::inflate_flags;
+use anyhow::bail;
 use miniz_oxide::inflate::core::DecompressorOxide;
+use miniz_oxide::inflate::core::inflate_flags;
 use zstd_safe::InBuffer;
 use zstd_safe::OutBuffer;
 
@@ -366,9 +366,9 @@ mod tests {
     use std::ops::Range;
 
     use super::*;
-    use rand::thread_rng;
     use rand::Rng;
     use rand::RngCore;
+    use rand::thread_rng;
     use rand::{self};
 
     fn rand_bytes(range: Range<usize>) -> Vec<u8> {
@@ -381,11 +381,13 @@ mod tests {
 
     fn serialize_to_vec(input: &[u8]) -> Vec<u8> {
         let mut out = Vec::new();
-        assert!(serialize_json_string_if_needed(&input, |chunk| {
-            out.extend(chunk);
-            Ok(())
-        })
-        .is_ok());
+        assert!(
+            serialize_json_string_if_needed(&input, |chunk| {
+                out.extend(chunk);
+                Ok(())
+            })
+            .is_ok()
+        );
         out
     }
 

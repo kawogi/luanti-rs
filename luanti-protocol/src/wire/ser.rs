@@ -1,5 +1,5 @@
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use std::num::TryFromIntError;
 
 use super::types::CommandDirection;

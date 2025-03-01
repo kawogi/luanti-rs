@@ -1,10 +1,10 @@
 use crate::wire::command::Command;
 use crate::wire::packet::InnerBody;
-use crate::wire::packet::OriginalBody;
-use crate::wire::packet::SplitBody;
 use crate::wire::packet::MAX_ORIGINAL_BODY_SIZE;
 use crate::wire::packet::MAX_SPLIT_BODY_SIZE;
+use crate::wire::packet::OriginalBody;
 use crate::wire::packet::SEQNUM_INITIAL;
+use crate::wire::packet::SplitBody;
 use crate::wire::ser::MockSerializer;
 use crate::wire::ser::Serialize;
 use crate::wire::ser::VecSerializer;

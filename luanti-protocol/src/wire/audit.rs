@@ -9,12 +9,12 @@
 //! But it should not be enabled normally, because a malformed packet from a
 //! broken/modified client will cause a crash.
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 
-use super::command::serialize_commandref;
 use super::command::CommandRef;
 use super::command::ToClientCommand;
+use super::command::serialize_commandref;
 use super::ser::VecSerializer;
 use super::types::ProtocolContext;
 use super::util::decompress_zlib;

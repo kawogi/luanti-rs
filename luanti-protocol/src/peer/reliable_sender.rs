@@ -160,8 +160,8 @@ mod tests {
     use std::collections::BTreeSet;
     use std::collections::HashMap;
 
-    use rand::thread_rng;
     use rand::Rng;
+    use rand::thread_rng;
 
     use crate::wire::command::*;
     use crate::wire::packet::OriginalBody;

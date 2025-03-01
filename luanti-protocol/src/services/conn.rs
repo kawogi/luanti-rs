@@ -7,8 +7,8 @@ use std::net::SocketAddr;
 use crate::peer::peer::Peer;
 use crate::wire::command::*;
 use crate::wire::types::*;
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 
 /// This is owned by the driver
 pub struct LuantiConnection {

@@ -6,9 +6,9 @@
 
 use std::net::SocketAddr;
 use std::time::Duration;
-use tokio::sync::mpsc::unbounded_channel;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::mpsc::unbounded_channel;
 
 use super::conn::LuantiConnection;
 use super::socket::LuantiSocket;
