@@ -93,7 +93,7 @@ impl Peer {
     /// Receive command from the peer
     /// Returns (channel, reliable flag, Command)
     /// If this fails, the peer is disconnected.
-    pub async fn recv(&mut self) -> anyhow::Result<Command> {
+    pub async fn recv(&mut self) -> Result<Command> {
         match self.recv.recv().await {
             Some(result) => result,
             None => bail!(PeerError::InternalPeerError),
@@ -205,7 +205,7 @@ impl Channel {
 
     /// Process a packet received from remote
     /// Possibly dispatching one or more Commands
-    pub(crate) async fn process(&mut self, body: PacketBody) -> anyhow::Result<()> {
+    pub(crate) async fn process(&mut self, body: PacketBody) -> Result<()> {
         match body {
             PacketBody::Reliable(rb) => self.process_reliable(rb).await?,
             PacketBody::Inner(ib) => self.process_inner(ib).await?,
@@ -221,7 +221,7 @@ impl Channel {
         Ok(())
     }
 
-    pub(crate) async fn process_inner(&mut self, body: InnerBody) -> anyhow::Result<()> {
+    pub(crate) async fn process_inner(&mut self, body: InnerBody) -> Result<()> {
         match body {
             InnerBody::Control(body) => self.process_control(body),
             InnerBody::Original(body) => self.process_command(body.command).await,
@@ -254,7 +254,7 @@ impl Channel {
     }
 
     /// Send command to remote
-    pub(crate) fn send(&mut self, reliable: bool, command: Command) -> anyhow::Result<()> {
+    pub(crate) fn send(&mut self, reliable: bool, command: Command) -> Result<()> {
         let bodies = self.split_out.push(self.send_context, command)?;
         for body in bodies.into_iter() {
             self.send_inner(reliable, body);
@@ -390,7 +390,7 @@ impl PeerRunner {
         }
     }
 
-    pub async fn run_inner(&mut self) -> anyhow::Result<()> {
+    pub async fn run_inner(&mut self) -> Result<()> {
         self.update_now();
 
         // 10 years ought to be enough
@@ -422,7 +422,7 @@ impl PeerRunner {
         }
     }
 
-    async fn handle_from_socket(&mut self, msg: Option<SocketToPeer>) -> anyhow::Result<()> {
+    async fn handle_from_socket(&mut self, msg: Option<SocketToPeer>) -> Result<()> {
         self.update_now();
         let msg = match msg {
             Some(msg) => msg,
@@ -439,7 +439,7 @@ impl PeerRunner {
         Ok(())
     }
 
-    async fn handle_from_controller(&mut self, command: Option<Command>) -> anyhow::Result<()> {
+    async fn handle_from_controller(&mut self, command: Option<Command>) -> Result<()> {
         self.update_now();
         let command = match command {
             Some(command) => command,
@@ -451,14 +451,14 @@ impl PeerRunner {
         Ok(())
     }
 
-    async fn handle_timeout(&mut self) -> anyhow::Result<()> {
+    async fn handle_timeout(&mut self) -> Result<()> {
         self.update_now();
         self.process_timeouts().await?;
         Ok(())
     }
 
     // Process a packet received over network
-    async fn process_packet(&mut self, pkt: Packet) -> anyhow::Result<()> {
+    async fn process_packet(&mut self, pkt: Packet) -> Result<()> {
         if !self.remote_is_server {
             // We're the server, assign the remote a peer_id.
             if self.remote_peer_id == 0 {
@@ -549,21 +549,21 @@ impl PeerRunner {
 
     /// If this is a reliable packet, send an ack right away
     /// using a higher-priority out-of-band channel.
-    async fn send_ack(&mut self, channel: u8, rb: &ReliableBody) -> anyhow::Result<()> {
+    async fn send_ack(&mut self, channel: u8, rb: &ReliableBody) -> Result<()> {
         let ack = AckBody::new(rb.seqnum).into_inner().into_unreliable();
         self.send_raw_priority(channel, ack).await?;
         Ok(())
     }
 
     /// Send command to remote
-    async fn send_command(&mut self, command: Command) -> anyhow::Result<()> {
+    async fn send_command(&mut self, command: Command) -> Result<()> {
         let channel = command.default_channel();
         let reliable = command.default_reliability();
         assert!((0..=2).contains(&channel));
         self.channels[channel as usize].send(reliable, command)
     }
 
-    async fn process_timeouts(&mut self) -> anyhow::Result<()> {
+    async fn process_timeouts(&mut self) -> Result<()> {
         Ok(())
     }
 }

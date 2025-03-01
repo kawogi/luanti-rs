@@ -32,9 +32,9 @@ macro_rules! itos {
 
 ///     let val: u16 = stoi(&s);
 ///
-pub fn stoi<T: FromStr>(bytes: &[u8]) -> anyhow::Result<T>
+pub fn stoi<T: FromStr>(bytes: &[u8]) -> Result<T>
 where
-    <T as FromStr>::Err: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
+    <T as FromStr>::Err: std::error::Error + Sync + Send + 'static,
 {
     let str = std::str::from_utf8(bytes)?;
     Ok(str.parse::<T>()?)
@@ -57,9 +57,9 @@ macro_rules! stoi {
 
 ///
 /// Streaming Zstd compress
-pub fn zstd_compress<F>(input: &[u8], mut write: F) -> anyhow::Result<()>
+pub fn zstd_compress<F>(input: &[u8], mut write: F) -> Result<()>
 where
-    F: FnMut(&[u8]) -> anyhow::Result<()>,
+    F: FnMut(&[u8]) -> Result<()>,
 {
     let mut ctx = zstd_safe::CCtx::create();
     const BUFSIZE: usize = 16384;
@@ -103,9 +103,9 @@ where
 /// The input is allowed to contain more data than Zstd will consume.
 /// Returns the actual number of bytes consumed from the input.
 ///
-pub fn zstd_decompress<F>(input: &[u8], mut write: F) -> anyhow::Result<usize>
+pub fn zstd_decompress<F>(input: &[u8], mut write: F) -> Result<usize>
 where
-    F: FnMut(&[u8]) -> anyhow::Result<()>,
+    F: FnMut(&[u8]) -> Result<()>,
 {
     let mut ctx = zstd_safe::DCtx::create();
     const BUFSIZE: usize = 16384;
@@ -134,9 +134,9 @@ where
 }
 
 /// serializeJsonStringIfNeeded
-pub fn serialize_json_string_if_needed<W>(input: &[u8], mut write: W) -> anyhow::Result<()>
+pub fn serialize_json_string_if_needed<W>(input: &[u8], mut write: W) -> Result<()>
 where
-    W: FnMut(&[u8]) -> anyhow::Result<()>,
+    W: FnMut(&[u8]) -> Result<()>,
 {
     if input.len() == 0
         || input
@@ -149,9 +149,9 @@ where
     }
 }
 
-pub fn serialize_json_string<W>(input: &[u8], mut write: W) -> anyhow::Result<()>
+pub fn serialize_json_string<W>(input: &[u8], mut write: W) -> Result<()>
 where
-    W: FnMut(&[u8]) -> anyhow::Result<()>,
+    W: FnMut(&[u8]) -> Result<()>,
 {
     write(b"\"")?;
     for ch in input {
@@ -183,7 +183,7 @@ pub fn to_hex(index: u8) -> u8 {
     HEX_CHARS[index as usize]
 }
 
-pub fn from_hex(hex_digit: u8) -> anyhow::Result<u8> {
+pub fn from_hex(hex_digit: u8) -> Result<u8> {
     if hex_digit >= b'0' && hex_digit <= b'9' {
         Ok(hex_digit - b'0')
     } else if hex_digit >= b'a' && hex_digit <= b'f' {
@@ -227,7 +227,7 @@ impl<'a> MiniReader<'a> {
         self.input.len() - self.pos
     }
 
-    pub(crate) fn take(&mut self, count: usize) -> anyhow::Result<&'a [u8]> {
+    pub(crate) fn take(&mut self, count: usize) -> Result<&'a [u8]> {
         if self.pos + count > self.input.len() {
             bail!("Luanti JSON string ended prematurely");
         }
@@ -236,7 +236,7 @@ impl<'a> MiniReader<'a> {
         Ok(result)
     }
 
-    pub(crate) fn take1(&mut self) -> anyhow::Result<u8> {
+    pub(crate) fn take1(&mut self) -> Result<u8> {
         self.take(1).map(|ch| ch[0])
     }
 }

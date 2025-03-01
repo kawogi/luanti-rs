@@ -80,7 +80,7 @@ fn get_wrapped_type(field: &Field) -> Type {
 /// For enum, tags are assumed u8, consecutive, starting with 0.
 fn make_serialize_body(input_name: &Ident, data: &Data) -> TokenStream {
     match *data {
-        syn::Data::Struct(ref data) => match data.fields {
+        Data::Struct(ref data) => match data.fields {
             syn::Fields::Named(ref fields) => {
                 let recurse = fields.named.iter().map(|field| {
                     let name = &field.ident;
@@ -109,7 +109,7 @@ fn make_serialize_body(input_name: &Ident, data: &Data) -> TokenStream {
                 quote! {}
             }
         },
-        syn::Data::Enum(ref body) => {
+        Data::Enum(ref body) => {
             let recurse = body.variants.iter().enumerate().map(|(index, variant)| {
                 if !variant.fields.is_empty() {
                     quote_spanned! {variant.span() =>
@@ -135,13 +135,13 @@ fn make_serialize_body(input_name: &Ident, data: &Data) -> TokenStream {
                     u8::serialize(&tag, ser)?;
             }
         }
-        syn::Data::Union(_) => unimplemented!(),
+        Data::Union(_) => unimplemented!(),
     }
 }
 
 fn make_deserialize_body(input_name: &Ident, data: &Data) -> TokenStream {
     match *data {
-        syn::Data::Struct(ref data) => {
+        Data::Struct(ref data) => {
             let inner = match data.fields {
                 syn::Fields::Named(ref fields) => {
                     let recurse = fields.named.iter().map(|field| {
@@ -177,7 +177,7 @@ fn make_deserialize_body(input_name: &Ident, data: &Data) -> TokenStream {
                 })
             }
         }
-        syn::Data::Enum(ref body) => {
+        Data::Enum(ref body) => {
             let recurse = body.variants.iter().enumerate().map(|(index, variant)| {
                 if !variant.fields.is_empty() {
                     quote_spanned! {variant.span() =>
@@ -207,7 +207,7 @@ fn make_deserialize_body(input_name: &Ident, data: &Data) -> TokenStream {
                     })
             }
         }
-        syn::Data::Union(_) => unimplemented!(),
+        Data::Union(_) => unimplemented!(),
     }
 }
 
