@@ -291,11 +291,7 @@ mod tests {
                 let resend_delay = info.sent_time[i] - info.sent_time[i - 1];
                 let delta =
                     ((resend_delay.as_millis() as i64) - (RESEND_TIMEOUT_START_MS as i64)).abs();
-                assert!(
-                    delta < 100,
-                    "Unexpected resend interval: {:?}",
-                    resend_delay
-                );
+                assert!(delta < 100, "Unexpected resend interval: {resend_delay:?}");
             }
         }
     }

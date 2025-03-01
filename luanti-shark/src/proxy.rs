@@ -114,12 +114,12 @@ impl ProxyAdapterRunner {
                 command = self.conn.recv() => {
                     let command = command?;
                     self.maybe_show(&command);
-                    self.client.send(command).await?;
+                    self.client.send(command)?;
                 },
                 command = self.client.recv() => {
                     let command = command?;
                     self.maybe_show(&command);
-                    self.conn.send(command).await?;
+                    self.conn.send(command)?;
                 }
             }
         }

@@ -35,7 +35,7 @@ impl LuantiClient {
     }
 
     /// If this fails, the client has disconnected.
-    pub async fn send(&mut self, command: ToServerCommand) -> anyhow::Result<()> {
-        self.remote_peer.send(Command::ToServer(command)).await
+    pub fn send(&mut self, command: ToServerCommand) -> anyhow::Result<()> {
+        self.remote_peer.send(Command::ToServer(command))
     }
 }

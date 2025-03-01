@@ -27,12 +27,12 @@ impl LuantiConnection {
     }
 
     /// Send a command to the client
-    pub async fn send(&self, command: ToClientCommand) -> Result<()> {
-        self.peer.send(Command::ToClient(command)).await
+    pub fn send(&self, command: ToClientCommand) -> Result<()> {
+        self.peer.send(Command::ToClient(command))
     }
 
-    pub async fn send_access_denied(&self, code: AccessDeniedCode) -> Result<()> {
-        self.send(AccessDeniedSpec { code }.into()).await
+    pub fn send_access_denied(&self, code: AccessDeniedCode) -> Result<()> {
+        self.send(AccessDeniedSpec { code }.into())
     }
 
     /// Await a command from the peer
@@ -49,4 +49,4 @@ impl LuantiConnection {
 }
 
 /// This is owned by the `luanti_protocol`
-pub struct LuantiConnectionRecord {}
+pub struct LuantiConnectionRecord;

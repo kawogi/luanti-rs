@@ -61,9 +61,9 @@ async fn real_main() -> anyhow::Result<()> {
 
     let bind_addr: SocketAddr = if let Some(listen_port) = args.listen {
         if args.target.is_ipv4() {
-            format!("0.0.0.0:{}", listen_port).parse()?
+            format!("0.0.0.0:{listen_port}").parse()?
         } else {
-            format!("[::]:{}", listen_port).parse()?
+            format!("[::]:{listen_port}").parse()?
         }
     } else if let Some(bind_addr) = args.bind {
         bind_addr

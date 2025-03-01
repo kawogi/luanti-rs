@@ -4,7 +4,9 @@
     missing_docs,
     // clippy::missing_panics_doc,
     // clippy::missing_errors_doc,
-    reason = "//TODO add documentation"
+    clippy::unwrap_used,
+    clippy::unimplemented,
+    reason = "//TODO add documentation and improve error handling"
 )]
 
 use proc_macro2::Ident;

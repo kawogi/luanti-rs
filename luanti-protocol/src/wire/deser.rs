@@ -26,19 +26,19 @@ pub enum DeserializeError {
 
 impl From<Utf8Error> for DeserializeError {
     fn from(other: Utf8Error) -> DeserializeError {
-        DeserializeError::InvalidValue(format!("Utf8Error {:?}", other))
+        DeserializeError::InvalidValue(format!("Utf8Error {other:?}"))
     }
 }
 
 impl From<ParseIntError> for DeserializeError {
     fn from(other: ParseIntError) -> DeserializeError {
-        DeserializeError::InvalidValue(format!("ParseIntError {:?}", other))
+        DeserializeError::InvalidValue(format!("ParseIntError {other:?}"))
     }
 }
 
 impl From<anyhow::Error> for DeserializeError {
     fn from(value: anyhow::Error) -> Self {
-        DeserializeError::OtherError(format!("OtherError {:?}", value))
+        DeserializeError::OtherError(format!("OtherError {value:?}"))
     }
 }
 

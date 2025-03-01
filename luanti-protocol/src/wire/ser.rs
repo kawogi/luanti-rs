@@ -17,7 +17,7 @@ pub enum SerializeError {
 
 impl From<TryFromIntError> for SerializeError {
     fn from(other: TryFromIntError) -> SerializeError {
-        SerializeError::InvalidValue(format!("{:?}", other))
+        SerializeError::InvalidValue(format!("{other:?}"))
     }
 }
 

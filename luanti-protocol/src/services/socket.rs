@@ -120,7 +120,7 @@ impl LuantiSocketRunner {
             }
             // rust-analyzer chokes on code inside select!, so keep it to a minimum.
             tokio::select! {
-                ready = self.socket.ready(interest) => self.handle_socket_io(ready, &mut buf).await?,
+                ready = self.socket.ready(interest) => self.handle_socket_io(ready, &mut buf)?,
                 msg = self.peer_rx.recv() => self.handle_peer_message(msg),
                 address = self.knock_rx.recv(), if !knock_closed => {
                     match address {
@@ -136,7 +136,7 @@ impl LuantiSocketRunner {
         }
     }
 
-    async fn handle_socket_io(
+    fn handle_socket_io(
         &mut self,
         ready: tokio::io::Result<Ready>,
         buf: &mut [u8],
@@ -151,7 +151,7 @@ impl LuantiSocketRunner {
                     }
                 }
                 Err(ref error) if error.kind() == std::io::ErrorKind::WouldBlock => (),
-                Err(error) => panic!("Unexpected socket error: {:?}", error),
+                Err(error) => panic!("Unexpected socket error: {error:?}"),
             };
         }
         if ready.is_writable() && !self.outgoing.is_empty() {
@@ -161,7 +161,7 @@ impl LuantiSocketRunner {
                 Err(ref error) if error.kind() == std::io::ErrorKind::WouldBlock => {
                     self.outgoing.push_back((addr, data));
                 }
-                Err(error) => panic!("Unexpected socket error: {:?}", error),
+                Err(error) => panic!("Unexpected socket error: {error:?}"),
             }
         }
         Ok(())

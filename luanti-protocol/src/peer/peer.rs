@@ -88,7 +88,7 @@ impl Peer {
 
     /// Send command to peer
     /// If this fails, the peer has disconnected.
-    pub async fn send(&self, command: Command) -> Result<()> {
+    pub fn send(&self, command: Command) -> Result<()> {
         self.send.send(command)?;
         Ok(())
     }
@@ -215,31 +215,31 @@ impl Channel {
 
     /// Process a packet received from remote
     /// Possibly dispatching one or more Commands
-    pub(crate) async fn process(&mut self, body: PacketBody) -> Result<()> {
+    pub(crate) fn process(&mut self, body: PacketBody) -> Result<()> {
         match body {
-            PacketBody::Reliable(rb) => self.process_reliable(rb).await?,
-            PacketBody::Inner(ib) => self.process_inner(ib).await?,
+            PacketBody::Reliable(rb) => self.process_reliable(rb)?,
+            PacketBody::Inner(ib) => self.process_inner(ib)?,
         }
         Ok(())
     }
 
-    pub(crate) async fn process_reliable(&mut self, body: ReliableBody) -> Result<()> {
+    pub(crate) fn process_reliable(&mut self, body: ReliableBody) -> Result<()> {
         self.reliable_in.push(body);
         while let Some(inner) = self.reliable_in.pop() {
-            self.process_inner(inner).await?;
+            self.process_inner(inner)?;
         }
         Ok(())
     }
 
-    pub(crate) async fn process_inner(&mut self, body: InnerBody) -> Result<()> {
+    pub(crate) fn process_inner(&mut self, body: InnerBody) -> Result<()> {
         match body {
             InnerBody::Control(body) => self.process_control(body),
-            InnerBody::Original(body) => self.process_command(body.command).await,
+            InnerBody::Original(body) => self.process_command(body.command),
             InnerBody::Split(body) => {
                 if let Some(payload) = self.split_in.push(self.now, body)? {
                     let mut buf = Deserializer::new(self.recv_context, &payload);
                     let command = Command::deserialize(&mut buf)?;
-                    self.process_command(command).await;
+                    self.process_command(command);
                 }
             }
         }
@@ -256,10 +256,10 @@ impl Channel {
         }
     }
 
-    pub(crate) async fn process_command(&mut self, command: Command) {
+    pub(crate) fn process_command(&mut self, command: Command) {
         match self.to_controller.send(Ok(command)) {
             Ok(_) => (),
-            Err(error) => panic!("Unexpected command channel shutdown: {:?}", error),
+            Err(error) => panic!("Unexpected command channel shutdown: {error:?}"),
         }
     }
 
@@ -360,14 +360,14 @@ impl PeerRunner {
         Ok(serializer.take())
     }
 
-    pub async fn send_raw(&mut self, channel: u8, body: PacketBody) -> Result<()> {
+    pub fn send_raw(&mut self, channel: u8, body: PacketBody) -> Result<()> {
         let raw = self.serialize_for_send(channel, body)?;
         self.to_socket
             .send(PeerToSocket::Send(self.remote_addr, raw))?;
         Ok(())
     }
 
-    pub async fn send_raw_priority(&mut self, channel: u8, body: PacketBody) -> Result<()> {
+    pub fn send_raw_priority(&mut self, channel: u8, body: PacketBody) -> Result<()> {
         let raw = self.serialize_for_send(channel, body)?;
         self.to_socket
             .send(PeerToSocket::SendImmediate(self.remote_addr, raw))?;
@@ -392,7 +392,6 @@ impl PeerRunner {
                     reason = "// TODO clarify error condition and handling"
                 )]
                 self.send_raw(0, (ControlBody::Disconnect).into_inner().into_unreliable())
-                    .await
                     .unwrap();
             }
             #[expect(
@@ -426,7 +425,7 @@ impl PeerRunner {
                 loop {
                     let pkt = self.channels[num].next_send(self.now);
                     match pkt {
-                        Some(body) => self.send_raw(num as u8, body).await?,
+                        Some(body) => self.send_raw(num as u8, body)?,
                         None => break,
                     }
                 }
@@ -437,14 +436,14 @@ impl PeerRunner {
 
             // rust-analyzer chokes on code inside select!, so keep it to a minimum.
             tokio::select! {
-                msg = self.from_socket.recv() => self.handle_from_socket(msg).await?,
-                command = self.from_controller.recv() => self.handle_from_controller(command).await?,
-                _ = tokio::time::sleep_until(next_wakeup.into()) => self.handle_timeout().await?,
+                msg = self.from_socket.recv() => self.handle_from_socket(msg)?,
+                command = self.from_controller.recv() => self.handle_from_controller(command)?,
+                _ = tokio::time::sleep_until(next_wakeup.into()) => self.handle_timeout()?,
             }
         }
     }
 
-    async fn handle_from_socket(&mut self, msg: Option<SocketToPeer>) -> Result<()> {
+    fn handle_from_socket(&mut self, msg: Option<SocketToPeer>) -> Result<()> {
         self.update_now();
         let msg = match msg {
             Some(msg) => msg,
@@ -455,13 +454,13 @@ impl PeerRunner {
                 let mut deser = Deserializer::new(self.recv_context, &buf);
                 let pkt = Packet::deserialize(&mut deser)?;
                 self.last_received = self.now;
-                self.process_packet(pkt).await?;
+                self.process_packet(pkt)?;
             }
         };
         Ok(())
     }
 
-    async fn handle_from_controller(&mut self, command: Option<Command>) -> Result<()> {
+    fn handle_from_controller(&mut self, command: Option<Command>) -> Result<()> {
         self.update_now();
         let command = match command {
             Some(command) => command,
@@ -469,18 +468,18 @@ impl PeerRunner {
         };
         self.sniff_hello(&command);
 
-        self.send_command(command).await?;
+        self.send_command(command)?;
         Ok(())
     }
 
-    async fn handle_timeout(&mut self) -> Result<()> {
+    fn handle_timeout(&mut self) -> Result<()> {
         self.update_now();
-        self.process_timeouts().await?;
+        self.process_timeouts()?;
         Ok(())
     }
 
     // Process a packet received over network
-    async fn process_packet(&mut self, pkt: Packet) -> Result<()> {
+    fn process_packet(&mut self, pkt: Packet) -> Result<()> {
         if !self.remote_is_server {
             // We're the server, assign the remote a peer_id.
             if self.remote_peer_id == 0 {
@@ -512,7 +511,7 @@ impl PeerRunner {
 
         // Send ack right away
         if let Some(rb) = pkt.as_reliable() {
-            self.send_ack(pkt.channel, rb).await?;
+            self.send_ack(pkt.channel, rb)?;
         }
 
         // Certain control packets need to be handled at the
@@ -547,7 +546,7 @@ impl PeerRunner {
             self.sniff_hello(command);
         }
 
-        self.channels[pkt.channel as usize].process(pkt.body).await
+        self.channels[pkt.channel as usize].process(pkt.body)
     }
 
     fn sniff_hello(&mut self, command: &Command) {
@@ -571,21 +570,21 @@ impl PeerRunner {
 
     /// If this is a reliable packet, send an ack right away
     /// using a higher-priority out-of-band channel.
-    async fn send_ack(&mut self, channel: u8, rb: &ReliableBody) -> Result<()> {
+    fn send_ack(&mut self, channel: u8, rb: &ReliableBody) -> Result<()> {
         let ack = AckBody::new(rb.seqnum).into_inner().into_unreliable();
-        self.send_raw_priority(channel, ack).await?;
+        self.send_raw_priority(channel, ack)?;
         Ok(())
     }
 
     /// Send command to remote
-    async fn send_command(&mut self, command: Command) -> Result<()> {
+    fn send_command(&mut self, command: Command) -> Result<()> {
         let channel = command.default_channel();
         let reliable = command.default_reliability();
         assert!((0..=2).contains(&channel), "channel id out of range");
         self.channels[channel as usize].send(reliable, command)
     }
 
-    async fn process_timeouts(&mut self) -> Result<()> {
+    fn process_timeouts(&mut self) -> Result<()> {
         Ok(())
     }
 }
