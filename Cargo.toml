@@ -21,18 +21,17 @@ luanti-shark = { path = "luanti-shark" }
 
 # from crates.io
 
-anyhow = { version = "1.0.69" }
-clap = { version = "4.1.8" }
-miniz_oxide = "0.6.2"
-proc-macro2 = "1.0.51"
-quote = "1.0.23"
-rand = "0.8.5"
-syn = { version = "1.0.107" }
-thiserror = "1.0.38"
-tokio = { version = "1.21.2" }
-tokio-util = { version = "0.7.4" }
-zstd-safe = { version = "6.0.4" }
-
+anyhow = { version = "1" }
+clap = { version = "4" }
+miniz_oxide = "0.8"
+proc-macro2 = "1"
+quote = "1"
+rand = "0.9"
+syn = { version = "2" }
+thiserror = "2"
+tokio = { version = "1" }
+tokio-util = { version = "0.7" }
+zstd-safe = { version = "7" }
 
 [profile.dev]
 panic = "unwind"

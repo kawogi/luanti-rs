@@ -69,7 +69,7 @@ pub fn luanti_deserialize(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 fn get_wrapped_type(f: &Field) -> Type {
     let mut ty = f.ty.clone();
     for attr in f.attrs.iter() {
-        if attr.path.is_ident("wrap") {
+        if attr.path().is_ident("wrap") {
             ty = attr.parse_args::<Type>().unwrap();
         }
     }

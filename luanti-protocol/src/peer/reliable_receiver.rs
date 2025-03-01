@@ -60,6 +60,7 @@ mod tests {
     use crate::wire::packet::OriginalBody;
     use crate::wire::packet::PacketBody;
     use rand::prelude::*;
+    use rand::rng;
 
     use super::*;
 
@@ -104,7 +105,7 @@ mod tests {
                     }
                 })
                 .collect();
-            pkts.shuffle(&mut thread_rng());
+            pkts.shuffle(&mut rng());
 
             let mut out: Vec<u32> = Vec::new();
             for pkt in pkts.into_iter() {

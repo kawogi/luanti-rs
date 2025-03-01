@@ -10,14 +10,14 @@
 //! This also handles control packets. In particular, it keeps track
 //! of the assigned peer id and includes it on every packet.
 //!  
-use anyhow::bail;
 use anyhow::Result;
-use rand::rngs::StdRng;
+use anyhow::bail;
 use rand::Rng;
 use rand::SeedableRng;
-use tokio::sync::mpsc::unbounded_channel;
+use rand::rngs::StdRng;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::mpsc::unbounded_channel;
 
 use crate::wire::command::Command;
 use crate::wire::command::CommandProperties;
@@ -138,7 +138,7 @@ pub fn new_peer(
             Channel::new(remote_is_server, peer_recv_tx.clone()),
             Channel::new(remote_is_server, peer_recv_tx.clone()),
         ],
-        rng: StdRng::from_entropy(),
+        rng: StdRng::from_os_rng(),
         now: Instant::now(),
         last_received: Instant::now(),
     };
