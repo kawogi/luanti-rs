@@ -215,7 +215,7 @@ impl Serializer for VecSerializer {
     }
 }
 
-/// MockSerializer
+/// `MockSerializer`
 /// Computes the size of the serialized output without storing it
 pub struct MockSerializer {
     context: ProtocolContext,

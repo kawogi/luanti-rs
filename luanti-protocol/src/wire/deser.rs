@@ -138,8 +138,8 @@ impl<'a> Deserializer<'a> {
     }
 
     /// Take bytes until whitespace or end of stream
-    /// If skip_whitespace is true, skips initial whitespace first.
-    /// If skip_whitespace is false, and the next byte is a space,
+    /// If `skip_whitespace` is true, skips initial whitespace first.
+    /// If `skip_whitespace` is false, and the next byte is a space,
     /// nothing is taken, and the returned will be empty.
     pub fn take_word(&mut self, skip_whitespace: bool) -> &'a [u8] {
         if skip_whitespace {

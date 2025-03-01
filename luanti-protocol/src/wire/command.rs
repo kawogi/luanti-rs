@@ -642,7 +642,7 @@ pub trait CommandProperties {
     fn command_name(&self) -> &'static str;
 }
 
-/// This only exists to make "audit_command" generic, but it
+/// This only exists to make `audit_command` generic, but it
 /// wasn't as clean as I hoped.
 /// TODO(paradust): Factor this out.
 pub trait CommandRef: CommandProperties + std::fmt::Debug {

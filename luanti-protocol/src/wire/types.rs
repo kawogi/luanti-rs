@@ -1,6 +1,6 @@
 //! Luanti data types used inside of Commands / Packets.
 //!
-//! Derive macros LuantiSerialize and LuantiDeserialize are used to
+//! Derive macros `LuantiSerialize` and `LuantiDeserialize` are used to
 //! produce ser/deser methods for many of the structs below. The order of
 //! the fields inside the struct determines the order in which they are
 //! serialized/deserialized, so be careful modifying anything below.
@@ -358,7 +358,7 @@ impl Deserialize for LongString {
     }
 }
 
-/// Corresponds to std::wstring in C++ land
+/// Corresponds to `std::wstring` in C++ land
 #[derive(Debug, Clone, PartialEq)]
 pub struct WString(PhantomData<String>);
 
@@ -764,7 +764,7 @@ pub struct AddedObject {
     pub init_data: GenericInitData,
 }
 
-/// This corresponds to GenericCAO::Initialize in Luanti
+/// This corresponds to `GenericCAO::Initialize` in Luanti
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct GenericInitData {
     pub version: u8,
@@ -2252,7 +2252,7 @@ pub struct NodeDefManager {
 }
 
 /// The way this structure is encoded is really unusual, in order to
-/// allow the ContentFeatures to be extended in the future without
+/// allow the `ContentFeatures` to be extended in the future without
 /// changing the encoding.
 impl Serialize for NodeDefManager {
     type Input = Self;
@@ -2320,11 +2320,11 @@ pub struct MapBlock {
 }
 
 impl Serialize for MapBlock {
-    /// MapBlock is a bit of a nightmare, because the compression algorithm
+    /// `MapBlock` is a bit of a nightmare, because the compression algorithm
     /// and where the compression is applied (to the whole struct, or to
     /// parts of it) depends on the serialization format version.
     ///
-    /// For now, only ser_fmt >= 28 is supported.
+    /// For now, only `ser_fmt` >= 28 is supported.
     /// For ver 28, only the nodes and nodemeta are compressed using zlib.
     /// For >= 29, the entire thing is compressed using zstd.
     type Input = Self;
@@ -2372,7 +2372,7 @@ impl Serialize for MapBlock {
 }
 
 ///
-/// This is a helper for MapBlock ser/deser
+/// This is a helper for `MapBlock` ser/deser
 /// Not exposed publicly.
 struct MapBlockHeader {
     pub is_underground: bool,
@@ -2556,7 +2556,7 @@ impl Deserialize for MapNodesBulk {
 }
 
 /// The default serialization is used for single nodes.
-/// But for transferring entire blocks, MapNodeBulk is used instead.
+/// But for transferring entire blocks, `MapNodeBulk` is used instead.
 #[derive(Debug, Clone, Copy, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct MapNode {
     pub param0: u16,
@@ -2649,7 +2649,7 @@ pub struct AbsBlockPos {
     pos: v3s16,
 }
 
-/// BlockPos addresses a node within a block
+/// `BlockPos` addresses a node within a block
 /// It is equivalent to (16*z + y)*16 + x, where x,y,z are from 0 to 15.
 #[derive(Debug, Clone, PartialEq)]
 pub struct BlockPos {
@@ -3067,8 +3067,8 @@ impl Deserialize for ItemStackMetadata {
     }
 }
 
-/// This is the way ADD_PARTICLESPAWNER is serialized.
-/// It seems to be an older version of ParticleParameters
+/// This is the way `ADD_PARTICLESPAWNER` is serialized.
+/// It seems to be an older version of `ParticleParameters`
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AddParticleSpawnerLegacy {
     pub amount: u16,
@@ -3195,7 +3195,7 @@ pub struct PlaneAttractor {
 }
 
 /// This is serialized as part of a combined 'flags' field on
-/// ServerParticleTexture, so it doesn't implement the  methods
+/// `ServerParticleTexture`, so it doesn't implement the  methods
 /// on its own.
 #[derive(Debug, Clone, PartialEq)]
 pub enum BlendMode {
@@ -3334,8 +3334,8 @@ where
     pub end: T,
 }
 
-/// This is the send format used by SendSpawnParticle
-/// See ParticleParameters::serialize
+/// This is the send format used by `SendSpawnParticle`
+/// See `ParticleParameters::serialize`
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct ParticleParameters {
     pub pos: v3f,

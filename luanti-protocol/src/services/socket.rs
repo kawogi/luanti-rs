@@ -20,7 +20,7 @@ use crate::peer::peer::new_peer;
 const MAX_DATAGRAM_SIZE: usize = 65536;
 
 ///
-/// LuantiSocket
+/// `LuantiSocket`
 ///
 /// Handles the raw UDP socket, protocol validation, separating packets by peer,
 /// reliable packet send, and split packets.
@@ -35,7 +35,7 @@ pub struct LuantiSocket {
 }
 
 impl LuantiSocket {
-    /// Create a new LuantiSocket and bind to address.
+    /// Create a new `LuantiSocket` and bind to address.
     /// The address may be V4 or V6.
     /// To select a random bind port, use 0.0.0.0:0 or [::]:0
     pub async fn new(bind_addr: SocketAddr, for_server: bool) -> Result<Self, Error> {

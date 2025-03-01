@@ -1,6 +1,6 @@
 //!
-//! For now, the LuantiServer is just a wrapper around a LuantiSocket,
-//! and a LuantiConnection is just a wrapper around a SocketPeer.
+//! For now, the `LuantiServer` is just a wrapper around a `LuantiSocket`,
+//! and a `LuantiConnection` is just a wrapper around a `SocketPeer`.
 //!
 //! In the future it may provide its own abstraction above the Luanti Commands.
 

@@ -319,7 +319,7 @@ pub fn compress_zlib(uncompressed: &[u8]) -> Vec<u8> {
 
 /// This method must detect the end of the stream.
 /// 'uncompressed' may have more data past the end of the zlib stream
-/// Returns (bytes_consumed, uncompressed_data)
+/// Returns (`bytes_consumed`, `uncompressed_data`)
 pub fn decompress_zlib(input: &[u8]) -> Result<(usize, Vec<u8>)> {
     let flags = inflate_flags::TINFL_FLAG_PARSE_ZLIB_HEADER
         | inflate_flags::TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF;

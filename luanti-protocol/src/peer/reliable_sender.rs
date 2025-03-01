@@ -93,7 +93,7 @@ impl ReliableSender {
     /// This should be repeatedly called to exhaustion every time there's
     /// a push or when a timeout occurs.
     ///
-    /// For the timeout logic to be correct, the returned PacketBody must be sent right away.
+    /// For the timeout logic to be correct, the returned `PacketBody` must be sent right away.
     ///
     /// When the send window has been exhausted, this will return None, even if there
     /// is more send, when the send window has been exhausted.

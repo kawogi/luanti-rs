@@ -1,4 +1,4 @@
-//! LuantiConnection
+//! `LuantiConnection`
 //!
 //!
 //!
@@ -48,5 +48,5 @@ impl LuantiConnection {
     }
 }
 
-/// This is owned by the luanti_protocol
+/// This is owned by the `luanti_protocol`
 pub struct LuantiConnectionRecord {}

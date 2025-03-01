@@ -1,7 +1,7 @@
 //!
 //! Peer
 //!
-//! Turns a datagram stream (e.g. from a UdpSocket) into a stream
+//! Turns a datagram stream (e.g. from a `UdpSocket`) into a stream
 //! of Luanti Commands, and vice versa.
 //!
 //! This handles reliable transport, as well as packet splitting and
@@ -153,7 +153,7 @@ pub fn new_peer(
 
 impl PeerIO {
     /// Parse the packet and send it to the runner
-    /// Called by the LuantiSocket when a packet arrives for us
+    /// Called by the `LuantiSocket` when a packet arrives for us
     ///
     pub fn send(&mut self, data: &[u8]) {
         //TODO Add backpressure
@@ -293,7 +293,7 @@ impl Channel {
         None
     }
 
-    /// Only call after exhausting next_send()
+    /// Only call after exhausting `next_send()`
     pub(crate) fn next_timeout(&mut self) -> Option<Instant> {
         self.reliable_out.next_timeout()
     }
