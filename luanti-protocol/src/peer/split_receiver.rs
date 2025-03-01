@@ -39,7 +39,7 @@ impl IncomingBuffer {
 
     fn take(self) -> anyhow::Result<Vec<u8>> {
         assert!(self.chunks.len() == self.chunk_count as usize);
-        let total_size: usize = self.chunks.iter().map(|v| v.1.len()).sum();
+        let total_size: usize = self.chunks.iter().map(|(_, chunk)| chunk.len()).sum();
         let mut buf = Vec::with_capacity(total_size);
         for (_, chunk) in self.chunks.iter() {
             buf.extend_from_slice(&chunk);

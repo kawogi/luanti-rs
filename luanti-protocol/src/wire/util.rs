@@ -32,13 +32,12 @@ macro_rules! itos {
 
 ///     let val: u16 = stoi(&s);
 ///
-pub fn stoi<T: FromStr>(b: &[u8]) -> anyhow::Result<T>
+pub fn stoi<T: FromStr>(bytes: &[u8]) -> anyhow::Result<T>
 where
     <T as FromStr>::Err: std::error::Error + std::marker::Sync + std::marker::Send + 'static,
 {
-    let s = std::str::from_utf8(b)?;
-    let n = s.parse::<T>()?;
-    Ok(n)
+    let str = std::str::from_utf8(bytes)?;
+    Ok(str.parse::<T>()?)
 }
 /*
 #[macro_export]
@@ -78,7 +77,7 @@ where
                     write(&written)?;
                 }
             }
-            Err(e) => bail!("zstd_compress: {}", zstd_safe::get_error_name(e)),
+            Err(error) => bail!("zstd_compress: {}", zstd_safe::get_error_name(error)),
         }
     }
     loop {
@@ -245,13 +244,13 @@ impl<'a> MiniReader<'a> {
 pub fn deserialize_json_string(input: &[u8]) -> Result<(Vec<u8>, usize), anyhow::Error> {
     let mut result: Vec<u8> = Vec::new();
     assert!(input[0] == b'"');
-    let mut r = MiniReader::new(input, 1);
-    while r.remaining() > 0 {
-        let ch = r.take1()?;
+    let mut reader = MiniReader::new(input, 1);
+    while reader.remaining() > 0 {
+        let ch = reader.take1()?;
         if ch == b'"' {
-            return Ok((result, r.pos));
+            return Ok((result, reader.pos));
         } else if ch == b'\\' {
-            let code = r.take1()?;
+            let code = reader.take1()?;
             match code {
                 b'b' => result.push(0x08),
                 b'f' => result.push(0x0C),
@@ -260,7 +259,7 @@ pub fn deserialize_json_string(input: &[u8]) -> Result<(Vec<u8>, usize), anyhow:
                 b't' => result.push(b'\t'),
                 b'u' => {
                     // "Unicode"
-                    let codepoint = r.take(4)?;
+                    let codepoint = reader.take(4)?;
                     if codepoint[0] != b'0' || codepoint[1] != b'0' {
                         bail!("Unsupported unicode in Luanti JSON");
                     }
@@ -280,7 +279,7 @@ pub fn deserialize_json_string(input: &[u8]) -> Result<(Vec<u8>, usize), anyhow:
 /// This is needed to handle the crazy inventory parsing.
 pub fn split_by_whitespace(line: &[u8]) -> Vec<&[u8]> {
     line.split(|ch| *ch == b' ' || *ch == b'\n')
-        .filter(|v| v.len() > 0)
+        .filter(|item| item.len() > 0)
         .collect()
 }
 
@@ -426,9 +425,9 @@ mod tests {
     #[test]
     fn itos_stoi_fuzz() {
         for i in -10000..10000 {
-            let s = itos!(i);
-            let v: i32 = stoi(s).expect("Should not have failed");
-            assert_eq!(v, i);
+            let str = itos!(i);
+            let integer: i32 = stoi(str).expect("Should not have failed");
+            assert_eq!(integer, i);
         }
     }
 }

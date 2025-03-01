@@ -1,3 +1,8 @@
+#![expect(
+    clippy::min_ident_chars,
+    reason = "//TODO rename the remaining fields within the macro"
+)]
+
 use super::audit::audit_command;
 use super::deser::Deserialize;
 use super::deser::DeserializeError;
@@ -649,11 +654,11 @@ pub fn serialize_commandref<Cmd: CommandRef, S: Serializer>(
     cmd: &Cmd,
     ser: &mut S,
 ) -> SerializeResult {
-    if let Some(r) = cmd.toserver_ref() {
-        ToServerCommand::serialize(r, ser)?;
+    if let Some(command) = cmd.toserver_ref() {
+        ToServerCommand::serialize(command, ser)?;
     }
-    if let Some(r) = cmd.toclient_ref() {
-        ToClientCommand::serialize(r, ser)?;
+    if let Some(command) = cmd.toclient_ref() {
+        ToClientCommand::serialize(command, ser)?;
     }
     Ok(())
 }
@@ -668,22 +673,22 @@ impl CommandProperties for Command {
 
     fn default_channel(&self) -> u8 {
         match self {
-            Command::ToServer(c) => c.default_channel(),
-            Command::ToClient(c) => c.default_channel(),
+            Command::ToServer(command) => command.default_channel(),
+            Command::ToClient(command) => command.default_channel(),
         }
     }
 
     fn default_reliability(&self) -> bool {
         match self {
-            Command::ToServer(c) => c.default_reliability(),
-            Command::ToClient(c) => c.default_reliability(),
+            Command::ToServer(command) => command.default_reliability(),
+            Command::ToClient(command) => command.default_reliability(),
         }
     }
 
     fn command_name(&self) -> &'static str {
         match self {
-            Command::ToServer(c) => c.command_name(),
-            Command::ToClient(c) => c.command_name(),
+            Command::ToServer(command) => command.command_name(),
+            Command::ToClient(command) => command.command_name(),
         }
     }
 }
@@ -691,7 +696,7 @@ impl CommandProperties for Command {
 impl CommandRef for Command {
     fn toserver_ref(&self) -> Option<&ToServerCommand> {
         match self {
-            Command::ToServer(s) => Some(s),
+            Command::ToServer(command) => Some(command),
             Command::ToClient(_) => None,
         }
     }
@@ -699,7 +704,7 @@ impl CommandRef for Command {
     fn toclient_ref(&self) -> Option<&ToClientCommand> {
         match self {
             Command::ToServer(_) => None,
-            Command::ToClient(c) => Some(c),
+            Command::ToClient(command) => Some(command),
         }
     }
 }
@@ -728,8 +733,8 @@ impl Serialize for Command {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         match value {
-            Command::ToServer(c) => ToServerCommand::serialize(c, ser),
-            Command::ToClient(c) => ToClientCommand::serialize(c, ser),
+            Command::ToServer(command) => ToServerCommand::serialize(command, ser),
+            Command::ToClient(command) => ToClientCommand::serialize(command, ser),
         }
     }
 }

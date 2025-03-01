@@ -135,7 +135,7 @@ impl<'a> Serializer for SliceSerializer<'a> {
         self.offset - (offset + length)
     }
 
-    fn write<F>(&mut self, length: usize, f: F) -> SerializeResult
+    fn write<F>(&mut self, length: usize, write_slice_fn: F) -> SerializeResult
     where
         F: FnOnce(&mut [u8]),
     {
@@ -145,7 +145,7 @@ impl<'a> Serializer for SliceSerializer<'a> {
                 "SliceSerializer out of space ".to_string(),
             ))
         }
-        f(&mut self.data[self.offset..self.offset + length]);
+        write_slice_fn(&mut self.data[self.offset..self.offset + length]);
         self.offset += length;
         Ok(())
     }
@@ -202,13 +202,13 @@ impl Serializer for VecSerializer {
         self.data.len() - (offset + length)
     }
 
-    fn write<F>(&mut self, length: usize, f: F) -> SerializeResult
+    fn write<F>(&mut self, length: usize, write_slice_fn: F) -> SerializeResult
     where
         F: FnOnce(&mut [u8]),
     {
         let offset = self.data.len();
         self.data.resize(offset + length, 0u8);
-        f(&mut self.data.as_mut_slice()[offset..offset + length]);
+        write_slice_fn(&mut self.data.as_mut_slice()[offset..offset + length]);
         Ok(())
     }
 }

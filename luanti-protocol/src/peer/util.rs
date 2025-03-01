@@ -10,11 +10,12 @@ pub(crate) fn rel_to_abs(base: u64, seqnum: u16) -> u64 {
 /// Sequence numbers are modulo 65536, so this is the
 /// unique value d in the range -32768 < d <= 32768
 /// with: a + d = b (mod 65536)
+#[expect(clippy::min_ident_chars, reason = "names are generic on purpose")]
 pub(crate) fn relative_distance(a: u16, b: u16) -> i64 {
-    let d: u16 = (std::num::Wrapping(b) - std::num::Wrapping(a)).0;
-    if d <= 32768 {
-        d as i64
+    let distance: u16 = (std::num::Wrapping(b) - std::num::Wrapping(a)).0;
+    if distance <= 32768 {
+        distance as i64
     } else {
-        (d as i64) - 65536
+        (distance as i64) - 65536
     }
 }

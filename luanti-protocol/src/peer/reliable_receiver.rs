@@ -85,7 +85,7 @@ mod tests {
 
     #[test]
     fn reliable_receiver_test() {
-        let mut r = ReliableReceiver::new();
+        let mut receiver = ReliableReceiver::new();
 
         // Generate random reliable packets
 
@@ -109,8 +109,8 @@ mod tests {
 
             let mut out: Vec<u32> = Vec::new();
             for pkt in pkts.into_iter() {
-                r.push(pkt);
-                while let Some(body) = r.pop() {
+                receiver.push(pkt);
+                while let Some(body) = receiver.pop() {
                     let recovered_index = recover_index(&body);
                     out.push(recovered_index);
                 }

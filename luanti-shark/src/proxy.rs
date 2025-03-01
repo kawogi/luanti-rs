@@ -111,13 +111,13 @@ impl ProxyAdapterRunner {
     pub(crate) async fn run_inner(&mut self) -> Result<()> {
         loop {
             tokio::select! {
-                t = self.conn.recv() => {
-                    let command = t?;
+                command = self.conn.recv() => {
+                    let command = command?;
                     self.maybe_show(&command);
                     self.client.send(command).await?;
                 },
-                t = self.client.recv() => {
-                    let command = t?;
+                command = self.client.recv() => {
+                    let command = command?;
                     self.maybe_show(&command);
                     self.conn.send(command).await?;
                 }

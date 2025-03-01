@@ -60,9 +60,9 @@ impl LuantiServerRunner {
         };
         info!("LuantiServer started");
         loop {
-            let t = socket.accept().await.unwrap();
+            let peer = socket.accept().await.unwrap();
             info!("LuantiServer accepted connection");
-            let conn = LuantiConnection::new(t);
+            let conn = LuantiConnection::new(peer);
             match self.accept_tx.send(conn) {
                 Ok(_) => (),
                 Err(_) => error!("Unexpected send fail in LuantiServer"),

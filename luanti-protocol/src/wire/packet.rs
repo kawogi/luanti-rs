@@ -279,9 +279,9 @@ impl Serialize for InnerBody {
         };
         u8::serialize(&packet_type, ser)?;
         match value {
-            Control(b) => ControlBody::serialize(b, ser),
-            Original(b) => OriginalBody::serialize(b, ser),
-            Split(b) => SplitBody::serialize(b, ser),
+            Control(body) => ControlBody::serialize(body, ser),
+            Original(body) => OriginalBody::serialize(body, ser),
+            Split(body) => SplitBody::serialize(body, ser),
         }
     }
 }

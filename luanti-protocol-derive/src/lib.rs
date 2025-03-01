@@ -66,9 +66,9 @@ pub fn luanti_deserialize(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     proc_macro::TokenStream::from(expanded)
 }
 
-fn get_wrapped_type(f: &Field) -> Type {
-    let mut ty = f.ty.clone();
-    for attr in f.attrs.iter() {
+fn get_wrapped_type(field: &Field) -> Type {
+    let mut ty = field.ty.clone();
+    for attr in field.attrs.iter() {
         if attr.path().is_ident("wrap") {
             ty = attr.parse_args::<Type>().unwrap();
         }
@@ -82,10 +82,10 @@ fn make_serialize_body(input_name: &Ident, data: &Data) -> TokenStream {
     match *data {
         syn::Data::Struct(ref data) => match data.fields {
             syn::Fields::Named(ref fields) => {
-                let recurse = fields.named.iter().map(|f| {
-                    let name = &f.ident;
-                    let ty = get_wrapped_type(f);
-                    quote_spanned! {f.span() =>
+                let recurse = fields.named.iter().map(|field| {
+                    let name = &field.ident;
+                    let ty = get_wrapped_type(field);
+                    quote_spanned! {field.span() =>
                         <#ty as Serialize>::serialize(&value.#name, ser)?;
                     }
                 });
@@ -94,10 +94,10 @@ fn make_serialize_body(input_name: &Ident, data: &Data) -> TokenStream {
                 }
             }
             syn::Fields::Unnamed(ref fields) => {
-                let recurse = fields.unnamed.iter().enumerate().map(|(i, f)| {
-                    let index = Index::from(i);
-                    let ty = get_wrapped_type(f);
-                    quote_spanned! {f.span() =>
+                let recurse = fields.unnamed.iter().enumerate().map(|(index, field)| {
+                    let index = Index::from(index);
+                    let ty = get_wrapped_type(field);
+                    quote_spanned! {field.span() =>
                         <#ty as Serialize>::serialize(&value.#index, ser)?;
                     }
                 });
@@ -110,19 +110,19 @@ fn make_serialize_body(input_name: &Ident, data: &Data) -> TokenStream {
             }
         },
         syn::Data::Enum(ref body) => {
-            let recurse = body.variants.iter().enumerate().map(|(i, v)| {
-                if !v.fields.is_empty() {
-                    quote_spanned! {v.span() =>
+            let recurse = body.variants.iter().enumerate().map(|(index, variant)| {
+                if !variant.fields.is_empty() {
+                    quote_spanned! {variant.span() =>
                         compile_error!("Cannot handle fields yet");
                     }
-                } else if v.discriminant.is_some() {
-                    quote_spanned! {v.span() =>
+                } else if variant.discriminant.is_some() {
+                    quote_spanned! {variant.span() =>
                         compile_error!("Cannot handle discrimiant yet");
                     }
                 } else {
-                    let id = &v.ident;
-                    let i = Literal::u8_unsuffixed(i as u8);
-                    quote_spanned! {v.span() =>
+                    let id = &variant.ident;
+                    let i = Literal::u8_unsuffixed(index as u8);
+                    quote_spanned! {variant.span() =>
                         #id => #i,
                     }
                 }
@@ -144,10 +144,10 @@ fn make_deserialize_body(input_name: &Ident, data: &Data) -> TokenStream {
         syn::Data::Struct(ref data) => {
             let inner = match data.fields {
                 syn::Fields::Named(ref fields) => {
-                    let recurse = fields.named.iter().map(|f| {
-                        let name = &f.ident;
-                        let ty = get_wrapped_type(f);
-                        quote_spanned! {f.span() =>
+                    let recurse = fields.named.iter().map(|field| {
+                        let name = &field.ident;
+                        let ty = get_wrapped_type(field);
+                        quote_spanned! {field.span() =>
                             #name: <#ty as Deserialize>::deserialize(deser)?,
                         }
                     });
@@ -156,10 +156,10 @@ fn make_deserialize_body(input_name: &Ident, data: &Data) -> TokenStream {
                     }
                 }
                 syn::Fields::Unnamed(ref fields) => {
-                    let recurse = fields.unnamed.iter().enumerate().map(|(i, f)| {
-                        let index = Index::from(i);
-                        let ty = get_wrapped_type(f);
-                        quote_spanned! {f.span() =>
+                    let recurse = fields.unnamed.iter().enumerate().map(|(index, field)| {
+                        let index = Index::from(index);
+                        let ty = get_wrapped_type(field);
+                        quote_spanned! {field.span() =>
                             #index: <#ty as Deserialize>::deserialize(deser)?,
                         }
                     });
@@ -178,19 +178,19 @@ fn make_deserialize_body(input_name: &Ident, data: &Data) -> TokenStream {
             }
         }
         syn::Data::Enum(ref body) => {
-            let recurse = body.variants.iter().enumerate().map(|(i, v)| {
-                if !v.fields.is_empty() {
-                    quote_spanned! {v.span() =>
+            let recurse = body.variants.iter().enumerate().map(|(index, variant)| {
+                if !variant.fields.is_empty() {
+                    quote_spanned! {variant.span() =>
                         compile_error!("Cannot handle fields yet");
                     }
-                } else if v.discriminant.is_some() {
-                    quote_spanned! {v.span() =>
+                } else if variant.discriminant.is_some() {
+                    quote_spanned! {variant.span() =>
                         compile_error!("Cannot handle discrimiant yet");
                     }
                 } else {
-                    let id = &v.ident;
-                    let i = Literal::u8_unsuffixed(i as u8);
-                    quote_spanned! {v.span() =>
+                    let id = &variant.ident;
+                    let i = Literal::u8_unsuffixed(index as u8);
+                    quote_spanned! {variant.span() =>
                         #i => #id,
 
                     }
@@ -218,11 +218,11 @@ fn strip_generic_bounds(input: &Generics) -> Generics {
         lt_token: input.lt_token,
         params: {
             let mut params = input.params.clone();
-            params.iter_mut().for_each(|v| {
-                *v = match v.clone() {
-                    syn::GenericParam::Type(v) => syn::GenericParam::Type(TypeParam {
+            params.iter_mut().for_each(|param| {
+                *param = match param.clone() {
+                    syn::GenericParam::Type(param) => syn::GenericParam::Type(TypeParam {
                         attrs: Vec::new(),
-                        ident: v.ident.clone(),
+                        ident: param.ident.clone(),
                         colon_token: None,
                         bounds: Punctuated::new(),
                         eq_token: None,

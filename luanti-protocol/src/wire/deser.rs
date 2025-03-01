@@ -77,8 +77,8 @@ impl<'a> Deserializer<'a> {
 
     /// Finds the first occurance of the byte 'b'
     /// from the current position in the stream.
-    pub fn find(&mut self, b: u8) -> Option<usize> {
-        self.data.iter().position(|ch| *ch == b)
+    pub fn find(&mut self, byte: u8) -> Option<usize> {
+        self.data.iter().position(|ch| *ch == byte)
     }
 
     pub fn peek(&mut self, count: usize) -> DeserializeResult<&'a [u8]> {

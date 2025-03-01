@@ -249,7 +249,7 @@ impl Channel {
     pub(crate) async fn process_command(&mut self, command: Command) {
         match self.to_controller.send(Ok(command)) {
             Ok(_) => (),
-            Err(e) => panic!("Unexpected command channel shutdown: {:?}", e),
+            Err(error) => panic!("Unexpected command channel shutdown: {:?}", error),
         }
     }
 
@@ -370,8 +370,8 @@ impl PeerRunner {
             // If an error gets to this point, the peer is toast.
             // Send a disconnect packet, and a remove peer request to the socket
             // These channels might already be dead, so ignore any errors.
-            let disconnected_cleanly: bool = if let Some(e) = err.downcast_ref::<PeerError>() {
-                matches!(e, PeerError::PeerSentDisconnect)
+            let disconnected_cleanly: bool = if let Some(error) = err.downcast_ref::<PeerError>() {
+                matches!(error, PeerError::PeerSentDisconnect)
             } else {
                 false
             };

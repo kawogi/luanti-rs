@@ -114,10 +114,10 @@ impl ReliableSender {
             return None;
         }
         match self.queued.pop_front() {
-            Some((seqnum, b)) => {
-                self.buffer.insert(seqnum, PacketBody::clone(&b));
+            Some((seqnum, body)) => {
+                self.buffer.insert(seqnum, PacketBody::clone(&body));
                 self.timeouts.insert((now + self.resend_timeout, seqnum));
-                Some(b)
+                Some(body)
             }
             None => None,
         }
@@ -161,6 +161,7 @@ mod tests {
     use std::collections::HashMap;
 
     use rand::Rng;
+    use rand::rng;
     use rand::thread_rng;
 
     use crate::wire::command::*;
@@ -193,8 +194,8 @@ mod tests {
     /// 3) Continues working after seqnum wraps.
     #[test]
     fn reliable_sender_test() {
-        let mut rng = thread_rng();
-        let mut r = ReliableSender::new();
+        let mut rng = rng();
+        let mut sender = ReliableSender::new();
         // For each reliable packet, track what happened to it
         // and confirm that it looks correct at the end of the test.
         struct Info {
@@ -216,7 +217,7 @@ mod tests {
                 // Send 0 to 99 new packets
                 for _ in 0..rng.gen_range(0..100) {
                     let inner = make_inner(next_index as u32);
-                    r.push(inner);
+                    sender.push(inner);
                     inflight.insert(
                         next_index,
                         Info {
@@ -230,7 +231,7 @@ mod tests {
 
             // See what it transmits for real
             let mut send_ack_now = Vec::new();
-            while let Some(body) = r.pop(now) {
+            while let Some(body) = sender.pop(now) {
                 let recovered_index = recover_index(body.inner()) as usize;
                 let info = inflight.get_mut(&recovered_index).unwrap();
                 info.sent_time.push(now);
@@ -239,7 +240,7 @@ mod tests {
                 }
 
                 // Transmission window should never exceed MAX_RELIABLE_WINDOW_SIZE
-                if let Some(oldest_unacked_index) = sent_but_unacked.first().map(|v| *v) {
+                if let Some(oldest_unacked_index) = sent_but_unacked.first().copied() {
                     assert!(
                         recovered_index >= oldest_unacked_index,
                         "Resending already acknowledged packet"
@@ -250,7 +251,7 @@ mod tests {
 
                 // Send acks for 50% of transmitted packets, forcing retries for the others
                 // Don't send duplicate acks
-                if info.ack_time.is_none() && rng.gen_range(0..2) == 1 {
+                if info.ack_time.is_none() && rng.random_range(0..2) == 1 {
                     let seqnum = match body {
                         PacketBody::Reliable(rb) => rb.seqnum,
                         PacketBody::Inner(_) => panic!("Unexpected body"),
@@ -263,11 +264,11 @@ mod tests {
 
             // Send the acks
             for seqnum in send_ack_now.into_iter() {
-                r.process_ack(AckBody { seqnum });
+                sender.process_ack(AckBody { seqnum });
             }
 
             // If we're given a timeout, simulate sleeping until the timeout 50% of the time.
-            match r.next_timeout() {
+            match sender.next_timeout() {
                 Some(timeout) => {
                     work_to_do = true;
                     assert!(timeout >= now);

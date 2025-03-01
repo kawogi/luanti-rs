@@ -115,9 +115,9 @@ impl ProtocolContext {
 pub struct ByteString(pub Vec<u8>);
 
 impl std::fmt::Debug for ByteString {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Format it as an escaped string
-        std::fmt::Debug::fmt(&self.escape_ascii(), f)
+        std::fmt::Debug::fmt(&self.escape_ascii(), formatter)
     }
 }
 
@@ -177,11 +177,11 @@ impl Serialize for bool {
 impl Deserialize for bool {
     type Output = Self;
     fn deserialize(deser: &mut Deserializer) -> DeserializeResult<Self> {
-        let b = deser.take_n::<1>()?[0];
-        Ok(match b {
+        let byte = deser.take_n::<1>()?[0];
+        Ok(match byte {
             0 => false,
             1 => true,
-            _ => bail!("Invalid bool: {}", b),
+            _ => bail!("Invalid bool: {}", byte),
         })
     }
 }
@@ -321,8 +321,8 @@ impl Deserialize for String {
     fn deserialize(deser: &mut Deserializer) -> DeserializeResult<Self> {
         let num_bytes = u16::deserialize(deser)? as usize;
         match std::str::from_utf8(deser.take(num_bytes)?) {
-            Ok(s) => Ok(s.to_string()),
-            Err(u) => bail!(DeserializeError::InvalidValue(u.to_string())),
+            Ok(str) => Ok(str.to_string()),
+            Err(error) => bail!(DeserializeError::InvalidValue(error.to_string())),
         }
     }
 }
@@ -343,8 +343,8 @@ impl Deserialize for LongString {
     fn deserialize(deser: &mut Deserializer) -> DeserializeResult<Self::Output> {
         let num_bytes = u32::deserialize(deser)? as usize;
         match std::str::from_utf8(deser.take(num_bytes)?) {
-            Ok(s) => Ok(s.to_string()),
-            Err(u) => bail!(DeserializeError::InvalidValue(u.to_string())),
+            Ok(str) => Ok(str.to_string()),
+            Err(error) => bail!(DeserializeError::InvalidValue(error.to_string())),
         }
     }
 }
@@ -381,7 +381,7 @@ impl Deserialize for WString {
             seq[i] = u16::from_be_bytes(raw[2 * i..2 * i + 2].try_into().unwrap());
         }
         match String::from_utf16(&seq) {
-            Ok(s) => Ok(s),
+            Ok(str) => Ok(str),
             Err(err) => bail!(DeserializeError::InvalidValue(err.to_string())),
         }
     }
@@ -516,6 +516,10 @@ impl v3s32 {
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+#[expect(
+    clippy::min_ident_chars,
+    reason = "those identifiers are well-known and clear from the context"
+)]
 pub struct SColor {
     pub r: u8,
     pub g: u8,
@@ -524,6 +528,10 @@ pub struct SColor {
 }
 
 impl SColor {
+    #[expect(
+        clippy::min_ident_chars,
+        reason = "those identifiers are well-known and clear from the context"
+    )]
     pub fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self { r, g, b, a }
     }
@@ -672,7 +680,7 @@ where
     type Input = Option<T::Input>;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         match value {
-            Some(v) => <T as Serialize>::serialize(v, ser),
+            Some(value) => <T as Serialize>::serialize(value, ser),
             None => Ok(()),
         }
     }
@@ -816,19 +824,33 @@ impl Serialize for ActiveObjectCommand {
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         u8::serialize(&value.get_command_prefix(), ser)?;
         match value {
-            ActiveObjectCommand::SetProperties(v) => AOCSetProperties::serialize(v, ser)?,
-            ActiveObjectCommand::UpdatePosition(v) => AOCUpdatePosition::serialize(v, ser)?,
-            ActiveObjectCommand::SetTextureMod(v) => AOCSetTextureMod::serialize(v, ser)?,
-            ActiveObjectCommand::SetSprite(v) => AOCSetSprite::serialize(v, ser)?,
-            ActiveObjectCommand::SetPhysicsOverride(v) => AOCSetPhysicsOverride::serialize(v, ser)?,
-            ActiveObjectCommand::SetAnimation(v) => AOCSetAnimation::serialize(v, ser)?,
-            ActiveObjectCommand::SetAnimationSpeed(v) => AOCSetAnimationSpeed::serialize(v, ser)?,
-            ActiveObjectCommand::SetBonePosition(v) => AOCSetBonePosition::serialize(v, ser)?,
-            ActiveObjectCommand::AttachTo(v) => AOCAttachTo::serialize(v, ser)?,
-            ActiveObjectCommand::Punched(v) => AOCPunched::serialize(v, ser)?,
-            ActiveObjectCommand::UpdateArmorGroups(v) => AOCUpdateArmorGroups::serialize(v, ser)?,
-            ActiveObjectCommand::SpawnInfant(v) => AOCSpawnInfant::serialize(v, ser)?,
-            ActiveObjectCommand::Obsolete1(v) => AOCObsolete1::serialize(v, ser)?,
+            ActiveObjectCommand::SetProperties(command) => {
+                AOCSetProperties::serialize(command, ser)?
+            }
+            ActiveObjectCommand::UpdatePosition(command) => {
+                AOCUpdatePosition::serialize(command, ser)?
+            }
+            ActiveObjectCommand::SetTextureMod(command) => {
+                AOCSetTextureMod::serialize(command, ser)?
+            }
+            ActiveObjectCommand::SetSprite(command) => AOCSetSprite::serialize(command, ser)?,
+            ActiveObjectCommand::SetPhysicsOverride(command) => {
+                AOCSetPhysicsOverride::serialize(command, ser)?
+            }
+            ActiveObjectCommand::SetAnimation(command) => AOCSetAnimation::serialize(command, ser)?,
+            ActiveObjectCommand::SetAnimationSpeed(command) => {
+                AOCSetAnimationSpeed::serialize(command, ser)?
+            }
+            ActiveObjectCommand::SetBonePosition(command) => {
+                AOCSetBonePosition::serialize(command, ser)?
+            }
+            ActiveObjectCommand::AttachTo(command) => AOCAttachTo::serialize(command, ser)?,
+            ActiveObjectCommand::Punched(command) => AOCPunched::serialize(command, ser)?,
+            ActiveObjectCommand::UpdateArmorGroups(command) => {
+                AOCUpdateArmorGroups::serialize(command, ser)?
+            }
+            ActiveObjectCommand::SpawnInfant(command) => AOCSpawnInfant::serialize(command, ser)?,
+            ActiveObjectCommand::Obsolete1(command) => AOCObsolete1::serialize(command, ser)?,
         }
         Ok(())
     }
@@ -1007,8 +1029,8 @@ where
 {
     type Input = Vec<T::Input>;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        for v in value.iter() {
-            <T as Serialize>::serialize(v, ser)?;
+        for value in value.iter() {
+            <T as Serialize>::serialize(value, ser)?;
         }
         Ok(())
     }
@@ -1036,8 +1058,8 @@ where
     type Input = Vec<T::Input>;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         u8::serialize(&u8::try_from(value.len())?, ser)?;
-        for v in value.iter() {
-            <T as Serialize>::serialize(v, ser)?;
+        for value in value.iter() {
+            <T as Serialize>::serialize(value, ser)?;
         }
         Ok(())
     }
@@ -1066,8 +1088,8 @@ where
     type Input = Vec<T::Input>;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         u16::serialize(&u16::try_from(value.len())?, ser)?;
-        for v in value.iter() {
-            <T as Serialize>::serialize(v, ser)?;
+        for value in value.iter() {
+            <T as Serialize>::serialize(value, ser)?;
         }
         Ok(())
     }
@@ -1096,8 +1118,8 @@ where
     type Input = Vec<T::Input>;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         u32::serialize(&u32::try_from(value.len())?, ser)?;
-        for v in value.iter() {
-            <T as Serialize>::serialize(v, ser)?;
+        for value in value.iter() {
+            <T as Serialize>::serialize(value, ser)?;
         }
         Ok(())
     }
@@ -1412,61 +1434,61 @@ impl Serialize for HudStat {
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         use HudStat::*;
         match value {
-            Pos(v) => {
+            Pos(value) => {
                 u8::serialize(&0, ser)?;
-                v2f::serialize(v, ser)?;
+                v2f::serialize(value, ser)?;
             }
-            Name(v) => {
+            Name(value) => {
                 u8::serialize(&1, ser)?;
-                String::serialize(v, ser)?;
+                String::serialize(value, ser)?;
             }
-            Scale(v) => {
+            Scale(value) => {
                 u8::serialize(&2, ser)?;
-                v2f::serialize(v, ser)?;
+                v2f::serialize(value, ser)?;
             }
-            Text(v) => {
+            Text(value) => {
                 u8::serialize(&3, ser)?;
-                String::serialize(v, ser)?;
+                String::serialize(value, ser)?;
             }
-            Number(v) => {
+            Number(value) => {
                 u8::serialize(&4, ser)?;
-                u32::serialize(v, ser)?;
+                u32::serialize(value, ser)?;
             }
-            Item(v) => {
+            Item(value) => {
                 u8::serialize(&5, ser)?;
-                u32::serialize(v, ser)?;
+                u32::serialize(value, ser)?;
             }
-            Dir(v) => {
+            Dir(value) => {
                 u8::serialize(&6, ser)?;
-                u32::serialize(v, ser)?;
+                u32::serialize(value, ser)?;
             }
-            Align(v) => {
+            Align(value) => {
                 u8::serialize(&7, ser)?;
-                v2f::serialize(v, ser)?;
+                v2f::serialize(value, ser)?;
             }
-            Offset(v) => {
+            Offset(value) => {
                 u8::serialize(&8, ser)?;
-                v2f::serialize(v, ser)?;
+                v2f::serialize(value, ser)?;
             }
-            WorldPos(v) => {
+            WorldPos(value) => {
                 u8::serialize(&9, ser)?;
-                v3f::serialize(v, ser)?;
+                v3f::serialize(value, ser)?;
             }
-            Size(v) => {
+            Size(value) => {
                 u8::serialize(&10, ser)?;
-                v2s32::serialize(v, ser)?;
+                v2s32::serialize(value, ser)?;
             }
-            ZIndex(v) => {
+            ZIndex(value) => {
                 u8::serialize(&11, ser)?;
-                u32::serialize(v, ser)?;
+                u32::serialize(value, ser)?;
             }
-            Text2(v) => {
+            Text2(value) => {
                 u8::serialize(&12, ser)?;
-                String::serialize(v, ser)?;
+                String::serialize(value, ser)?;
             }
-            Style(v) => {
+            Style(value) => {
                 u8::serialize(&13, ser)?;
-                u32::serialize(v, ser)?;
+                u32::serialize(value, ser)?;
             }
         }
         Ok(())
@@ -1534,8 +1556,8 @@ impl Serialize for SkyboxParams {
         String::serialize(&value.fog_tint_type, ser)?;
         match &value.data {
             SkyboxData::None => (),
-            SkyboxData::Textures(v) => <Array16<String> as Serialize>::serialize(v, ser)?,
-            SkyboxData::Color(v) => SkyColor::serialize(v, ser)?,
+            SkyboxData::Textures(value) => <Array16<String> as Serialize>::serialize(value, ser)?,
+            SkyboxData::Color(value) => SkyColor::serialize(value, ser)?,
         }
         <Option<f32> as Serialize>::serialize(&value.body_orbit_tilt, ser)?;
         Ok(())
@@ -1582,8 +1604,8 @@ impl Serialize for MinimapModeList {
         // which makes the layout not fit into any usual pattern.
         u16::serialize(&u16::try_from(value.vec.len())?, ser)?;
         u16::serialize(&value.mode, ser)?;
-        for v in value.vec.iter() {
-            MinimapMode::serialize(v, ser)?;
+        for value in value.vec.iter() {
+            MinimapMode::serialize(value, ser)?;
         }
         Ok(())
     }
@@ -2104,10 +2126,10 @@ impl Serialize for NodeBox {
         u8::serialize(&typ, ser)?;
         match value {
             NodeBox::Regular => Ok(()),
-            NodeBox::Fixed(v) => NodeBoxFixed::serialize(v, ser),
-            NodeBox::Wallmounted(v) => NodeBoxWallmounted::serialize(v, ser),
-            NodeBox::Leveled(v) => NodeBoxLeveled::serialize(v, ser),
-            NodeBox::Connected(v) => NodeBoxConnected::serialize(v, ser),
+            NodeBox::Fixed(value) => NodeBoxFixed::serialize(value, ser),
+            NodeBox::Wallmounted(value) => NodeBoxWallmounted::serialize(value, ser),
+            NodeBox::Leveled(value) => NodeBoxLeveled::serialize(value, ser),
+            NodeBox::Connected(value) => NodeBoxConnected::serialize(value, ser),
         }
     }
 }
@@ -2223,11 +2245,11 @@ impl Serialize for NodeDefManager {
         // The serialization of content_features is wrapped in a String32
         // Write a marker so we can write the size later
         let string32_wrapper = ser.write_marker(4)?;
-        for (i, f) in value.content_features.iter() {
-            u16::serialize(i, ser)?;
+        for (index, features) in value.content_features.iter() {
+            u16::serialize(index, ser)?;
             // The contents of each feature is wrapped in a String16.
             let string16_wrapper = ser.write_marker(2)?;
-            ContentFeatures::serialize(f, ser)?;
+            ContentFeatures::serialize(features, ser)?;
             let wlen: u16 = u16::try_from(ser.marker_distance(&string16_wrapper))?;
             ser.set_marker(string16_wrapper, &wlen.to_be_bytes()[..])?;
         }
@@ -2255,8 +2277,8 @@ impl Deserialize for NodeDefManager {
             let i = u16::deserialize(&mut deser)?;
             let string16_wrapper_len: u16 = u16::deserialize(&mut deser)?;
             let mut inner_deser = deser.slice(string16_wrapper_len as usize)?;
-            let f = ContentFeatures::deserialize(&mut inner_deser)?;
-            content_features.push((i, f));
+            let features = ContentFeatures::deserialize(&mut inner_deser)?;
+            content_features.push((i, features));
         }
         Ok(Self { content_features })
     }
@@ -2466,17 +2488,17 @@ impl Serialize for MapNodesBulk {
         // Write all param0 first
         ser.write(2 * nodecount as usize, |buf| {
             assert!(buf.len() == 2 * nodecount as usize);
-            for i in 0..nodecount {
-                let v = value.nodes[i].param0.to_be_bytes();
-                buf[2 * i] = v[0];
-                buf[2 * i + 1] = v[1];
+            for index in 0..nodecount {
+                let bytes = value.nodes[index].param0.to_be_bytes();
+                buf[2 * index] = bytes[0];
+                buf[2 * index + 1] = bytes[1];
             }
         })?;
         // Write all param1
         ser.write(nodecount, |buf| {
             assert!(buf.len() == nodecount);
-            for i in 0..nodecount {
-                buf[i] = value.nodes[i].param1;
+            for index in 0..nodecount {
+                buf[index] = value.nodes[index].param1;
             }
         })?;
         // Write all param2
@@ -2745,7 +2767,9 @@ impl Deserialize for Inventory {
                     ));
                 }
                 match std::str::from_utf8(&words[1]) {
-                    Ok(s) => result.entries.push(InventoryEntry::KeepList(s.to_string())),
+                    Ok(str) => result
+                        .entries
+                        .push(InventoryEntry::KeepList(str.to_string())),
                     Err(_) => {
                         bail!(DeserializeError::InvalidValue(
                             "KeepList name is invalid UTF8".to_string(),
@@ -3098,9 +3122,9 @@ impl Serialize for Attractor {
         u8::serialize(&kind, ser)?;
         match value {
             Attractor::None => (),
-            Attractor::Point(v) => PointAttractor::serialize(v, ser)?,
-            Attractor::Line(v) => LineAttractor::serialize(v, ser)?,
-            Attractor::Plane(v) => PlaneAttractor::serialize(v, ser)?,
+            Attractor::Point(value) => PointAttractor::serialize(value, ser)?,
+            Attractor::Line(value) => LineAttractor::serialize(value, ser)?,
+            Attractor::Plane(value) => PlaneAttractor::serialize(value, ser)?,
         }
         Ok(())
     }
@@ -3370,13 +3394,13 @@ impl Serialize for HudSetParam {
         };
         u16::serialize(&param, ser)?;
         match value {
-            SetHotBarItemCount(v) => {
+            SetHotBarItemCount(value) => {
                 // The value is wrapped in a a String16
                 u16::serialize(&4, ser)?;
-                s32::serialize(v, ser)?;
+                s32::serialize(value, ser)?;
             }
-            SetHotBarImage(v) => String::serialize(v, ser)?,
-            SetHotBarSelectedImage(v) => String::serialize(v, ser)?,
+            SetHotBarImage(value) => String::serialize(value, ser)?,
+            SetHotBarSelectedImage(value) => String::serialize(value, ser)?,
         };
         Ok(())
     }

@@ -114,18 +114,18 @@ impl LuantiSocketRunner {
         let mut buf: Vec<u8> = vec![0u8; MAX_DATAGRAM_SIZE];
 
         loop {
-            let mut r = Interest::READABLE;
+            let mut interest = Interest::READABLE;
             if !self.outgoing.is_empty() {
-                r = r | Interest::WRITABLE;
+                interest = interest | Interest::WRITABLE;
             }
             // rust-analyzer chokes on code inside select!, so keep it to a minimum.
             tokio::select! {
-                t = self.socket.ready(r) => self.handle_socket_io(t, &mut buf).await?,
+                ready = self.socket.ready(interest) => self.handle_socket_io(ready, &mut buf).await?,
                 msg = self.peer_rx.recv() => self.handle_peer_message(msg),
-                t = self.knock_rx.recv(), if !knock_closed => {
-                    match t {
-                        Some(t) => {
-                            self.get_peer(t, true);
+                address = self.knock_rx.recv(), if !knock_closed => {
+                    match address {
+                        Some(address) => {
+                            self.get_peer(address, true);
                         },
                         None => {
                             knock_closed = true;
@@ -138,11 +138,11 @@ impl LuantiSocketRunner {
 
     async fn handle_socket_io(
         &mut self,
-        t: tokio::io::Result<Ready>,
+        ready: tokio::io::Result<Ready>,
         buf: &mut [u8],
     ) -> anyhow::Result<()> {
-        let t = t.expect("socket.ready should not error");
-        if t.is_readable() {
+        let ready = ready.expect("socket.ready should not error");
+        if ready.is_readable() {
             match self.socket.try_recv_from(buf) {
                 Ok((n, remote_addr)) => {
                     if let Some(peer) = self.get_peer(remote_addr, self.for_server) {
@@ -150,18 +150,18 @@ impl LuantiSocketRunner {
                         peer.send(&buf[..n]);
                     }
                 }
-                Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => (),
-                Err(e) => panic!("Unexpected socket error: {:?}", e),
+                Err(ref error) if error.kind() == std::io::ErrorKind::WouldBlock => (),
+                Err(error) => panic!("Unexpected socket error: {:?}", error),
             };
         }
-        if t.is_writable() && !self.outgoing.is_empty() {
+        if ready.is_writable() && !self.outgoing.is_empty() {
             let (addr, data) = self.outgoing.pop_back().unwrap();
             match self.socket.try_send_to(&data, addr) {
                 Ok(_) => (),
-                Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                Err(ref error) if error.kind() == std::io::ErrorKind::WouldBlock => {
                     self.outgoing.push_back((addr, data));
                 }
-                Err(e) => panic!("Unexpected socket error: {:?}", e),
+                Err(error) => panic!("Unexpected socket error: {:?}", error),
             }
         }
         Ok(())
