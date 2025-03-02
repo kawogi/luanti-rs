@@ -166,7 +166,7 @@ mod tests {
 
     use rand::Rng;
     use rand::rng;
-    use rand::thread_rng;
+    
 
     use crate::wire::command::*;
     use crate::wire::packet::OriginalBody;

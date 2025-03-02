@@ -3,7 +3,7 @@ use std::net::SocketAddr;
 use anyhow::bail;
 
 use super::socket::LuantiSocket;
-use crate::peer::peer::Peer;
+use crate::peer::Peer;
 use crate::wire::command::*;
 
 pub struct LuantiClient {

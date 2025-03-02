@@ -27,7 +27,7 @@ use luanti_protocol::CommandRef;
 use luanti_protocol::LuantiClient;
 use luanti_protocol::LuantiConnection;
 use luanti_protocol::LuantiServer;
-use luanti_protocol::peer::peer::PeerError;
+use luanti_protocol::peer::PeerError;
 use luanti_protocol::wire::command::ToClientCommand;
 use std::net::SocketAddr;
 

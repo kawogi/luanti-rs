@@ -11,11 +11,11 @@ use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::mpsc::unbounded_channel;
 
-use crate::peer::peer::PeerToSocket;
+use crate::peer::PeerToSocket;
 
-use crate::peer::peer::Peer;
-use crate::peer::peer::PeerIO;
-use crate::peer::peer::new_peer;
+use crate::peer::Peer;
+use crate::peer::PeerIO;
+use crate::peer::new_peer;
 
 const MAX_DATAGRAM_SIZE: usize = 0x0001_0000;
 

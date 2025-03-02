@@ -4,7 +4,7 @@
 //!
 use std::net::SocketAddr;
 
-use crate::peer::peer::Peer;
+use crate::peer::Peer;
 use crate::wire::command::*;
 use crate::wire::types::*;
 use anyhow::Result;

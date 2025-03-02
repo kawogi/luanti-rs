@@ -82,7 +82,7 @@ impl<'a> SliceSerializer<'a> {
     }
 }
 
-impl<'a> Serializer for SliceSerializer<'a> {
+impl Serializer for SliceSerializer<'_> {
     type Marker = (usize, usize);
 
     fn context(&self) -> ProtocolContext {
