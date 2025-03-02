@@ -17,7 +17,7 @@ pub(super) struct SplitSender {
 impl SplitSender {
     pub(super) fn new() -> Self {
         Self {
-            next_seqnum: SEQNUM_INITIAL as u64,
+            next_seqnum: u64::from(SEQNUM_INITIAL),
         }
     }
 
@@ -46,7 +46,7 @@ impl SplitSender {
             assert_eq!(data.len(), total_size, "length mismatch");
             let mut index: usize = 0;
             let mut offset: usize = 0;
-            let total_chunks: usize = (total_size + MAX_SPLIT_BODY_SIZE - 1) / MAX_SPLIT_BODY_SIZE;
+            let total_chunks = total_size.div_ceil(MAX_SPLIT_BODY_SIZE);
             while offset < total_size {
                 let end = std::cmp::min(offset + MAX_SPLIT_BODY_SIZE, total_size);
                 result.push(InnerBody::Split(SplitBody {

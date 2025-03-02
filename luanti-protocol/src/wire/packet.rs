@@ -55,9 +55,9 @@ impl Serialize for AckBody {
 
 impl Deserialize for AckBody {
     type Output = Self;
-    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+    fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         Ok(Self {
-            seqnum: u16::deserialize(deser)?,
+            seqnum: u16::deserialize(deserializer)?,
         })
     }
 }
@@ -113,19 +113,17 @@ impl ControlBody {
 impl Serialize for ControlBody {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        use ControlBody::*;
         let control_type = match value {
-            Ack(_) => 0,
-            SetPeerId(_) => 1,
-            Ping => 2,
-            Disconnect => 3,
+            ControlBody::Ack(_) => 0,
+            ControlBody::SetPeerId(_) => 1,
+            ControlBody::Ping => 2,
+            ControlBody::Disconnect => 3,
         };
         u8::serialize(&control_type, ser)?;
         match value {
-            Ack(body) => AckBody::serialize(body, ser)?,
-            SetPeerId(body) => SetPeerIdBody::serialize(body, ser)?,
-            Ping => (),
-            Disconnect => (),
+            ControlBody::Ack(body) => AckBody::serialize(body, ser)?,
+            ControlBody::SetPeerId(body) => SetPeerIdBody::serialize(body, ser)?,
+            ControlBody::Ping | ControlBody::Disconnect => (),
         };
         Ok(())
     }
@@ -134,14 +132,15 @@ impl Serialize for ControlBody {
 impl Deserialize for ControlBody {
     type Output = Self;
 
-    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-        use ControlBody::*;
-        let control_type = u8::deserialize(deser)?;
+    fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+        let control_type = u8::deserialize(deserializer)?;
         match control_type {
-            0 => Ok(Ack(AckBody::deserialize(deser)?)),
-            1 => Ok(SetPeerId(SetPeerIdBody::deserialize(deser)?)),
-            2 => Ok(Ping),
-            3 => Ok(Disconnect),
+            0 => Ok(ControlBody::Ack(AckBody::deserialize(deserializer)?)),
+            1 => Ok(ControlBody::SetPeerId(SetPeerIdBody::deserialize(
+                deserializer,
+            )?)),
+            2 => Ok(ControlBody::Ping),
+            3 => Ok(ControlBody::Disconnect),
             _ => bail!(DeserializeError::InvalidValue(String::from(
                 "Invalid control_type in ControlBody",
             ))),
@@ -225,7 +224,7 @@ impl Deserialize for ReliableBody {
         let packet_type = u8::deserialize(deser)?;
         if packet_type != 3 {
             bail!(DeserializeError::InvalidValue(
-                "Invalid packet_type for ReliableBody".to_string(),
+                "Invalid packet_type for ReliableBody".into(),
             ))
         }
         Ok(ReliableBody {
@@ -254,7 +253,7 @@ impl InnerBody {
     #[must_use]
     pub fn into_reliable(self, seqnum: u16) -> PacketBody {
         PacketBody::Reliable(ReliableBody {
-            seqnum: seqnum,
+            seqnum,
             inner: self,
         })
     }
@@ -270,9 +269,8 @@ impl InnerBody {
     #[must_use]
     pub fn command(&self) -> Option<&Command> {
         match self {
-            InnerBody::Control(_) => None,
             InnerBody::Original(body) => Some(&body.command),
-            InnerBody::Split(_) => None,
+            InnerBody::Control(_) | InnerBody::Split(_) => None,
         }
     }
 }
@@ -280,17 +278,16 @@ impl InnerBody {
 impl Serialize for InnerBody {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        use InnerBody::*;
         let packet_type: u8 = match value {
-            Control(..) => 0,
-            Original(..) => 1,
-            Split(..) => 2,
+            InnerBody::Control(..) => 0,
+            InnerBody::Original(..) => 1,
+            InnerBody::Split(..) => 2,
         };
         u8::serialize(&packet_type, ser)?;
         match value {
-            Control(body) => ControlBody::serialize(body, ser),
-            Original(body) => OriginalBody::serialize(body, ser),
-            Split(body) => SplitBody::serialize(body, ser),
+            InnerBody::Control(body) => ControlBody::serialize(body, ser),
+            InnerBody::Original(body) => OriginalBody::serialize(body, ser),
+            InnerBody::Split(body) => SplitBody::serialize(body, ser),
         }
     }
 }
@@ -299,12 +296,11 @@ impl Deserialize for InnerBody {
     type Output = Self;
 
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-        use InnerBody::*;
         let packet_type = u8::deserialize(deser)?;
         match packet_type {
-            0 => Ok(Control(ControlBody::deserialize(deser)?)),
-            1 => Ok(Original(OriginalBody::deserialize(deser)?)),
-            2 => Ok(Split(SplitBody::deserialize(deser)?)),
+            0 => Ok(InnerBody::Control(ControlBody::deserialize(deser)?)),
+            1 => Ok(InnerBody::Original(OriginalBody::deserialize(deser)?)),
+            2 => Ok(InnerBody::Split(SplitBody::deserialize(deser)?)),
             _ => bail!(DeserializeError::InvalidPacketKind(packet_type)),
         }
     }
@@ -321,7 +317,7 @@ impl PacketBody {
     pub fn inner(&self) -> &InnerBody {
         match self {
             PacketBody::Reliable(body) => &body.inner,
-            PacketBody::Inner(inner) => &inner,
+            PacketBody::Inner(inner) => inner,
         }
     }
 
@@ -334,6 +330,7 @@ impl PacketBody {
 impl Serialize for PacketBody {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
+        #![allow(clippy::enum_glob_use, reason = "improves readability")]
         use PacketBody::*;
         // Both ReliableBody and InnerBody will emit their own packet type.
         match value {
@@ -346,6 +343,7 @@ impl Serialize for PacketBody {
 impl Deserialize for PacketBody {
     type Output = Self;
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+        #![allow(clippy::enum_glob_use, reason = "improves readability")]
         use PacketBody::*;
         // Both ReliableBody and InnerBody expect to consume the packet type tag.
         // So only peek it.
@@ -392,9 +390,8 @@ impl Packet {
     #[must_use]
     pub fn as_control(&self) -> Option<&ControlBody> {
         match self.inner() {
-            InnerBody::Control(control) => Some(&control),
-            InnerBody::Original(_) => None,
-            InnerBody::Split(_) => None,
+            InnerBody::Control(control) => Some(control),
+            InnerBody::Original(_) | InnerBody::Split(_) => None,
         }
     }
 }

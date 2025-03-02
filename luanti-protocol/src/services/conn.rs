@@ -5,8 +5,11 @@
 use std::net::SocketAddr;
 
 use crate::peer::Peer;
-use crate::wire::command::*;
-use crate::wire::types::*;
+use crate::wire::command::AccessDeniedSpec;
+use crate::wire::command::Command;
+use crate::wire::command::ToClientCommand;
+use crate::wire::command::ToServerCommand;
+use crate::wire::types::AccessDeniedCode;
 use anyhow::Result;
 use anyhow::bail;
 
@@ -18,7 +21,7 @@ pub struct LuantiConnection {
 impl LuantiConnection {
     #[must_use]
     pub fn new(peer: Peer) -> Self {
-        Self { peer: peer }
+        Self { peer }
     }
 
     #[must_use]

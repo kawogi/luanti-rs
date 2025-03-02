@@ -10,6 +10,7 @@
 //!
 //! TODO(paradust): Having an assert!-like macro that generates Serialize/Deserialize
 //! errors instead of aborts may be helpful for cleaning this up.
+use anyhow::anyhow;
 use anyhow::bail;
 use luanti_protocol_derive::LuantiDeserialize;
 use luanti_protocol_derive::LuantiSerialize;
@@ -43,13 +44,13 @@ use std::ops::DerefMut;
 use std::ops::Div;
 use std::ops::Mul;
 
-#[allow(non_camel_case_types)]
+#[allow(non_camel_case_types, reason = "aligns with the original C++ codebase")]
 pub type s8 = i8;
 
-#[allow(non_camel_case_types)]
+#[allow(non_camel_case_types, reason = "aligns with the original C++ codebase")]
 pub type s16 = i16;
 
-#[allow(non_camel_case_types)]
+#[allow(non_camel_case_types, reason = "aligns with the original C++ codebase")]
 pub type s32 = i32;
 
 pub type CommandId = u8;
@@ -63,10 +64,10 @@ pub enum CommandDirection {
 impl CommandDirection {
     #[must_use]
     pub fn for_send(remote_is_server: bool) -> Self {
-        use CommandDirection::*;
-        match remote_is_server {
-            true => ToServer,
-            false => ToClient,
+        if remote_is_server {
+            CommandDirection::ToServer
+        } else {
+            CommandDirection::ToClient
         }
     }
 
@@ -77,10 +78,9 @@ impl CommandDirection {
 
     #[must_use]
     pub fn flip(&self) -> Self {
-        use CommandDirection::*;
         match self {
-            ToClient => ToServer,
-            ToServer => ToClient,
+            CommandDirection::ToClient => CommandDirection::ToServer,
+            CommandDirection::ToServer => CommandDirection::ToClient,
         }
     }
 }
@@ -178,15 +178,14 @@ impl From<&[u8]> for ByteString {
 impl Serialize for bool {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        let val: u8 = if *value { 1 } else { 0 };
-        ser.write_bytes(&val.to_be_bytes()[..])
+        ser.write_bytes(u8::from(*value).to_be_bytes().as_slice())
     }
 }
 
 impl Deserialize for bool {
     type Output = Self;
-    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-        let byte = deser.take_n::<1>()?[0];
+    fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+        let byte = deserializer.take_n::<1>()?[0];
         Ok(match byte {
             0 => false,
             1 => true,
@@ -204,8 +203,8 @@ impl Serialize for u8 {
 
 impl Deserialize for u8 {
     type Output = Self;
-    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-        Ok(deser.take_n::<1>()?[0])
+    fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+        Ok(deserializer.take_n::<1>()?[0])
     }
 }
 
@@ -218,8 +217,8 @@ impl Serialize for u16 {
 
 impl Deserialize for u16 {
     type Output = Self;
-    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-        Ok(u16::from_be_bytes(deser.take_n::<2>()?))
+    fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+        Ok(u16::from_be_bytes(deserializer.take_n::<2>()?))
     }
 }
 
@@ -232,8 +231,8 @@ impl Serialize for u32 {
 
 impl Deserialize for u32 {
     type Output = Self;
-    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-        Ok(u32::from_be_bytes(deser.take_n::<4>()?))
+    fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+        Ok(u32::from_be_bytes(deserializer.take_n::<4>()?))
     }
 }
 
@@ -246,8 +245,8 @@ impl Serialize for u64 {
 
 impl Deserialize for u64 {
     type Output = Self;
-    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-        Ok(u64::from_be_bytes(deser.take_n::<8>()?))
+    fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+        Ok(u64::from_be_bytes(deserializer.take_n::<8>()?))
     }
 }
 
@@ -260,8 +259,8 @@ impl Serialize for i8 {
 
 impl Deserialize for i8 {
     type Output = Self;
-    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-        Ok(deser.take(1)?[0] as i8)
+    fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+        Ok(deserializer.take(1)?[0] as i8)
     }
 }
 
@@ -275,8 +274,8 @@ impl Serialize for i16 {
 impl Deserialize for i16 {
     type Output = Self;
 
-    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-        Ok(u16::from_be_bytes(deser.take_n::<2>()?) as i16)
+    fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+        Ok(u16::from_be_bytes(deserializer.take_n::<2>()?) as i16)
     }
 }
 
@@ -289,8 +288,8 @@ impl Serialize for i32 {
 
 impl Deserialize for i32 {
     type Output = Self;
-    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-        Ok(u32::from_be_bytes(deser.take_n::<4>()?) as i32)
+    fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+        Ok(u32::from_be_bytes(deserializer.take_n::<4>()?) as i32)
     }
 }
 
@@ -321,7 +320,7 @@ impl Serialize for str {
 impl Serialize for String {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        <str as Serialize>::serialize(&value, ser)
+        <str as Serialize>::serialize(value, ser)
     }
 }
 
@@ -330,7 +329,7 @@ impl Deserialize for String {
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         let num_bytes = u16::deserialize(deser)? as usize;
         match std::str::from_utf8(deser.take(num_bytes)?) {
-            Ok(str) => Ok(str.to_string()),
+            Ok(str) => Ok(str.into()),
             Err(error) => bail!(DeserializeError::InvalidValue(error.to_string())),
         }
     }
@@ -343,7 +342,7 @@ impl Serialize for LongString {
     type Input = String;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         u32::serialize(&u32::try_from(value.len())?, ser)?;
-        ser.write_bytes(&value.as_bytes())
+        ser.write_bytes(value.as_bytes())
     }
 }
 
@@ -352,7 +351,7 @@ impl Deserialize for LongString {
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self::Output> {
         let num_bytes = u32::deserialize(deser)? as usize;
         match std::str::from_utf8(deser.take(num_bytes)?) {
-            Ok(str) => Ok(str.to_string()),
+            Ok(str) => Ok(str.into()),
             Err(error) => bail!(DeserializeError::InvalidValue(error.to_string())),
         }
     }
@@ -396,7 +395,7 @@ impl Deserialize for WString {
     }
 }
 
-#[allow(non_camel_case_types)]
+#[allow(non_camel_case_types, reason = "aligns with the original C++ codebase")]
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct v2f {
     pub x: f32,
@@ -410,7 +409,7 @@ impl v2f {
     }
 }
 
-#[allow(non_camel_case_types)]
+#[allow(non_camel_case_types, reason = "aligns with the original C++ codebase")]
 #[derive(Debug, Clone, Copy, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct v3f {
     pub x: f32,
@@ -456,7 +455,7 @@ impl Div<f32> for v3f {
     }
 }
 
-#[allow(non_camel_case_types)]
+#[allow(non_camel_case_types, reason = "aligns with the original C++ codebase")]
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct v2u32 {
     pub x: u32,
@@ -470,7 +469,7 @@ impl v2u32 {
     }
 }
 
-#[allow(non_camel_case_types)]
+#[allow(non_camel_case_types, reason = "aligns with the original C++ codebase")]
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct v2s16 {
     pub x: s16,
@@ -484,8 +483,9 @@ impl v2s16 {
     }
 }
 
-#[allow(non_camel_case_types)]
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+#[allow(non_camel_case_types, reason = "aligns with the original C++ codebase")]
+#[derive(Debug, Clone, Copy, PartialEq, LuantiSerialize, LuantiDeserialize)]
+// TODO replace with types from the `glam` crate
 pub struct v3s16 {
     pub x: s16,
     pub y: s16,
@@ -499,8 +499,9 @@ impl v3s16 {
     }
 }
 
-#[allow(non_camel_case_types)]
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+#[allow(non_camel_case_types, reason = "aligns with the original C++ codebase")]
+#[derive(Debug, Clone, Copy, PartialEq, LuantiSerialize, LuantiDeserialize)]
+// TODO replace with types from the `glam` crate
 pub struct v2s32 {
     pub x: s32,
     pub y: s32,
@@ -513,7 +514,7 @@ impl v2s32 {
     }
 }
 
-#[allow(non_camel_case_types)]
+#[allow(non_camel_case_types, reason = "aligns with the original C++ codebase")]
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct v3s32 {
     pub x: s32,
@@ -566,8 +567,8 @@ impl<T: Serialize> Serialize for Wrapped16<T> {
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         let marker = ser.write_marker(2)?;
         <T as Serialize>::serialize(value, ser)?;
-        let wlen: u16 = u16::try_from(ser.marker_distance(&marker))?;
-        ser.set_marker(marker, &wlen.to_be_bytes()[..])?;
+        let len: u16 = u16::try_from(ser.marker_distance(&marker))?;
+        ser.set_marker(marker, &len.to_be_bytes()[..])?;
         Ok(())
     }
 }
@@ -575,8 +576,8 @@ impl<T: Serialize> Serialize for Wrapped16<T> {
 impl<T: Deserialize> Deserialize for Wrapped16<T> {
     type Output = T::Output;
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self::Output> {
-        let wlen = u16::deserialize(deser)?;
-        let mut restricted_deser = deser.slice(wlen as usize)?;
+        let len = u16::deserialize(deser)?;
+        let mut restricted_deser = deser.slice(len as usize)?;
         <T as Deserialize>::deserialize(&mut restricted_deser)
     }
 }
@@ -592,8 +593,8 @@ impl<T: Serialize> Serialize for Wrapped32<T> {
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         let marker = ser.write_marker(4)?;
         <T as Serialize>::serialize(value, ser)?;
-        let wlen: u32 = u32::try_from(ser.marker_distance(&marker))?;
-        ser.set_marker(marker, &wlen.to_be_bytes()[..])?;
+        let len: u32 = u32::try_from(ser.marker_distance(&marker))?;
+        ser.set_marker(marker, &len.to_be_bytes()[..])?;
         Ok(())
     }
 }
@@ -601,8 +602,8 @@ impl<T: Serialize> Serialize for Wrapped32<T> {
 impl<T: Deserialize> Deserialize for Wrapped32<T> {
     type Output = T::Output;
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self::Output> {
-        let wlen = u32::deserialize(deser)?;
-        let mut restricted_deser = deser.slice(wlen as usize)?;
+        let len = u32::deserialize(deser)?;
+        let mut restricted_deser = deser.slice(len as usize)?;
         <T as Deserialize>::deserialize(&mut restricted_deser)
     }
 }
@@ -684,7 +685,7 @@ where
         }
         match entries.try_into() {
             Ok(entries) => Ok(entries),
-            Err(_) => bail!(DeserializeError::InvalidValue("FixedArray bug".to_string())),
+            Err(_) => bail!(DeserializeError::InvalidValue("FixedArray bug".into())),
         }
     }
 }
@@ -787,6 +788,7 @@ pub struct ActiveObjectMessage {
 
 // TODO(paradust): Handle this in derive macros
 #[derive(Debug, Clone, PartialEq)]
+#[expect(clippy::large_enum_variant, reason = "consider `Box`ing variants")]
 pub enum ActiveObjectCommand {
     SetProperties(AOCSetProperties),
     UpdatePosition(AOCUpdatePosition),
@@ -914,10 +916,16 @@ pub struct AOCSetProperties {
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+#[expect(clippy::struct_excessive_bools, reason = "this is mandated by the API")]
 pub struct ObjectProperties {
     pub version: u8, // must be 4
     pub hp_max: u16,
     pub physical: bool,
+    #[expect(
+        clippy::pub_underscore_fields,
+        clippy::used_underscore_binding,
+        reason = "required for de-/serialization macros"
+    )]
     pub _unused: u32,
     pub collision_box: aabb3f,
     pub selection_box: aabb3f,
@@ -1038,7 +1046,7 @@ pub struct AOCSpawnInfant {
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct AOCObsolete1 {}
+pub struct AOCObsolete1;
 
 /// An array of items with no specified length.
 /// The length is determined by buffer end.
@@ -1051,8 +1059,8 @@ where
 {
     type Input = Vec<T::Input>;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        for value in value {
-            <T as Serialize>::serialize(value, ser)?;
+        for item in value {
+            <T as Serialize>::serialize(item, ser)?;
         }
         Ok(())
     }
@@ -1080,8 +1088,8 @@ where
     type Input = Vec<T::Input>;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         u8::serialize(&u8::try_from(value.len())?, ser)?;
-        for value in value {
-            <T as Serialize>::serialize(value, ser)?;
+        for item in value {
+            <T as Serialize>::serialize(item, ser)?;
         }
         Ok(())
     }
@@ -1110,8 +1118,8 @@ where
     type Input = Vec<T::Input>;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         u16::serialize(&u16::try_from(value.len())?, ser)?;
-        for value in value {
-            <T as Serialize>::serialize(value, ser)?;
+        for item in value {
+            <T as Serialize>::serialize(item, ser)?;
         }
         Ok(())
     }
@@ -1140,8 +1148,8 @@ where
     type Input = Vec<T::Input>;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         u32::serialize(&u32::try_from(value.len())?, ser)?;
-        for value in value {
-            <T as Serialize>::serialize(value, ser)?;
+        for item in value {
+            <T as Serialize>::serialize(item, ser)?;
         }
         Ok(())
     }
@@ -1154,7 +1162,7 @@ impl<T: Deserialize> Deserialize for Array32<T> {
         // Sanity check to prevent memory DoS
         if length > deser.remaining() {
             bail!(DeserializeError::InvalidValue(
-                "Array32 length too long".to_string(),
+                "Array32 length too long".into(),
             ));
         }
         let mut vec = Vec::with_capacity(length);
@@ -1227,7 +1235,7 @@ pub struct MinimapMode {
 #[derive(Debug, Clone, PartialEq)]
 pub struct PlayerPos {
     pub position: v3f,     // serialized as v3s32, *100.0f
-    pub speed: v3f,        // serialzied as v3s32, *100.0f
+    pub speed: v3f,        // serialized as v3s32, *100.0f
     pub pitch: f32,        // serialized as s32, *100.0f
     pub yaw: f32,          // serialized as s32, *100.0f
     pub keys_pressed: u32, // bitset
@@ -1270,9 +1278,9 @@ impl Deserialize for PlayerPos {
             speed: s_speed.as_v3f() / 100_f32,
             pitch: (s_pitch as f32) / 100_f32,
             yaw: (s_yaw as f32) / 100_f32,
-            keys_pressed: keys_pressed,
-            fov: (s_fov as f32) / 80_f32,
-            wanted_range: wanted_range,
+            keys_pressed,
+            fov: f32::from(s_fov) / 80_f32,
+            wanted_range,
         })
     }
 }
@@ -1323,6 +1331,7 @@ pub enum AccessDeniedCode {
 impl Serialize for AccessDeniedCode {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
+        #![allow(clippy::enum_glob_use, reason = "improves readability")]
         use AccessDeniedCode::*;
         match value {
             WrongPassword => u8::serialize(&0, ser),
@@ -1337,19 +1346,19 @@ impl Serialize for AccessDeniedCode {
             ServerFail => u8::serialize(&9, ser),
             CustomString(msg) => {
                 u8::serialize(&10, ser)?;
-                String::serialize(&msg, ser)?;
+                String::serialize(msg, ser)?;
                 Ok(())
             }
             Shutdown(msg, reconnect) => {
                 u8::serialize(&11, ser)?;
-                String::serialize(&msg, ser)?;
-                bool::serialize(&reconnect, ser)?;
+                String::serialize(msg, ser)?;
+                bool::serialize(reconnect, ser)?;
                 Ok(())
             }
             Crash(msg, reconnect) => {
                 u8::serialize(&12, ser)?;
-                String::serialize(&msg, ser)?;
-                bool::serialize(&reconnect, ser)?;
+                String::serialize(msg, ser)?;
+                bool::serialize(reconnect, ser)?;
                 Ok(())
             }
         }
@@ -1359,6 +1368,7 @@ impl Serialize for AccessDeniedCode {
 impl Deserialize for AccessDeniedCode {
     type Output = Self;
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+        #![allow(clippy::enum_glob_use, reason = "improves readability")]
         use AccessDeniedCode::*;
         let deny_code = u8::deserialize(deser)?;
         match deny_code {
@@ -1388,7 +1398,8 @@ impl Deserialize for AccessDeniedCode {
 
 impl AccessDeniedCode {
     #[must_use]
-    pub fn to_str<'a>(&'a self) -> &'a str {
+    pub fn to_str(&self) -> &str {
+        #![allow(clippy::enum_glob_use, reason = "improves readability")]
         use AccessDeniedCode::*;
         match self {
             WrongPassword => "Invalid password",
@@ -1455,6 +1466,7 @@ pub enum HudStat {
 impl Serialize for HudStat {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
+        #![allow(clippy::enum_glob_use, reason = "improves readability")]
         use HudStat::*;
         match value {
             Pos(value) => {
@@ -1521,6 +1533,7 @@ impl Serialize for HudStat {
 impl Deserialize for HudStat {
     type Output = Self;
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+        #![allow(clippy::enum_glob_use, reason = "improves readability")]
         use HudStat::*;
         let stat = u8::deserialize(deser)?;
         match stat {
@@ -1593,7 +1606,7 @@ impl Deserialize for SkyboxParams {
         let bgcolor = SColor::deserialize(deser)?;
         let typ = String::deserialize(deser)?;
         Ok(SkyboxParams {
-            bgcolor: bgcolor,
+            bgcolor,
             clouds: bool::deserialize(deser)?,
             fog_sun_tint: SColor::deserialize(deser)?,
             fog_moon_tint: SColor::deserialize(deser)?,
@@ -1627,8 +1640,8 @@ impl Serialize for MinimapModeList {
         // which makes the layout not fit into any usual pattern.
         u16::serialize(&u16::try_from(value.vec.len())?, ser)?;
         u16::serialize(&value.mode, ser)?;
-        for value in &value.vec {
-            MinimapMode::serialize(value, ser)?;
+        for mode in &value.vec {
+            MinimapMode::serialize(mode, ser)?;
         }
         Ok(())
     }
@@ -1643,10 +1656,7 @@ impl Deserialize for MinimapModeList {
         for _ in 0..count {
             vec.push(MinimapMode::deserialize(deser)?);
         }
-        Ok(MinimapModeList {
-            mode: mode,
-            vec: vec,
-        })
+        Ok(MinimapModeList { mode, vec })
     }
 }
 
@@ -1696,7 +1706,7 @@ impl<T: Serialize> Serialize for ZLibCompressed<T> {
 
         // Serialize 'value' to a temporary buffer, and then compress
         let mut tmp = VecSerializer::new(ser.context(), 1024);
-        <T as Serialize>::serialize(&value, &mut tmp)?;
+        <T as Serialize>::serialize(value, &mut tmp)?;
         let tmp = tmp.take();
         let tmp = miniz_oxide::deflate::compress_to_vec_zlib(&tmp, 6);
 
@@ -1713,7 +1723,7 @@ impl<T: Deserialize> Deserialize for ZLibCompressed<T> {
         let num_bytes = u32::deserialize(deser)? as usize;
         let data = deser.take(num_bytes)?;
         // TODO(paradust): DANGEROUS. There is no decompression size bound.
-        match miniz_oxide::inflate::decompress_to_vec_zlib(&data) {
+        match miniz_oxide::inflate::decompress_to_vec_zlib(data) {
             Ok(decompressed) => {
                 let mut tmp = Deserializer::new(deser.context(), &decompressed);
                 Ok(<T as Deserialize>::deserialize(&mut tmp)?)
@@ -1910,32 +1920,33 @@ impl Serialize for TileDef {
 
 impl Deserialize for TileDef {
     type Output = Self;
-    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-        let version: u8 = u8::deserialize(deser)?;
+    fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+        let version: u8 = u8::deserialize(deserializer)?;
         if version != 6 {
             bail!(DeserializeError::InvalidValue(
-                "Invalid TileDef version".to_string(),
+                "Invalid TileDef version".into(),
             ));
         }
-        let name = String::deserialize(deser)?;
-        let animation = TileAnimationParams::deserialize(deser)?;
-        let flags = u16::deserialize(deser)?;
+        let name = String::deserialize(deserializer)?;
+        let animation = TileAnimationParams::deserialize(deserializer)?;
+        let flags = u16::deserialize(deserializer)?;
+        #[expect(clippy::if_then_some_else_none, reason = "`?`-operator prohibits this")]
         let color = if (flags & TILE_FLAG_HAS_COLOR) != 0 {
             Some((
-                u8::deserialize(deser)?,
-                u8::deserialize(deser)?,
-                u8::deserialize(deser)?,
+                u8::deserialize(deserializer)?,
+                u8::deserialize(deserializer)?,
+                u8::deserialize(deserializer)?,
             ))
         } else {
             None
         };
         let scale = if (flags & TILE_FLAG_HAS_SCALE) != 0 {
-            u8::deserialize(deser)?
+            u8::deserialize(deserializer)?
         } else {
             0
         };
         let align_style = if (flags & TILE_FLAG_HAS_ALIGN_STYLE) != 0 {
-            AlignStyle::deserialize(deser)?
+            AlignStyle::deserialize(deserializer)?
         } else {
             AlignStyle::Node
         };
@@ -1989,18 +2000,18 @@ impl Serialize for TileAnimationParams {
                 aspect_h,
                 length,
             } => {
-                u16::serialize(&aspect_w, ser)?;
-                u16::serialize(&aspect_h, ser)?;
-                f32::serialize(&length, ser)?;
+                u16::serialize(aspect_w, ser)?;
+                u16::serialize(aspect_h, ser)?;
+                f32::serialize(length, ser)?;
             }
             TileAnimationParams::Sheet2D {
                 frames_w,
                 frames_h,
                 frame_length,
             } => {
-                u8::serialize(&frames_w, ser)?;
-                u8::serialize(&frames_h, ser)?;
-                f32::serialize(&frame_length, ser)?;
+                u8::serialize(frames_w, ser)?;
+                u8::serialize(frames_h, ser)?;
+                f32::serialize(frame_length, ser)?;
             }
         };
         Ok(())
@@ -2061,6 +2072,7 @@ pub enum DrawType {
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+#[expect(clippy::struct_excessive_bools, reason = "this is mandated by the API")]
 pub struct ContentFeatures {
     pub version: u8,
     pub name: String,
@@ -2125,6 +2137,10 @@ pub struct ContentFeatures {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "// TODO consider `Box`ing variants"
+)]
 pub enum NodeBox {
     Regular,
     Fixed(NodeBoxFixed),
@@ -2162,9 +2178,7 @@ impl Deserialize for NodeBox {
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         let ver = u8::deserialize(deser)?;
         if ver != 6 {
-            bail!(DeserializeError::InvalidValue(
-                "Invalid NodeBox ver".to_string(),
-            ));
+            bail!(DeserializeError::InvalidValue("Invalid NodeBox ver".into(),));
         }
         let typ = u8::deserialize(deser)?;
         match typ {
@@ -2176,13 +2190,13 @@ impl Deserialize for NodeBox {
             3 => Ok(NodeBox::Leveled(NodeBoxLeveled::deserialize(deser)?)),
             4 => Ok(NodeBox::Connected(NodeBoxConnected::deserialize(deser)?)),
             _ => bail!(DeserializeError::InvalidValue(
-                "Invalid NodeBox type".to_string(),
+                "Invalid NodeBox type".into(),
             )),
         }
     }
 }
 
-#[allow(non_camel_case_types)]
+#[allow(non_camel_case_types, reason = "aligns with the original C++ codebase")]
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct aabb3f {
     pub min_edge: v3f,
@@ -2273,11 +2287,11 @@ impl Serialize for NodeDefManager {
             // The contents of each feature is wrapped in a String16.
             let string16_wrapper = ser.write_marker(2)?;
             ContentFeatures::serialize(features, ser)?;
-            let wlen: u16 = u16::try_from(ser.marker_distance(&string16_wrapper))?;
-            ser.set_marker(string16_wrapper, &wlen.to_be_bytes()[..])?;
+            let len: u16 = u16::try_from(ser.marker_distance(&string16_wrapper))?;
+            ser.set_marker(string16_wrapper, &len.to_be_bytes()[..])?;
         }
-        let wlen: u32 = u32::try_from(ser.marker_distance(&string32_wrapper))?;
-        ser.set_marker(string32_wrapper, &wlen.to_be_bytes()[..])?;
+        let len: u32 = u32::try_from(ser.marker_distance(&string32_wrapper))?;
+        ser.set_marker(string32_wrapper, &len.to_be_bytes()[..])?;
         Ok(())
     }
 }
@@ -2288,7 +2302,7 @@ impl Deserialize for NodeDefManager {
         let version = u8::deserialize(deser)?;
         if version != 1 {
             bail!(DeserializeError::InvalidValue(
-                "Bad NodeDefManager version".to_string(),
+                "Bad NodeDefManager version".into(),
             ));
         }
         let count: u16 = u16::deserialize(deser)?;
@@ -2332,10 +2346,9 @@ impl Serialize for MapBlock {
     /// For ver 28, only the nodes and nodemeta are compressed using zlib.
     /// For >= 29, the entire thing is compressed using zstd.
     type Input = Self;
-    fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        let ver = ser.context().ser_fmt;
-        let real_ser = ser;
-        let mut tmp_ser = VecSerializer::new(real_ser.context(), 0x8000);
+    fn serialize<S: Serializer>(value: &Self::Input, serializer: &mut S) -> SerializeResult {
+        let ver = serializer.context().ser_fmt;
+        let mut tmp_ser = VecSerializer::new(serializer.context(), 0x8000);
         let ser = &mut tmp_ser;
         let header = MapBlockHeader {
             is_underground: value.is_underground,
@@ -2365,11 +2378,11 @@ impl Serialize for MapBlock {
         if ver >= 29 {
             // The whole thing is zstd compressed
             let tmp = tmp_ser.take();
-            zstd_compress(&tmp, |chunk| real_ser.write_bytes(chunk))?;
+            zstd_compress(&tmp, |chunk| serializer.write_bytes(chunk))?;
         } else {
             // Just write it directly
             let tmp = tmp_ser.take();
-            real_ser.write_bytes(&tmp)?;
+            serializer.write_bytes(&tmp)?;
         }
         Ok(())
     }
@@ -2418,9 +2431,10 @@ impl Deserialize for MapBlockHeader {
         let flags = u8::deserialize(deser)?;
         if flags != (flags & (0x1 | 0x2 | 0x8)) {
             bail!(DeserializeError::InvalidValue(
-                "Invalid MapBlock flags".to_string(),
+                "Invalid MapBlock flags".into(),
             ));
         }
+        #[expect(clippy::if_then_some_else_none, reason = "`?`-operator prohibits this")]
         let lighting_complete = if deser.context().ser_fmt >= 27 {
             Some(u16::deserialize(deser)?)
         } else {
@@ -2430,14 +2444,14 @@ impl Deserialize for MapBlockHeader {
         let params_width = u8::deserialize(deser)?;
         if content_width != 2 || params_width != 2 {
             bail!(DeserializeError::InvalidValue(
-                "Corrupt MapBlock: content_width and params_width not both 2".to_string(),
+                "Corrupt MapBlock: content_width and params_width not both 2".into(),
             ));
         }
         Ok(Self {
             is_underground: (flags & 0x1) != 0,
             day_night_diff: (flags & 0x2) != 0,
             generated: (flags & 0x8) == 0,
-            lighting_complete: lighting_complete,
+            lighting_complete,
         })
     }
 }
@@ -2473,14 +2487,14 @@ impl Deserialize for MapBlock {
             })
         } else {
             let header = MapBlockHeader::deserialize(deser)?;
-            let (consumed, nodes_raw) = decompress_zlib(deser.peek_all())?;
-            deser.take(consumed)?;
+            let (consumed1, nodes_raw) = decompress_zlib(deser.peek_all())?;
+            deser.take(consumed1)?;
             let nodes = {
                 let mut tmp = Deserializer::new(deser.context(), &nodes_raw);
                 MapNodesBulk::deserialize(&mut tmp)?
             };
-            let (consumed, metadata_raw) = decompress_zlib(deser.peek_all())?;
-            deser.take(consumed)?;
+            let (consumed2, metadata_raw) = decompress_zlib(deser.peek_all())?;
+            deser.take(consumed2)?;
             let node_metadata = {
                 let mut tmp = Deserializer::new(deser.context(), &metadata_raw);
                 NodeMetadataList::deserialize(&mut tmp)?
@@ -2509,8 +2523,8 @@ impl Serialize for MapNodesBulk {
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         let nodecount = NODECOUNT as usize;
         // Write all param0 first
-        ser.write(2 * nodecount as usize, |buf| {
-            assert_eq!(buf.len(), 2 * nodecount as usize, "size mismatch");
+        ser.write(2 * nodecount, |buf| {
+            assert_eq!(buf.len(), 2 * nodecount, "size mismatch");
             for index in 0..nodecount {
                 let bytes = value.nodes[index].param0.to_be_bytes();
                 buf[2 * index] = bytes[0];
@@ -2520,6 +2534,10 @@ impl Serialize for MapNodesBulk {
         // Write all param1
         ser.write(nodecount, |buf| {
             assert_eq!(buf.len(), nodecount, "size mismatch");
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "// TODO transform into iterator"
+            )]
             for index in 0..nodecount {
                 buf[index] = value.nodes[index].param1;
             }
@@ -2527,6 +2545,10 @@ impl Serialize for MapNodesBulk {
         // Write all param2
         ser.write(nodecount, |buf| {
             assert_eq!(buf.len(), nodecount, "size mismatch");
+            #[expect(
+                clippy::needless_range_loop,
+                reason = "// TODO transform into iterator"
+            )]
             for i in 0..nodecount {
                 buf[i] = value.nodes[i].param2;
             }
@@ -2576,7 +2598,7 @@ pub struct NodeMetadataList {
 impl Serialize for NodeMetadataList {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        if value.metadata.len() == 0 {
+        if value.metadata.is_empty() {
             u8::serialize(&0, ser)?; // version 0 indicates no data
             return Ok(());
         }
@@ -2591,9 +2613,9 @@ impl Deserialize for NodeMetadataList {
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         let ver = u8::deserialize(deser)?;
         if ver == 0 {
-            return Ok(Self {
+            Ok(Self {
                 metadata: Vec::new(),
-            });
+            })
         } else if ver == 2 {
             Ok(Self {
                 metadata: <Array16<Pair<BlockPos, NodeMetadata>> as Deserialize>::deserialize(
@@ -2602,7 +2624,7 @@ impl Deserialize for NodeMetadataList {
             })
         } else {
             bail!(DeserializeError::InvalidValue(
-                "Invalid NodeMetadataList version".to_string(),
+                "Invalid NodeMetadataList version".into(),
             ))
         }
     }
@@ -2616,7 +2638,7 @@ pub struct AbsNodeMetadataList {
 impl Serialize for AbsNodeMetadataList {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        if value.metadata.len() == 0 {
+        if value.metadata.is_empty() {
             u8::serialize(&0, ser)?; // version 0 indicates no data
             return Ok(());
         }
@@ -2631,9 +2653,9 @@ impl Deserialize for AbsNodeMetadataList {
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         let ver = u8::deserialize(deser)?;
         if ver == 0 {
-            return Ok(Self {
+            Ok(Self {
                 metadata: Vec::new(),
-            });
+            })
         } else if ver == 2 {
             Ok(Self {
                 metadata: <Array16<Pair<AbsBlockPos, NodeMetadata>> as Deserialize>::deserialize(
@@ -2642,7 +2664,7 @@ impl Deserialize for AbsNodeMetadataList {
             })
         } else {
             bail!(DeserializeError::InvalidValue(
-                "Invalid AbsNodeMetadataList version".to_string(),
+                "Invalid AbsNodeMetadataList version".into(),
             ))
         }
     }
@@ -2703,9 +2725,7 @@ impl Deserialize for BlockPos {
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         let raw = u16::deserialize(deser)?;
         if raw >= 4096 {
-            bail!(DeserializeError::InvalidValue(
-                "Invalid BlockPos".to_string(),
-            ))
+            bail!(DeserializeError::InvalidValue("Invalid BlockPos".into(),))
         }
         Ok(Self { raw })
     }
@@ -2740,7 +2760,7 @@ pub enum InventoryEntry {
 }
 
 /// Inventory is sent as a "almost" line-based text format.
-/// Unfortutely there's no way to simplify this code, it has to mirror
+/// Unfortunately there's no way to simplify this code, it has to mirror
 /// the way Luanti does it exactly, because it is so arbitrary.
 impl Serialize for Inventory {
     type Input = Self;
@@ -2775,7 +2795,7 @@ impl Deserialize for Inventory {
             // Peek the line, but don't take it yet.
             let line = deser.peek_line()?;
             let words = split_by_whitespace(line);
-            if words.len() == 0 {
+            if words.is_empty() {
                 deser.take_line()?;
                 continue;
             }
@@ -2792,16 +2812,14 @@ impl Deserialize for Inventory {
             } else if name == b"KeepList" {
                 if words.len() < 2 {
                     bail!(DeserializeError::InvalidValue(
-                        "KeepList missing name".to_string(),
+                        "KeepList missing name".into(),
                     ));
                 }
-                match std::str::from_utf8(&words[1]) {
-                    Ok(str) => result
-                        .entries
-                        .push(InventoryEntry::KeepList(str.to_string())),
+                match std::str::from_utf8(words[1]) {
+                    Ok(str) => result.entries.push(InventoryEntry::KeepList(str.into())),
                     Err(_) => {
                         bail!(DeserializeError::InvalidValue(
-                            "KeepList name is invalid UTF8".to_string(),
+                            "KeepList name is invalid UTF8".into(),
                         ))
                     }
                 }
@@ -2850,9 +2868,9 @@ impl Serialize for InventoryList {
             match item {
                 ItemStackUpdate::Empty => ser.write_bytes(b"Empty\n")?,
                 ItemStackUpdate::Keep => ser.write_bytes(b"Keep\n")?,
-                ItemStackUpdate::Item(itemstack) => {
+                ItemStackUpdate::Item(item_stack) => {
                     // Writes Item line
-                    ItemStack::serialize(itemstack, ser)?;
+                    ItemStack::serialize(item_stack, ser)?;
                 }
             }
         }
@@ -2868,36 +2886,32 @@ impl Deserialize for InventoryList {
         let line = deser.take_line()?;
         let words = split_by_whitespace(line);
         if words.len() != 3 || words[0] != b"List" {
-            bail!(DeserializeError::InvalidValue(
-                "Broken List tag".to_string(),
-            ));
+            bail!(DeserializeError::InvalidValue("Broken List tag".into(),));
         }
         let list_name = std::str::from_utf8(words[1])?;
         let _count: u32 = stoi(words[2])?;
         let mut result = Self {
-            name: list_name.to_string(),
+            name: list_name.into(),
             width: 0,
             items: Vec::new(),
         };
         while deser.remaining() > 0 {
             // Peek the line, but don't take it yet.
-            let line = deser.peek_line()?;
-            let words = split_by_whitespace(line);
-            if words.len() == 0 {
+            let peeked_line = deser.peek_line()?;
+            let peeked_words = split_by_whitespace(peeked_line);
+            if peeked_words.is_empty() {
                 deser.take_line()?;
                 continue;
             }
-            let name = words[0];
+            let name = peeked_words[0];
             if name == b"EndInventoryList" || name == b"end" {
                 deser.take_line()?;
                 return Ok(result);
             } else if name == b"Width" {
-                if words.len() < 2 {
-                    bail!(DeserializeError::InvalidValue(
-                        "Width value missing".to_string(),
-                    ));
+                if peeked_words.len() < 2 {
+                    bail!(DeserializeError::InvalidValue("Width value missing".into(),));
                 }
-                result.width = stoi(words[1])?;
+                result.width = stoi(peeked_words[1])?;
                 deser.take_line()?;
             } else if name == b"Item" {
                 // ItemStack takes the line
@@ -2933,9 +2947,7 @@ impl Serialize for ItemStack {
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         // Item <name_json> [count] [wear] [metadata]
         ser.write_bytes(b"Item ")?;
-        serialize_json_string_if_needed(&value.name.as_bytes(), |chunk| {
-            Ok(ser.write_bytes(chunk)?)
-        })?;
+        serialize_json_string_if_needed(value.name.as_bytes(), |chunk| ser.write_bytes(chunk))?;
 
         let mut parts = 1;
         if !value.metadata.string_vars.is_empty() {
@@ -2968,31 +2980,29 @@ impl Deserialize for ItemStack {
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         // Item "name maybe escaped" [count] [wear] ["metadata escaped"]
         let line = deser.take_line()?;
-        let err = DeserializeError::InvalidValue("Truncated Item line".to_string());
-        let (word, line) = next_word(line).ok_or(err)?;
-        if word != b"Item" {
-            bail!(DeserializeError::InvalidValue(
-                "Invalid Item line".to_string(),
-            ));
+        let err = DeserializeError::InvalidValue("Truncated Item line".into());
+        let (first_word, line) = next_word(line).ok_or(err)?;
+        if first_word != b"Item" {
+            bail!(DeserializeError::InvalidValue("Invalid Item line".into(),));
         }
         let line = skip_whitespace(line);
         let (name, skip) = deserialize_json_string_if_needed(line)?;
         let line = skip_whitespace(&line[skip..]);
 
         let mut result = Self {
-            name: std::str::from_utf8(&name)?.to_string(),
+            name: std::str::from_utf8(&name)?.into(),
             count: 1,
             wear: 0,
             metadata: ItemStackMetadata {
                 string_vars: Vec::new(),
             },
         };
-        if let Some((word, line)) = next_word(line) {
-            result.count = stoi(word)?;
-            if let Some((word, line)) = next_word(line) {
-                result.wear = stoi(word)?;
+        if let Some((count_str, line)) = next_word(line) {
+            result.count = stoi(count_str)?;
+            if let Some((wear_str, line)) = next_word(line) {
+                result.wear = stoi(wear_str)?;
                 let line = skip_whitespace(line);
-                if line.len() > 0 {
+                if !line.is_empty() {
                     let mut tmp_deser = Deserializer::new(deser.context(), line);
                     result.metadata = ItemStackMetadata::deserialize(&mut tmp_deser)?;
                 }
@@ -3038,25 +3048,24 @@ impl Deserialize for ItemStackMetadata {
         let mut result = Self {
             string_vars: Vec::new(),
         };
-        let raw = &raw[..]; // easier to work with slice
-        if raw.len() == 0 {
+        if raw.is_empty() {
             return Ok(result);
         }
         if raw[0] != DESERIALIZE_START[0] {
             bail!(DeserializeError::InvalidValue(
-                "ItemStackMetadata bad start".to_string(),
+                "ItemStackMetadata bad start".into(),
             ));
         }
         let mut raw = &raw[1..];
         // This is odd, but matches the behavior of ItemStackMetadata::deSerialize
-        while raw.len() != 0 {
+        while !raw.is_empty() {
             let kv_delim_pos = raw
                 .iter()
                 .position(|ch| *ch == DESERIALIZE_KV_DELIM[0])
                 .unwrap_or(raw.len());
             let name = &raw[..kv_delim_pos];
             raw = &raw[kv_delim_pos..];
-            if raw.len() > 0 {
+            if !raw.is_empty() {
                 raw = &raw[1..];
             }
             let pair_delim_pos = raw
@@ -3065,7 +3074,7 @@ impl Deserialize for ItemStackMetadata {
                 .unwrap_or(raw.len());
             let var = &raw[..pair_delim_pos];
             raw = &raw[pair_delim_pos..];
-            if raw.len() > 0 {
+            if !raw.is_empty() {
                 raw = &raw[1..];
             }
             result.string_vars.push((name.into(), var.into()));
@@ -3077,6 +3086,7 @@ impl Deserialize for ItemStackMetadata {
 /// This is the way `ADD_PARTICLESPAWNER` is serialized.
 /// It seems to be an older version of `ParticleParameters`
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+#[expect(clippy::struct_excessive_bools, reason = "this is mandated by the API")]
 pub struct AddParticleSpawnerLegacy {
     pub amount: u16,
     pub time: f32,
@@ -3344,6 +3354,7 @@ where
 /// This is the send format used by `SendSpawnParticle`
 /// See `ParticleParameters::serialize`
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+#[expect(clippy::struct_excessive_bools, reason = "this is mandated by the API")]
 pub struct ParticleParameters {
     pub pos: v3f,
     pub vel: v3f,
@@ -3415,6 +3426,7 @@ pub enum HudSetParam {
 impl Serialize for HudSetParam {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
+        #![allow(clippy::enum_glob_use, reason = "improves readability")]
         use HudSetParam::*;
         let param: u16 = match value {
             SetHotBarItemCount(_) => 1,
@@ -3438,6 +3450,7 @@ impl Serialize for HudSetParam {
 impl Deserialize for HudSetParam {
     type Output = Self;
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+        #[allow(clippy::enum_glob_use, reason = "improves readability")]
         use HudSetParam::*;
         let param = u16::deserialize(deser)?;
         Ok(match param {
@@ -3456,6 +3469,10 @@ impl Deserialize for HudSetParam {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "// TODO rewrite using a crate for flags or bit-fields"
+)]
 pub struct HudFlags {
     pub hotbar_visible: bool,
     pub healthbar_visible: bool,
@@ -3471,16 +3488,17 @@ pub struct HudFlags {
 impl HudFlags {
     #[must_use]
     pub fn to_u32(&self) -> u32 {
+        #![expect(clippy::identity_op, reason = "for symmetry")]
         let mut flags: u32 = 0;
-        flags |= (self.hotbar_visible as u32) << 0;
-        flags |= (self.healthbar_visible as u32) << 1;
-        flags |= (self.crosshair_visible as u32) << 2;
-        flags |= (self.wielditem_visible as u32) << 3;
-        flags |= (self.breathbar_visible as u32) << 4;
-        flags |= (self.minimap_visible as u32) << 5;
-        flags |= (self.minimap_radar_visible as u32) << 6;
-        flags |= (self.basic_debug as u32) << 7;
-        flags |= (self.chat_visible as u32) << 8;
+        flags |= u32::from(self.hotbar_visible) << 0;
+        flags |= u32::from(self.healthbar_visible) << 1;
+        flags |= u32::from(self.crosshair_visible) << 2;
+        flags |= u32::from(self.wielditem_visible) << 3;
+        flags |= u32::from(self.breathbar_visible) << 4;
+        flags |= u32::from(self.minimap_visible) << 5;
+        flags |= u32::from(self.minimap_radar_visible) << 6;
+        flags |= u32::from(self.basic_debug) << 7;
+        flags |= u32::from(self.chat_visible) << 8;
         flags
     }
 
@@ -3530,6 +3548,10 @@ pub enum InteractAction {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[expect(
+    variant_size_differences,
+    reason = "// TODO review whether this is actually a problem"
+)]
 pub enum PointedThing {
     Nothing,
     Node {
@@ -3690,6 +3712,7 @@ impl Deserialize for InventoryAction {
                 from_i: stoi(deser.take_word(true))?,
                 to_inv: InventoryLocation::deserialize(deser)?,
                 to_list: std::str::from_utf8(deser.take_word(true))?.to_owned(),
+                #[expect(clippy::if_then_some_else_none, reason = "`?`-operator prohibits this")]
                 to_i: if word == b"Move" {
                     Some(stoi(deser.take_word(true))?)
                 } else {
@@ -3750,14 +3773,15 @@ impl Deserialize for InventoryLocation {
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         let word = deser.take_word(true);
         if word == b"undefined" {
-            return Ok(InventoryLocation::Undefined);
+            Ok(InventoryLocation::Undefined)
         } else if word == b"current_player" {
-            return Ok(InventoryLocation::CurrentPlayer);
+            Ok(InventoryLocation::CurrentPlayer)
         } else if word.starts_with(b"player:") {
-            return Ok(InventoryLocation::Player {
-                name: std::str::from_utf8(&word[7..])?.to_string(),
-            });
+            Ok(InventoryLocation::Player {
+                name: std::str::from_utf8(&word[7..])?.into(),
+            })
         } else if word.starts_with(b"nodemeta:") {
+            // TODO replace with strip_prefix
             let coords: Vec<&[u8]> = word[9..].split(|&ch| ch == b',').collect();
             if coords.len() != 3 {
                 bail!("Corrupted nodemeta InventoryLocation");
@@ -3767,13 +3791,13 @@ impl Deserialize for InventoryLocation {
                 xyz[i] = stoi(n)?;
             }
             let pos = v3s16::new(xyz[0], xyz[1], xyz[2]);
-            return Ok(InventoryLocation::NodeMeta { pos });
+            Ok(InventoryLocation::NodeMeta { pos })
         } else if word.starts_with(b"detached:") {
-            return Ok(InventoryLocation::Detached {
-                name: std::str::from_utf8(&word[9..])?.to_string(),
-            });
+            Ok(InventoryLocation::Detached {
+                name: std::str::from_utf8(&word[9..])?.into(),
+            })
         } else {
-            bail!("Unknown InventoryLocation: {:?}", word)
+            Err(anyhow!("Unknown InventoryLocation: {:?}", word))
         }
     }
 }

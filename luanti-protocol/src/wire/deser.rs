@@ -44,14 +44,14 @@ impl From<anyhow::Error> for DeserializeError {
 
 pub type DeserializeResult<R> = anyhow::Result<R>;
 
-pub struct Deserializer<'a> {
+pub struct Deserializer<'data> {
     pub context: ProtocolContext,
-    pub data: &'a [u8], // Remaining data
+    pub data: &'data [u8], // Remaining data
 }
 
-impl<'a> Deserializer<'a> {
+impl<'data> Deserializer<'data> {
     #[must_use]
-    pub fn new(context: ProtocolContext, data: &'a [u8]) -> Self {
+    pub fn new(context: ProtocolContext, data: &'data [u8]) -> Self {
         Self { context, data }
     }
 
@@ -60,7 +60,7 @@ impl<'a> Deserializer<'a> {
     pub fn slice(&mut self, count: usize) -> DeserializeResult<Self> {
         Ok(Self {
             context: self.context,
-            data: &self.take(count)?,
+            data: self.take(count)?,
         })
     }
 
@@ -79,47 +79,45 @@ impl<'a> Deserializer<'a> {
         self.data.len()
     }
 
-    /// Finds the first occurance of the byte 'b'
+    /// Finds the first occurrence of the byte 'b'
     /// from the current position in the stream.
     pub fn find(&mut self, byte: u8) -> Option<usize> {
         self.data.iter().position(|ch| *ch == byte)
     }
 
-    pub fn peek(&mut self, count: usize) -> DeserializeResult<&'a [u8]> {
+    pub fn peek(&mut self, count: usize) -> DeserializeResult<&'data [u8]> {
         if count > self.data.len() {
             bail!(DeserializeError::Eof)
-        } else {
-            Ok(&self.data[0..count])
         }
+        Ok(&self.data[0..count])
     }
 
-    pub fn peek_all(&mut self) -> &'a [u8] {
-        &self.data[..]
+    pub fn peek_all(&mut self) -> &'data [u8] {
+        self.data
     }
 
-    pub fn take(&mut self, count: usize) -> DeserializeResult<&'a [u8]> {
+    pub fn take(&mut self, count: usize) -> DeserializeResult<&'data [u8]> {
         if count > self.data.len() {
             bail!(DeserializeError::Eof)
-        } else {
-            let ret;
-            (ret, self.data) = self.data.split_at(count);
-            Ok(ret)
         }
+        let (ret, data) = self.data.split_at(count);
+        self.data = data;
+        Ok(ret)
     }
 
     pub fn take_n<const N: usize>(&mut self) -> DeserializeResult<[u8; N]> {
         Ok(self.take(N)?.try_into().unwrap())
     }
 
-    pub fn take_all(&mut self) -> &'a [u8] {
-        let ret;
-        (ret, self.data) = self.data.split_at(self.data.len());
+    pub fn take_all(&mut self) -> &'data [u8] {
+        let (ret, data) = self.data.split_at(self.data.len());
+        self.data = data;
         ret
     }
 
     /// Peek the next line (including ending \n, if present)
     /// If the stream is at end, this will be an empty slice.
-    pub fn peek_line(&mut self) -> DeserializeResult<&'a [u8]> {
+    pub fn peek_line(&mut self) -> DeserializeResult<&'data [u8]> {
         let line_len = match self.find(b'\n') {
             Some(pos) => pos + 1,
             None => self.remaining(),
@@ -129,7 +127,7 @@ impl<'a> Deserializer<'a> {
 
     /// Take the next line (including ending \n, if present)
     /// If the stream is at end, this will be an empty slice.
-    pub fn take_line(&mut self) -> DeserializeResult<&'a [u8]> {
+    pub fn take_line(&mut self) -> DeserializeResult<&'data [u8]> {
         let line_len = match self.find(b'\n') {
             Some(pos) => pos + 1,
             None => self.remaining(),
@@ -141,14 +139,14 @@ impl<'a> Deserializer<'a> {
     /// If `skip_whitespace` is true, skips initial whitespace first.
     /// If `skip_whitespace` is false, and the next byte is a space,
     /// nothing is taken, and the returned will be empty.
-    pub fn take_word(&mut self, skip_whitespace: bool) -> &'a [u8] {
+    pub fn take_word(&mut self, skip_whitespace: bool) -> &'data [u8] {
         if skip_whitespace {
             self.take_space();
         }
         match self.data.iter().position(|&ch| ch == b' ' || ch == b'\n') {
             Some(end) => {
-                let ret;
-                (ret, self.data) = self.data.split_at(end);
+                let (ret, data) = self.data.split_at(end);
+                self.data = data;
                 ret
             }
             None => self.take_all(),

@@ -17,7 +17,7 @@ example of how to use this library, see the `luanti-shark` crate.
 
 ## Work in progress
 
-- Documentation is incomplete and unreviewed.
+- Documentation is incomplete and not reviewed.
 
 - Reliable packet delivery transmission window size is fixed for now.
 

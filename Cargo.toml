@@ -69,7 +69,7 @@ unused_crate_dependencies = "warn"
 # Maintenance lints that are generally overridden, but can be used temporarily for clean-up and maintenance
 ######################################################################################################################
 
-# generally too eager and suggests too big datatypes but helps to see whether there are missed opportunities
+# generally too eager and suggests too big data types but helps to see whether there are missed opportunities
 # missing_copy_implementations = "warn"
 
 ######################################################################################################################

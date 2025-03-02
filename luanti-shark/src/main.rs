@@ -12,7 +12,7 @@ use proxy::LuantiProxy;
 use std::net::SocketAddr;
 use std::time::Duration;
 
-/// mtshark - Luanti proxy that gives detailed inspection of protocol
+/// luanti-shark - Luanti proxy that gives detailed inspection of protocol
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 #[command(group(ArgGroup::new("source").required(true).args(["listen", "bind"])))]

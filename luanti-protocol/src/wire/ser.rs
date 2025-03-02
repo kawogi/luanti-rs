@@ -52,30 +52,30 @@ pub trait Serializer {
 }
 
 /// Serialize a Packet to a mutable slice
-pub struct SliceSerializer<'a> {
+pub struct SliceSerializer<'data> {
     context: ProtocolContext,
     offset: usize,
-    data: &'a mut [u8],
+    data: &'data mut [u8],
     overflow: bool,
 }
 
-impl<'a> SliceSerializer<'a> {
-    pub fn new(context: ProtocolContext, data: &'a mut [u8]) -> Self {
+impl<'data> SliceSerializer<'data> {
+    pub fn new(context: ProtocolContext, data: &'data mut [u8]) -> Self {
         Self {
             context,
             offset: 0,
-            data: data,
+            data,
             overflow: false,
         }
     }
 
     /// Returns the finished serialized packet
-    /// This is a subslice of the original data slice provided
+    /// This is a sub-slice of the original data slice provided
     /// If the serializer ran out of space, returns None.
     pub fn take(&self) -> Result<&[u8]> {
         if self.overflow {
             bail!(SerializeError::BufferLimit(
-                "SliceSerializer overflow".to_string()
+                "SliceSerializer overflow".into()
             ));
         }
         Ok(&self.data[..self.offset])
@@ -97,7 +97,7 @@ impl Serializer for SliceSerializer<'_> {
         if self.offset + fragment.len() > self.data.len() {
             self.overflow = true;
             bail!(SerializeError::BufferLimit(
-                "SliceSerializer out of space ".to_string(),
+                "SliceSerializer out of space ".into(),
             ));
         }
         self.data[self.offset..self.offset + fragment.len()].copy_from_slice(fragment);
@@ -109,7 +109,7 @@ impl Serializer for SliceSerializer<'_> {
         if self.offset + length > self.data.len() {
             self.overflow = true;
             Err(SerializeError::BufferLimit(
-                "SliceSerializer out of space ".to_string(),
+                "SliceSerializer out of space ".into(),
             ))
         } else {
             let marker = (self.offset, length);
@@ -122,9 +122,7 @@ impl Serializer for SliceSerializer<'_> {
         let (offset, length) = marker;
         if fragment.len() != length {
             self.overflow = true;
-            bail!(SerializeError::InvalidValue(
-                "Marker has wrong size".to_string(),
-            ));
+            bail!(SerializeError::InvalidValue("Marker has wrong size".into(),));
         }
         self.data[offset..offset + length].copy_from_slice(fragment);
         Ok(())
@@ -142,7 +140,7 @@ impl Serializer for SliceSerializer<'_> {
         if self.offset + length > self.data.len() {
             self.overflow = true;
             bail!(SerializeError::BufferLimit(
-                "SliceSerializer out of space ".to_string(),
+                "SliceSerializer out of space ".into(),
             ))
         }
         write_slice_fn(&mut self.data[self.offset..self.offset + length]);
@@ -230,6 +228,10 @@ impl MockSerializer {
 
     /// How many bytes have been written so far
     #[must_use]
+    #[expect(
+        clippy::len_without_is_empty,
+        reason = "seems to be unneeded in this context"
+    )]
     pub fn len(&self) -> usize {
         self.count
     }

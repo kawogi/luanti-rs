@@ -116,11 +116,11 @@ impl LuantiSocketRunner {
         loop {
             let mut interest = Interest::READABLE;
             if !self.outgoing.is_empty() {
-                interest = interest | Interest::WRITABLE;
+                interest |= Interest::WRITABLE;
             }
             // rust-analyzer chokes on code inside select!, so keep it to a minimum.
             tokio::select! {
-                ready = self.socket.ready(interest) => self.handle_socket_io(ready, &mut buf)?,
+                ready = self.socket.ready(interest) => self.handle_socket_io(ready, &mut buf),
                 msg = self.peer_rx.recv() => self.handle_peer_message(msg),
                 address = self.knock_rx.recv(), if !knock_closed => {
                     match address {
@@ -136,11 +136,7 @@ impl LuantiSocketRunner {
         }
     }
 
-    fn handle_socket_io(
-        &mut self,
-        ready: tokio::io::Result<Ready>,
-        buf: &mut [u8],
-    ) -> anyhow::Result<()> {
+    fn handle_socket_io(&mut self, ready: tokio::io::Result<Ready>, buf: &mut [u8]) {
         let ready = ready.expect("socket.ready should not error");
         if ready.is_readable() {
             match self.socket.try_recv_from(buf) {
@@ -164,13 +160,11 @@ impl LuantiSocketRunner {
                 Err(error) => panic!("Unexpected socket error: {error:?}"),
             }
         }
-        Ok(())
     }
 
     fn handle_peer_message(&mut self, msg: Option<PeerToSocket>) {
-        let msg = match msg {
-            Some(msg) => msg,
-            None => panic!("Unexpected Server shutdown?"),
+        let Some(msg) = msg else {
+            panic!("Unexpected Server shutdown?");
         };
         match msg {
             PeerToSocket::SendImmediate(addr, data) => self.outgoing.push_back((addr, data)),
@@ -187,8 +181,8 @@ impl LuantiSocketRunner {
     }
 
     fn insert_peer(&mut self, remote_addr: SocketAddr) {
-        let (peer, peerio) = new_peer(remote_addr, !self.for_server, self.peer_tx.clone());
-        self.peers.insert(remote_addr, peerio);
+        let (peer, peer_io) = new_peer(remote_addr, !self.for_server, self.peer_tx.clone());
+        self.peers.insert(remote_addr, peer_io);
         self.accept_tx.send(peer).unwrap();
     }
 

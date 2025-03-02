@@ -6,12 +6,13 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use anyhow::bail;
+use miniz_oxide::inflate;
 use miniz_oxide::inflate::core::DecompressorOxide;
 use miniz_oxide::inflate::core::inflate_flags;
 use zstd_safe::InBuffer;
 use zstd_safe::OutBuffer;
 
-/// Convert an integer type into it's string represention as &[u8]
+/// Convert an integer type into it's string representation as &[u8]
 ///
 /// For example:
 ///    123 returns &[49, 50, 51]
@@ -25,13 +26,15 @@ macro_rules! itos {
 }
 
 /// Parse byte slice into an integer. The opposite of itos.
-/// On error (such as Utf8Error or ParseIntError) this does
+/// On error (such as `Utf8Error` or `ParseIntError`) this does
 /// `return Err()` implicitly.
 ///
 /// Use return type-inference to specify the integer type, e.g:
-
-///     let val: u16 = stoi(&s);
 ///
+/// ```rust
+/// use luanti_protocol::wire::util::stoi;
+/// let val: u16 = stoi(b"123".as_slice()).unwrap();
+/// ```
 pub fn stoi<T: FromStr>(bytes: &[u8]) -> Result<T>
 where
     <T as FromStr>::Err: std::error::Error + Sync + Send + 'static,
@@ -104,21 +107,18 @@ pub fn zstd_decompress<F>(input: &[u8], mut write: F) -> Result<usize>
 where
     F: FnMut(&[u8]) -> Result<()>,
 {
-    let mut ctx = zstd_safe::DCtx::create();
     const BUFSIZE: usize = 0x4000;
     let mut buf = [0_u8; BUFSIZE];
+    let mut ctx = zstd_safe::DCtx::create();
 
-    let mut input_buffer = InBuffer {
-        src: &input,
-        pos: 0,
-    };
+    let mut input_buffer = InBuffer { src: input, pos: 0 };
     loop {
         let mut output_buffer = OutBuffer::around(&mut buf);
         match ctx.decompress_stream(&mut output_buffer, &mut input_buffer) {
             Ok(code) => {
                 let out = output_buffer.as_slice();
-                if out.len() != 0 {
-                    write(&out)?;
+                if !out.is_empty() {
+                    write(out)?;
                 }
                 if code == 0 {
                     break;
@@ -135,12 +135,12 @@ pub fn serialize_json_string_if_needed<W>(input: &[u8], mut write: W) -> Result<
 where
     W: FnMut(&[u8]) -> Result<()>,
 {
-    if input.len() == 0
+    if input.is_empty()
         || input
             .iter()
             .any(|&ch| ch <= 0x1f || ch >= 0x7f || ch == b' ' || ch == b'\"')
     {
-        serialize_json_string(&input, write)
+        serialize_json_string(input, write)
     } else {
         write(input)
     }
@@ -275,7 +275,7 @@ pub fn deserialize_json_string(input: &[u8]) -> Result<(Vec<u8>, usize), anyhow:
                     let lo = from_hex(codepoint[3])?;
                     result.push((hi << 4) | lo);
                 }
-                ch => result.push(ch),
+                other_char => result.push(other_char),
             }
         } else {
             result.push(ch);
@@ -288,7 +288,7 @@ pub fn deserialize_json_string(input: &[u8]) -> Result<(Vec<u8>, usize), anyhow:
 #[must_use]
 pub fn split_by_whitespace(line: &[u8]) -> Vec<&[u8]> {
     line.split(|ch| *ch == b' ' || *ch == b'\n')
-        .filter(|item| item.len() > 0)
+        .filter(|item| !item.is_empty())
         .collect()
 }
 
@@ -310,7 +310,7 @@ pub fn next_word(line: &[u8]) -> Option<(&[u8], &[u8])> {
     match line.iter().position(|ch| *ch == b' ' || *ch == b'\n') {
         Some(endpos) => Some((&line[..endpos], &line[endpos..])),
         None => {
-            if line.len() == 0 {
+            if line.is_empty() {
                 None
             } else {
                 Some((line, &line[line.len()..]))
@@ -332,15 +332,15 @@ pub fn decompress_zlib(input: &[u8]) -> Result<(usize, Vec<u8>)> {
         | inflate_flags::TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF;
     let mut ret: Vec<u8> = vec![0; input.len().saturating_mul(2)];
 
-    let mut decomp = Box::<DecompressorOxide>::default();
+    let mut decompressor = Box::<DecompressorOxide>::default();
 
     let mut in_pos = 0;
     let mut out_pos = 0;
     loop {
         // Wrap the whole output slice so we know we have enough of the
         // decompressed data for matches.
-        let (status, in_consumed, out_consumed) = miniz_oxide::inflate::core::decompress(
-            &mut decomp,
+        let (status, in_consumed, out_consumed) = inflate::core::decompress(
+            &mut decompressor,
             &input[in_pos..],
             &mut ret,
             out_pos,
@@ -350,12 +350,12 @@ pub fn decompress_zlib(input: &[u8]) -> Result<(usize, Vec<u8>)> {
         out_pos += out_consumed;
 
         match status {
-            miniz_oxide::inflate::TINFLStatus::Done => {
+            inflate::TINFLStatus::Done => {
                 ret.truncate(out_pos);
                 return Ok((in_pos, ret));
             }
 
-            miniz_oxide::inflate::TINFLStatus::HasMoreOutput => {
+            inflate::TINFLStatus::HasMoreOutput => {
                 // if the buffer has already reached the size limit, return an error
                 // calculate the new length, capped at `max_output_size`
                 let new_len = ret.len().saturating_mul(2);
@@ -378,14 +378,14 @@ mod tests {
 
     use super::*;
     use log::error;
+    use rand;
     use rand::Rng;
     use rand::RngCore;
-    use rand::thread_rng;
-    use rand::{self};
+    use rand::rng;
 
     fn rand_bytes(range: Range<usize>) -> Vec<u8> {
-        let mut rng = thread_rng();
-        let length = rng.gen_range(range);
+        let mut rng = rng();
+        let length = rng.random_range(range);
         let mut input = vec![0_u8; length];
         rng.fill_bytes(input.as_mut_slice());
         input
@@ -393,13 +393,11 @@ mod tests {
 
     fn serialize_to_vec(input: &[u8]) -> Vec<u8> {
         let mut out = Vec::new();
-        assert!(
-            serialize_json_string_if_needed(&input, |chunk| {
-                out.extend(chunk);
-                Ok(())
-            })
-            .is_ok()
-        );
+        serialize_json_string_if_needed(input, |chunk| {
+            out.extend(chunk);
+            Ok(())
+        })
+        .unwrap();
         out
     }
 
@@ -420,7 +418,7 @@ mod tests {
                 error!("serialized_plus_junk = {:?}", serialized_plus_junk);
                 error!("result = {:?}", result);
                 error!("consumed = {}", consumed);
-                assert!(false);
+                panic!();
             }
             assert_eq!(input, result);
             assert_eq!(consumed, serialized.len());

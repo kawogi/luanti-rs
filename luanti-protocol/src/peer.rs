@@ -77,7 +77,7 @@ pub type FullSeqNum = u64;
 pub struct Peer {
     remote_addr: SocketAddr,
     remote_is_server: bool,
-    /// TODO(paradust): Add backpressure
+    /// TODO(paradust): Add back-pressure
     send: UnboundedSender<Command>,
     recv: UnboundedReceiver<Result<Command>>,
 }
@@ -164,7 +164,7 @@ impl PeerIO {
     /// Called by the `LuantiSocket` when a packet arrives for us
     ///
     pub fn send(&mut self, data: &[u8]) {
-        //TODO Add backpressure
+        //TODO Add back-pressure
         #[expect(
             clippy::unwrap_used,
             reason = "// TODO clarify error condition and handling"
@@ -214,11 +214,11 @@ impl Channel {
 
     pub(crate) fn update_context(
         &mut self,
-        recv_context: &ProtocolContext,
-        send_context: &ProtocolContext,
+        recv_context: ProtocolContext,
+        send_context: ProtocolContext,
     ) {
-        self.recv_context = *recv_context;
-        self.send_context = *send_context;
+        self.recv_context = recv_context;
+        self.send_context = send_context;
     }
 
     /// Process a packet received from remote
@@ -257,7 +257,7 @@ impl Channel {
     pub(crate) fn process_control(&mut self, body: ControlBody) {
         match body {
             ControlBody::Ack(ack) => {
-                self.reliable_out.process_ack(ack);
+                self.reliable_out.process_ack(&ack);
             }
             // Everything else is handled one level up
             _ => (),
@@ -290,13 +290,11 @@ impl Channel {
 
     /// Check if the channel has anything ready to send.
     pub(crate) fn next_send(&mut self, now: Instant) -> Option<PacketBody> {
-        match self.unreliable_out.pop_front() {
-            Some(body) => return Some(PacketBody::Inner(body)),
-            None => (),
+        if let Some(body) = self.unreliable_out.pop_front() {
+            return Some(PacketBody::Inner(body));
         };
-        match self.reliable_out.pop(now) {
-            Some(body) => return Some(body),
-            None => (),
+        if let Some(body) = self.reliable_out.pop(now) {
+            return Some(body);
         }
         None
     }
@@ -332,7 +330,7 @@ pub struct PeerRunner {
     from_socket: UnboundedReceiver<SocketToPeer>,
     to_socket: UnboundedSender<PeerToSocket>,
 
-    // TODO(paradust): These should have backpressure
+    // TODO(paradust): These should have back-pressure
     from_controller: UnboundedReceiver<Command>,
     to_controller: UnboundedSender<Result<Command>>,
 
@@ -346,7 +344,7 @@ pub struct PeerRunner {
 
     channels: Vec<Channel>,
 
-    // Updated once per wakeup, to limit number of repeated syscalls
+    // Updated once per wakeup, to limit number of repeated sys-calls
     now: Instant,
 
     // Time last packet was received. Used to timeout connection.
@@ -429,15 +427,15 @@ impl PeerRunner {
             // Before select, make sure everything ready to send has been sent,
             // and compute a resend timeout.
             let mut next_wakeup = never;
-            for num in 0..=2 {
+            for num in 0_u8..=2 {
                 loop {
-                    let pkt = self.channels[num].next_send(self.now);
+                    let pkt = self.channels[usize::from(num)].next_send(self.now);
                     match pkt {
-                        Some(body) => self.send_raw(num as u8, body)?,
+                        Some(body) => self.send_raw(num, body)?,
                         None => break,
                     }
                 }
-                if let Some(timeout) = self.channels[num].next_timeout() {
+                if let Some(timeout) = self.channels[usize::from(num)].next_timeout() {
                     next_wakeup = std::cmp::min(next_wakeup, timeout);
                 }
             }
@@ -453,9 +451,8 @@ impl PeerRunner {
 
     fn handle_from_socket(&mut self, msg: Option<SocketToPeer>) -> Result<()> {
         self.update_now();
-        let msg = match msg {
-            Some(msg) => msg,
-            None => bail!(PeerError::SocketClosed),
+        let Some(msg) = msg else {
+            bail!(PeerError::SocketClosed);
         };
         match msg {
             SocketToPeer::Received(buf) => {
@@ -470,9 +467,8 @@ impl PeerRunner {
 
     fn handle_from_controller(&mut self, command: Option<Command>) -> Result<()> {
         self.update_now();
-        let command = match command {
-            Some(command) => command,
-            None => bail!(PeerError::ControllerClosed),
+        let Some(command) = command else {
+            bail!(PeerError::ControllerClosed);
         };
         self.sniff_hello(&command);
 
@@ -488,12 +484,17 @@ impl PeerRunner {
 
     // Process a packet received over network
     fn process_packet(&mut self, pkt: Packet) -> Result<()> {
-        if !self.remote_is_server {
+        if self.remote_is_server {
+            if pkt.sender_peer_id != 1 {
+                warn!("Server sending from wrong peer id");
+                return Ok(());
+            }
+        } else {
             // We're the server, assign the remote a peer_id.
             if self.remote_peer_id == 0 {
                 // Assign a peer id
                 self.local_peer_id = 1;
-                self.remote_peer_id = self.rng.gen_range(2..0xFFFF);
+                self.remote_peer_id = self.rng.random_range(2..0xFFFF);
 
                 // Tell the client about it
                 let set_peer_id = SetPeerIdBody::new(self.remote_peer_id).into_inner();
@@ -510,11 +511,6 @@ impl PeerRunner {
                 warn!("Invalid peer_id on packet");
                 return Ok(());
             }
-        } else {
-            if pkt.sender_peer_id != 1 {
-                warn!("Server sending from wrong peer id");
-                return Ok(());
-            }
         }
 
         // Send ack right away
@@ -528,19 +524,20 @@ impl PeerRunner {
         // passed to the channel, because they may have reliable bodies
         // (and affect seqnums)
         if let Some(control) = pkt.as_control() {
+            #[expect(clippy::match_same_arms, reason = "for better documentation")]
             match control {
                 ControlBody::Ack(_) => {
                     // Handled by channel
                 }
                 ControlBody::SetPeerId(set_peer_id) => {
-                    if !self.remote_is_server {
-                        bail!("Invalid set_peer_id received from client");
-                    } else {
+                    if self.remote_is_server {
                         if self.local_peer_id == 0 {
                             self.local_peer_id = set_peer_id.peer_id;
                         } else if self.local_peer_id != set_peer_id.peer_id {
                             bail!("Peer id mismatch in duplicate SetPeerId");
                         }
+                    } else {
+                        bail!("Invalid set_peer_id received from client");
                     }
                 }
                 ControlBody::Ping => {
@@ -558,11 +555,8 @@ impl PeerRunner {
     }
 
     fn sniff_hello(&mut self, command: &Command) {
-        match command {
-            Command::ToClient(ToClientCommand::Hello(spec)) => {
-                self.update_context(spec.serialization_ver, spec.proto_ver);
-            }
-            _ => (),
+        if let Command::ToClient(ToClientCommand::Hello(spec)) = command {
+            self.update_context(spec.serialization_ver, spec.proto_ver);
         }
     }
 
@@ -572,7 +566,7 @@ impl PeerRunner {
         self.send_context.protocol_version = protocol_version;
         self.send_context.ser_fmt = ser_fmt;
         for num in 0..=2 {
-            self.channels[num].update_context(&self.recv_context, &self.send_context);
+            self.channels[num].update_context(self.recv_context, self.send_context);
         }
     }
 
@@ -592,6 +586,11 @@ impl PeerRunner {
         self.channels[channel as usize].send(reliable, command)
     }
 
+    #[expect(
+        clippy::unused_self,
+        clippy::unnecessary_wraps,
+        reason = "// TODO this implementation looks incomplete"
+    )]
     fn process_timeouts(&mut self) -> Result<()> {
         Ok(())
     }

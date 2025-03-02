@@ -11,6 +11,7 @@ use super::deser::Deserializer;
 use super::ser::Serialize;
 use super::ser::SerializeResult;
 use super::ser::Serializer;
+#[allow(clippy::wildcard_imports, reason = "greatly simplifies macros")]
 use super::types::*;
 use anyhow::bail;
 use luanti_protocol_derive::LuantiDeserialize;
@@ -52,7 +53,7 @@ macro_rules! default_deserializer {
     ($spec_ty: ident { }) => {
         impl Deserialize for $spec_ty {
             type Output = Self;
-            fn deserialize(_deser: &mut Deserializer) -> DeserializeResult<Self> {
+            fn deserialize(_deserializer: &mut Deserializer) -> DeserializeResult<Self> {
                 Ok($spec_ty)
             }
         }
@@ -60,7 +61,7 @@ macro_rules! default_deserializer {
     ($spec_ty: ident { $($fname: ident: $ftyp: ty ),+ }) => {
         impl Deserialize for $spec_ty {
             type Output = Self;
-            fn deserialize(deser: &mut Deserializer) -> DeserializeResult<Self> {
+            fn deserialize(deserializer: &mut Deserializer) -> DeserializeResult<Self> {
                 Ok($spec_ty {
                     $(
                         $fname: <$ftyp>::deserialize(deser)?,

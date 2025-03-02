@@ -125,7 +125,7 @@ fn make_serialize_body(input_name: &Ident, data: &Data) -> TokenStream {
                     }
                 } else if variant.discriminant.is_some() {
                     quote_spanned! {variant.span() =>
-                        compile_error!("Cannot handle discrimiant yet");
+                        compile_error!("Cannot handle discriminant yet");
                     }
                 } else {
                     let id = &variant.ident;

@@ -17,7 +17,7 @@ pub(super) struct ReliableReceiver {
 impl ReliableReceiver {
     pub(super) fn new() -> Self {
         ReliableReceiver {
-            next_seqnum: SEQNUM_INITIAL as u64,
+            next_seqnum: u64::from(SEQNUM_INITIAL),
             buffer: BTreeMap::new(),
         }
     }
@@ -39,14 +39,10 @@ impl ReliableReceiver {
     // This should be called until exhaustion, after a push.
     pub(super) fn pop(&mut self) -> Option<InnerBody> {
         match self.buffer.first_key_value().map(|(seqnum, _)| *seqnum) {
-            Some(seqnum) => {
-                if seqnum == self.next_seqnum {
-                    self.next_seqnum += 1;
-                    Some(self.buffer.pop_first().unwrap().1)
-                } else {
-                    None
-                }
-            }
+            Some(seqnum) => (seqnum == self.next_seqnum).then(|| {
+                self.next_seqnum += 1;
+                self.buffer.pop_first().unwrap().1
+            }),
             None => None,
         }
     }
@@ -96,8 +92,9 @@ mod tests {
         let mut receiver = ReliableReceiver::new();
         let mut offset: u32 = 0;
         for _ in 0..5 {
-            let mut pkts: Vec<ReliableBody> = (offset..offset + CHUNK_LEN)
+            let mut packets: Vec<ReliableBody> = (offset..offset + CHUNK_LEN)
                 .map(|i| {
+                    #[expect(clippy::cast_possible_truncation, reason = "truncation is on purpose")]
                     let seqnum: u16 = (Wrapping(SEQNUM_INITIAL) + Wrapping(i as u16)).0;
                     match make_inner(i).into_reliable(seqnum) {
                         PacketBody::Reliable(rb) => rb,
@@ -105,10 +102,10 @@ mod tests {
                     }
                 })
                 .collect();
-            pkts.shuffle(&mut rng());
+            packets.shuffle(&mut rng());
 
             let mut out: Vec<u32> = Vec::new();
-            for pkt in pkts {
+            for pkt in packets {
                 receiver.push(pkt);
                 while let Some(body) = receiver.pop() {
                     let recovered_index = recover_index(&body);

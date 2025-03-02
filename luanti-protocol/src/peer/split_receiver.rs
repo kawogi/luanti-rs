@@ -29,26 +29,26 @@ impl IncomingBuffer {
             bail!("Split packet corrupt: chunk_count mismatch");
         } else if body.chunk_num >= self.chunk_count {
             bail!("Split packet corrupt: chunk_num >= chunk_count");
-        } else {
-            self.timeout = now + SPLIT_TIMEOUT;
-            self.chunks.insert(body.chunk_num, body.chunk_data);
-            Ok(self.chunks.len() == self.chunk_count as usize)
         }
+        self.timeout = now + SPLIT_TIMEOUT;
+        self.chunks.insert(body.chunk_num, body.chunk_data);
+        Ok(self.chunks.len() == self.chunk_count as usize)
     }
 
-    fn take(self) -> anyhow::Result<Vec<u8>> {
+    fn take(self) -> Vec<u8> {
         assert_eq!(
             self.chunks.len(),
             self.chunk_count as usize,
             "chunk count mismatch"
         );
-        let total_size: usize = self.chunks.iter().map(|(_, chunk)| chunk.len()).sum();
+        // TODO replace with `flatten`
+        let total_size: usize = self.chunks.values().map(Vec::len).sum();
         let mut buf = Vec::with_capacity(total_size);
-        for (_, chunk) in &self.chunks {
-            buf.extend_from_slice(&chunk);
+        for chunk in self.chunks.values() {
+            buf.extend_from_slice(chunk);
         }
         assert_eq!(buf.len(), total_size, "buffer length mismatch");
-        Ok(buf)
+        buf
     }
 }
 
@@ -78,7 +78,7 @@ impl SplitReceiver {
             .push(now, body)?;
 
         if should_take {
-            Ok(Some(self.pending.remove(&seqnum).unwrap().take()?))
+            Ok(Some(self.pending.remove(&seqnum).unwrap().take()))
         } else {
             Ok(None)
         }

@@ -25,15 +25,13 @@ impl LuantiServer {
     pub fn new(bind_addr: SocketAddr) -> Self {
         let (accept_tx, accept_rx) = unbounded_channel();
         let runner = LuantiServerRunner {
-            bind_addr: bind_addr,
-            accept_tx: accept_tx,
+            bind_addr,
+            accept_tx,
         };
         tokio::spawn(async move {
             runner.run().await;
         });
-        Self {
-            accept_rx: accept_rx,
-        }
+        Self { accept_rx }
     }
 
     pub async fn accept(&mut self) -> LuantiConnection {
@@ -60,13 +58,16 @@ impl LuantiServerRunner {
             };
         };
         info!("LuantiServer started");
+        #[expect(
+            clippy::infinite_loop,
+            reason = "// TODO implement a cancellation mechanism"
+        )]
         loop {
             let peer = socket.accept().await.unwrap();
             info!("LuantiServer accepted connection");
             let conn = LuantiConnection::new(peer);
-            match self.accept_tx.send(conn) {
-                Ok(()) => (),
-                Err(_) => error!("Unexpected send fail in LuantiServer"),
+            if let Err(error) = self.accept_tx.send(conn) {
+                error!("Unexpected send fail in LuantiServer: {error}");
             }
         }
     }

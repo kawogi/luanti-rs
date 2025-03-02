@@ -42,7 +42,7 @@ pub(super) struct ReliableSender {
 impl ReliableSender {
     pub(super) fn new() -> Self {
         ReliableSender {
-            next_seqnum: SEQNUM_INITIAL as u64,
+            next_seqnum: u64::from(SEQNUM_INITIAL),
             window_size: START_RELIABLE_WINDOW_SIZE,
             buffer: BTreeMap::new(),
             timeouts: BTreeSet::new(),
@@ -51,12 +51,9 @@ impl ReliableSender {
         }
     }
 
-    pub(super) fn process_ack(&mut self, ack: AckBody) {
-        let unacked_base = match self.oldest_unacked() {
-            Some(unacked_base) => unacked_base,
-            None => {
-                return;
-            }
+    pub(super) fn process_ack(&mut self, ack: &AckBody) {
+        let Some(unacked_base) = self.oldest_unacked() else {
+            return;
         };
         let seqnum = rel_to_abs(unacked_base, ack.seqnum);
         self.buffer.remove(&seqnum);
@@ -76,16 +73,15 @@ impl ReliableSender {
 
     fn safe_to_transmit(&self, seqnum: u64) -> bool {
         match self.oldest_unacked() {
-            Some(unacked_seqnum) => seqnum < (unacked_seqnum + (self.window_size as u64)),
+            Some(unacked_seqnum) => seqnum < (unacked_seqnum + u64::from(self.window_size)),
             None => true,
         }
     }
 
     pub(super) fn next_timeout(&self) -> Option<Instant> {
-        match self.timeouts.first() {
-            Some((when, _)) => Some(*when + RESEND_RESOLUTION),
-            None => None,
-        }
+        self.timeouts
+            .first()
+            .map(|(when, _)| *when + RESEND_RESOLUTION)
     }
 
     /// Pop a single packet for immediate transmission.
@@ -101,7 +97,7 @@ impl ReliableSender {
     /// TODO(paradust): Iterator to make this more efficient
     #[must_use]
     pub(super) fn pop(&mut self, now: Instant) -> Option<PacketBody> {
-        // Prioritize expired resends before making new sends
+        // Prioritize expired re-sends before making new sends
         self.pop_resend(now).or_else(|| self.pop_queued(now))
     }
 
@@ -166,7 +162,6 @@ mod tests {
 
     use rand::Rng;
     use rand::rng;
-    
 
     use crate::wire::command::*;
     use crate::wire::packet::OriginalBody;
@@ -198,14 +193,14 @@ mod tests {
     /// 3) Continues working after seqnum wraps.
     #[test]
     fn reliable_sender_test() {
-        let mut rng = rng();
-        let mut sender = ReliableSender::new();
         // For each reliable packet, track what happened to it
         // and confirm that it looks correct at the end of the test.
         struct Info {
             sent_time: Vec<Instant>,
             ack_time: Option<Instant>,
         }
+        let mut rng = rng();
+        let mut sender = ReliableSender::new();
         let mut next_index: usize = 0;
         let mut now = Instant::now();
         let mut inflight: HashMap<usize, Info> = HashMap::new();
@@ -219,7 +214,7 @@ mod tests {
             if inflight.len() < 1_000_000 {
                 work_to_do = true;
                 // Send 0 to 99 new packets
-                for _ in 0..rng.gen_range(0..100) {
+                for _ in 0..rng.random_range(0..100) {
                     let inner = make_inner(next_index as u32);
                     sender.push(inner);
                     inflight.insert(
@@ -268,7 +263,7 @@ mod tests {
 
             // Send the acks
             for seqnum in send_ack_now {
-                sender.process_ack(AckBody { seqnum });
+                sender.process_ack(&AckBody { seqnum });
             }
 
             // If we're given a timeout, simulate sleeping until the timeout 50% of the time.

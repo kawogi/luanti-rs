@@ -4,6 +4,11 @@ use anyhow::bail;
 
 use super::socket::LuantiSocket;
 use crate::peer::Peer;
+
+#[allow(
+    clippy::wildcard_imports,
+    reason = "commands are expected to be used in bulk"
+)]
 use crate::wire::command::*;
 
 pub struct LuantiClient {
