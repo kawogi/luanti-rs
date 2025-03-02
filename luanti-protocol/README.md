@@ -15,9 +15,9 @@ Supported functionality:
 This is a library and does not contain any programs. For an
 example of how to use this library, see the `luanti-shark` crate.
 
-# Work in progress
+## Work in progress
 
-- Documentation is incomplete &amp; unreviewed.
+- Documentation is incomplete and unreviewed.
 
 - Reliable packet delivery transmission window size is fixed for now.
 

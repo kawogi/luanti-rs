@@ -4,16 +4,16 @@ Luanti proxy with detailed inspection of protocol
 
 Example usage:
 
-```
+```sh
 cargo install luanti-shark
 ```
 
-```
+```sh
 # Listen on port 40000, forward to localhost port 30000, verbosity 1
-$ mtshark -l 40000 -t 127.0.0.1:30000 -v
+$ luanti-shark -l 40000 -t 127.0.0.1:30000 -v
 ```
 
-```
+```sh
 LuantiServer starting on 0.0.0.0:40000
 LuantiServer started
 LuantiServer accepted connection
@@ -35,7 +35,7 @@ LuantiServer accepted connection
 ```
 
 ```sh
-mtshark -l 40000 -t 127.0.0.1:30000 -vv
+luanti-shark -l 40000 -t 127.0.0.1:30000 -vv
 ```
 
 ```sh
@@ -78,9 +78,9 @@ LuantiServer accepted connection
 ....
 ```
 
-# Verbosity levels
+## Verbosity levels
 
-```
+```plain
 default   Shows connects/disconnects only
 -v        Command names
 -vv       Command contents (except for bulk commands)

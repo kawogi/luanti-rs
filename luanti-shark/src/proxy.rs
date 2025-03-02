@@ -89,20 +89,17 @@ impl ProxyAdapterRunner {
 
     pub(crate) async fn run(mut self) {
         match self.run_inner().await {
-            Ok(_) => (),
+            Ok(()) => (),
             Err(err) => {
                 let show_err = if let Some(err) = err.downcast_ref::<PeerError>() {
-                    match err {
-                        PeerError::PeerSentDisconnect => false,
-                        _ => true,
-                    }
+                    !matches!(err, PeerError::PeerSentDisconnect)
                 } else {
                     true
                 };
                 if show_err {
-                    error!("[{}] Disconnected: {:?}", self.id, err)
+                    error!("[{}] Disconnected: {:?}", self.id, err);
                 } else {
-                    error!("[{}] Disconnected", self.id)
+                    info!("[{}] Disconnected", self.id);
                 }
             }
         }
@@ -125,16 +122,11 @@ impl ProxyAdapterRunner {
         }
     }
 
-    pub(crate) fn is_bulk_command<Cmd: CommandRef>(&self, command: &Cmd) -> bool {
-        if let Some(cmd) = command.toclient_ref() {
-            match cmd {
-                ToClientCommand::Blockdata(_) => true,
-                ToClientCommand::Media(_) => true,
-                _ => false,
-            }
-        } else {
-            false
-        }
+    pub(crate) fn is_bulk_command<Cmd: CommandRef>(command: &Cmd) -> bool {
+        matches!(
+            command.toclient_ref(),
+            Some(ToClientCommand::Blockdata(_) | ToClientCommand::Media(_))
+        )
     }
 
     pub(crate) fn maybe_show<Cmd: CommandRef>(&self, command: &Cmd) {
@@ -144,7 +136,7 @@ impl ProxyAdapterRunner {
         };
         let prefix = format!("[{}] {} ", self.id, dir);
         let mut verbosity = self.verbosity;
-        if verbosity == 2 && self.is_bulk_command(command) {
+        if verbosity == 2 && Self::is_bulk_command(command) {
             // Show the contents of smaller commands, but skip the huge ones
             verbosity = 1;
         }

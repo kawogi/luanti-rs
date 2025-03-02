@@ -1,4 +1,5 @@
 //! Luanti protocol implemented in Rust
+#![expect(clippy::expect_used, reason = "//TODO improve error handling")]
 
 mod proxy;
 
@@ -72,6 +73,10 @@ async fn real_main() -> anyhow::Result<()> {
     };
 
     let _proxy = LuantiProxy::new(bind_addr, args.target, args.verbose);
+    #[expect(
+        clippy::infinite_loop,
+        reason = "// TODO implement a cancellation mechanism"
+    )]
     loop {
         tokio::time::sleep(Duration::from_secs(3600)).await;
     }

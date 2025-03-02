@@ -4,6 +4,7 @@
     missing_docs,
     // clippy::missing_panics_doc,
     // clippy::missing_errors_doc,
+    clippy::expect_used,
     clippy::unwrap_used,
     clippy::unimplemented,
     reason = "//TODO add documentation and improve error handling"
@@ -75,7 +76,7 @@ pub fn luanti_deserialize(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 
 fn get_wrapped_type(field: &Field) -> Type {
     let mut ty = field.ty.clone();
-    for attr in field.attrs.iter() {
+    for attr in &field.attrs {
         if attr.path().is_ident("wrap") {
             ty = attr.parse_args::<Type>().unwrap();
         }
@@ -128,7 +129,9 @@ fn make_serialize_body(input_name: &Ident, data: &Data) -> TokenStream {
                     }
                 } else {
                     let id = &variant.ident;
-                    let i = Literal::u8_unsuffixed(index as u8);
+                    let i = Literal::u8_unsuffixed(
+                        u8::try_from(index).expect("variant index exceeds range of u8"),
+                    );
                     quote_spanned! {variant.span() =>
                         #id => #i,
                     }
@@ -192,11 +195,13 @@ fn make_deserialize_body(input_name: &Ident, data: &Data) -> TokenStream {
                     }
                 } else if variant.discriminant.is_some() {
                     quote_spanned! {variant.span() =>
-                        compile_error!("Cannot handle discrimiant yet");
+                        compile_error!("Cannot handle discriminant yet");
                     }
                 } else {
                     let id = &variant.ident;
-                    let i = Literal::u8_unsuffixed(index as u8);
+                    let i = Literal::u8_unsuffixed(
+                        u8::try_from(index).expect("variant index exceeds range of u8"),
+                    );
                     quote_spanned! {variant.span() =>
                         #i => #id,
 

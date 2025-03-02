@@ -258,7 +258,7 @@ impl Channel {
 
     pub(crate) fn process_command(&mut self, command: Command) {
         match self.to_controller.send(Ok(command)) {
-            Ok(_) => (),
+            Ok(()) => (),
             Err(error) => panic!("Unexpected command channel shutdown: {error:?}"),
         }
     }
@@ -266,7 +266,7 @@ impl Channel {
     /// Send command to remote
     pub(crate) fn send(&mut self, reliable: bool, command: Command) -> Result<()> {
         let bodies = self.split_out.push(self.send_context, command)?;
-        for body in bodies.into_iter() {
+        for body in bodies {
             self.send_inner(reliable, body);
         }
         Ok(())
@@ -438,7 +438,7 @@ impl PeerRunner {
             tokio::select! {
                 msg = self.from_socket.recv() => self.handle_from_socket(msg)?,
                 command = self.from_controller.recv() => self.handle_from_controller(command)?,
-                _ = tokio::time::sleep_until(next_wakeup.into()) => self.handle_timeout()?,
+                () = tokio::time::sleep_until(next_wakeup.into()) => self.handle_timeout()?,
             }
         }
     }

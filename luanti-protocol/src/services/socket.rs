@@ -102,7 +102,7 @@ impl LuantiSocketRunner {
     pub async fn run(mut self) {
         // Top-level error handler
         match self.run_inner().await {
-            Ok(_) => (),
+            Ok(()) => (),
             Err(err) => {
                 error!("LuantiSocket abnormal exit: {:?}", err);
             }

@@ -108,14 +108,14 @@ mod tests {
             pkts.shuffle(&mut rng());
 
             let mut out: Vec<u32> = Vec::new();
-            for pkt in pkts.into_iter() {
+            for pkt in pkts {
                 receiver.push(pkt);
                 while let Some(body) = receiver.pop() {
                     let recovered_index = recover_index(&body);
                     out.push(recovered_index);
                 }
             }
-            assert_eq!(out.len() as u32, CHUNK_LEN, "Not all packets processed");
+            assert_eq!(out.len(), CHUNK_LEN as usize, "Not all packets processed");
             let expected: Vec<u32> = (offset..offset + CHUNK_LEN).collect();
             for i in 0..out.len() {
                 assert_eq!(out[i], expected[i]);

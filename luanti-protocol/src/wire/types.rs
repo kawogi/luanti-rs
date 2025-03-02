@@ -664,7 +664,7 @@ where
 {
     type Input = [T; COUNT];
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        for ent in value.iter() {
+        for ent in value {
             <T as Serialize>::serialize(ent, ser)?;
         }
         Ok(())
@@ -843,29 +843,29 @@ impl Serialize for ActiveObjectCommand {
         u8::serialize(&value.get_command_prefix(), ser)?;
         match value {
             ActiveObjectCommand::SetProperties(command) => {
-                AOCSetProperties::serialize(command, ser)?
+                AOCSetProperties::serialize(command, ser)?;
             }
             ActiveObjectCommand::UpdatePosition(command) => {
-                AOCUpdatePosition::serialize(command, ser)?
+                AOCUpdatePosition::serialize(command, ser)?;
             }
             ActiveObjectCommand::SetTextureMod(command) => {
-                AOCSetTextureMod::serialize(command, ser)?
+                AOCSetTextureMod::serialize(command, ser)?;
             }
             ActiveObjectCommand::SetSprite(command) => AOCSetSprite::serialize(command, ser)?,
             ActiveObjectCommand::SetPhysicsOverride(command) => {
-                AOCSetPhysicsOverride::serialize(command, ser)?
+                AOCSetPhysicsOverride::serialize(command, ser)?;
             }
             ActiveObjectCommand::SetAnimation(command) => AOCSetAnimation::serialize(command, ser)?,
             ActiveObjectCommand::SetAnimationSpeed(command) => {
-                AOCSetAnimationSpeed::serialize(command, ser)?
+                AOCSetAnimationSpeed::serialize(command, ser)?;
             }
             ActiveObjectCommand::SetBonePosition(command) => {
-                AOCSetBonePosition::serialize(command, ser)?
+                AOCSetBonePosition::serialize(command, ser)?;
             }
             ActiveObjectCommand::AttachTo(command) => AOCAttachTo::serialize(command, ser)?,
             ActiveObjectCommand::Punched(command) => AOCPunched::serialize(command, ser)?,
             ActiveObjectCommand::UpdateArmorGroups(command) => {
-                AOCUpdateArmorGroups::serialize(command, ser)?
+                AOCUpdateArmorGroups::serialize(command, ser)?;
             }
             ActiveObjectCommand::SpawnInfant(command) => AOCSpawnInfant::serialize(command, ser)?,
             ActiveObjectCommand::Obsolete1(command) => AOCObsolete1::serialize(command, ser)?,
@@ -877,6 +877,10 @@ impl Serialize for ActiveObjectCommand {
 impl Deserialize for ActiveObjectCommand {
     type Output = Self;
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+        #[allow(
+            clippy::enum_glob_use,
+            reason = "this improves readability and is very local"
+        )]
         use ActiveObjectCommand::*;
         let cmd = u8::deserialize(deser)?;
         Ok(match cmd {
@@ -1047,7 +1051,7 @@ where
 {
     type Input = Vec<T::Input>;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        for value in value.iter() {
+        for value in value {
             <T as Serialize>::serialize(value, ser)?;
         }
         Ok(())
@@ -1076,7 +1080,7 @@ where
     type Input = Vec<T::Input>;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         u8::serialize(&u8::try_from(value.len())?, ser)?;
-        for value in value.iter() {
+        for value in value {
             <T as Serialize>::serialize(value, ser)?;
         }
         Ok(())
@@ -1106,7 +1110,7 @@ where
     type Input = Vec<T::Input>;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         u16::serialize(&u16::try_from(value.len())?, ser)?;
-        for value in value.iter() {
+        for value in value {
             <T as Serialize>::serialize(value, ser)?;
         }
         Ok(())
@@ -1136,7 +1140,7 @@ where
     type Input = Vec<T::Input>;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         u32::serialize(&u32::try_from(value.len())?, ser)?;
-        for value in value.iter() {
+        for value in value {
             <T as Serialize>::serialize(value, ser)?;
         }
         Ok(())
@@ -1623,7 +1627,7 @@ impl Serialize for MinimapModeList {
         // which makes the layout not fit into any usual pattern.
         u16::serialize(&u16::try_from(value.vec.len())?, ser)?;
         u16::serialize(&value.mode, ser)?;
-        for value in value.vec.iter() {
+        for value in &value.vec {
             MinimapMode::serialize(value, ser)?;
         }
         Ok(())
@@ -1734,7 +1738,7 @@ impl<T: Serialize> Serialize for ZStdCompressed<T> {
             ser.write_bytes(chunk)?;
             Ok(())
         }) {
-            Ok(_) => Ok(()),
+            Ok(()) => Ok(()),
             Err(err) => bail!(SerializeError::CompressionFailed(err.to_string())),
         }
     }
@@ -2264,7 +2268,7 @@ impl Serialize for NodeDefManager {
         // The serialization of content_features is wrapped in a String32
         // Write a marker so we can write the size later
         let string32_wrapper = ser.write_marker(4)?;
-        for (index, features) in value.content_features.iter() {
+        for (index, features) in &value.content_features {
             u16::serialize(index, ser)?;
             // The contents of each feature is wrapped in a String16.
             let string16_wrapper = ser.write_marker(2)?;
@@ -2544,7 +2548,7 @@ impl Deserialize for MapNodesBulk {
                 param0: u16::from_be_bytes(data[2 * i..2 * i + 2].try_into().unwrap()),
                 param1: data[param1_offset + i],
                 param2: data[param2_offset + i],
-            })
+            });
         }
         Ok(Self {
             nodes: match nodes.try_into() {
@@ -2842,7 +2846,7 @@ impl Serialize for InventoryList {
         ser.write_bytes(value.width.to_string().as_bytes())?;
         ser.write_bytes(b"\n")?;
 
-        for item in value.items.iter() {
+        for item in &value.items {
             match item {
                 ItemStackUpdate::Empty => ser.write_bytes(b"Empty\n")?,
                 ItemStackUpdate::Keep => ser.write_bytes(b"Keep\n")?,
@@ -3013,7 +3017,7 @@ impl Serialize for ItemStackMetadata {
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         let mut buf: Vec<u8> = Vec::new();
         buf.extend(DESERIALIZE_START);
-        for (key, val) in value.string_vars.iter() {
+        for (key, val) in &value.string_vars {
             if !key.is_empty() || !val.is_empty() {
                 buf.extend(key.as_bytes());
                 buf.extend(DESERIALIZE_KV_DELIM);

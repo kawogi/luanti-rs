@@ -137,6 +137,10 @@ impl ReliableSender {
                         // Packet has already been ack'd
                     } else if expire_time <= now {
                         // Ready to resend
+                        #[expect(
+                            clippy::get_unwrap,
+                            reason = "we need to get rid of that unwrap anyway"
+                        )]
                         let body = self.buffer.get(&seqnum).unwrap().clone();
                         // Schedule future resend
                         self.timeouts.insert((now + self.resend_timeout, seqnum));
@@ -263,7 +267,7 @@ mod tests {
             }
 
             // Send the acks
-            for seqnum in send_ack_now.into_iter() {
+            for seqnum in send_ack_now {
                 sender.process_ack(AckBody { seqnum });
             }
 
@@ -272,7 +276,7 @@ mod tests {
                 Some(timeout) => {
                     work_to_do = true;
                     assert!(timeout >= now);
-                    if rng.gen_range(0..2) == 1 {
+                    if rng.random_range(0..2) == 1 {
                         now = timeout;
                     } else {
                         now += Duration::from_secs_f32(0.05);
@@ -285,7 +289,7 @@ mod tests {
         }
 
         // Make sure the send intervals are sane
-        for (_, info) in inflight.into_iter() {
+        for (_, info) in inflight {
             // Resend delay should be approximately RESEND_TIMEOUT_START_MS to within 50ms
             for i in 1..info.sent_time.len() {
                 let resend_delay = info.sent_time[i] - info.sent_time[i - 1];

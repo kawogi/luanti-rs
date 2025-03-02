@@ -44,7 +44,7 @@ impl IncomingBuffer {
         );
         let total_size: usize = self.chunks.iter().map(|(_, chunk)| chunk.len()).sum();
         let mut buf = Vec::with_capacity(total_size);
-        for (_, chunk) in self.chunks.iter() {
+        for (_, chunk) in &self.chunks {
             buf.extend_from_slice(&chunk);
         }
         assert_eq!(buf.len(), total_size, "buffer length mismatch");

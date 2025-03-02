@@ -65,7 +65,7 @@ impl LuantiServerRunner {
             info!("LuantiServer accepted connection");
             let conn = LuantiConnection::new(peer);
             match self.accept_tx.send(conn) {
-                Ok(_) => (),
+                Ok(()) => (),
                 Err(_) => error!("Unexpected send fail in LuantiServer"),
             }
         }

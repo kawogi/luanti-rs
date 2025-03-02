@@ -11,7 +11,7 @@ readme.workspace = true
 repository.workspace = true
 
 [[bin]]
-name = "mtshark"
+name = "luanti-shark"
 path = "src/main.rs"
 test = false
 bench = false

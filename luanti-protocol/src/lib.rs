@@ -9,6 +9,10 @@
     clippy::panic_in_result_fn,
     reason = "//TODO add documentation and improve error handling"
 )]
+#![expect(
+    clippy::indexing_slicing,
+    reason = "//TODO there's some unidiomatic code left"
+)]
 
 pub mod peer;
 pub mod services;

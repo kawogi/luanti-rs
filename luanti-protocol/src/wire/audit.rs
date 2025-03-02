@@ -34,7 +34,7 @@ pub fn audit_command<Cmd: CommandRef>(context: ProtocolContext, orig: &[u8], com
     }
     let mut ser = VecSerializer::new(context, 2 * orig.len());
     match serialize_commandref(command, &mut ser) {
-        Ok(_) => (),
+        Ok(()) => (),
         Err(err) => {
             error!("AUDIT: Reserialization failed");
             error!("AUDIT: ORIGINAL = {:?}", orig);
@@ -46,7 +46,7 @@ pub fn audit_command<Cmd: CommandRef>(context: ProtocolContext, orig: &[u8], com
     let reser = ser.take();
     let reser = reser.as_slice();
     match audit_command_inner(context, orig, reser, command) {
-        Ok(_) => (),
+        Ok(()) => (),
         Err(err) => {
             error!("AUDIT: Unknown error occurred auditing of command");
             error!("AUDIT: PARSED = {:?}", command);

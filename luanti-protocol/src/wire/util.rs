@@ -61,20 +61,17 @@ pub fn zstd_compress<F>(input: &[u8], mut write: F) -> Result<()>
 where
     F: FnMut(&[u8]) -> Result<()>,
 {
-    let mut ctx = zstd_safe::CCtx::create();
     const BUFSIZE: usize = 0x4000;
+    let mut ctx = zstd_safe::CCtx::create();
     let mut buf = [0_u8; BUFSIZE];
-    let mut input_buffer = InBuffer {
-        src: &input,
-        pos: 0,
-    };
+    let mut input_buffer = InBuffer { src: input, pos: 0 };
     while input_buffer.pos < input.len() {
         let mut output_buffer = OutBuffer::around(&mut buf);
         match ctx.compress_stream(&mut output_buffer, &mut input_buffer) {
             Ok(_) => {
                 let written = output_buffer.as_slice();
-                if written.len() > 0 {
-                    write(&written)?;
+                if !written.is_empty() {
+                    write(written)?;
                 }
             }
             Err(error) => bail!("zstd_compress: {}", zstd_safe::get_error_name(error)),
@@ -85,8 +82,8 @@ where
         match ctx.end_stream(&mut output_buffer) {
             Ok(code) => {
                 let chunk = output_buffer.as_slice();
-                if chunk.len() != 0 {
-                    write(&chunk)?;
+                if !chunk.is_empty() {
+                    write(chunk)?;
                 }
                 if code == 0 {
                     break;
@@ -154,8 +151,8 @@ where
     W: FnMut(&[u8]) -> Result<()>,
 {
     write(b"\"")?;
-    for ch in input {
-        match *ch {
+    for &ch in input {
+        match ch {
             b'"' => write(b"\\\"")?,
             b'\\' => write(b"\\\\")?,
             0x08 => write(b"\\b")?,
@@ -163,13 +160,21 @@ where
             b'\n' => write(b"\\n")?,
             b'\r' => write(b"\\r")?,
             b'\t' => write(b"\\t")?,
-            ch => {
-                if ch >= 32 && ch <= 126 {
-                    write(&[ch])?
+            other_char => {
+                // TODO use range pattern instead
+                if (32..=126).contains(&other_char) {
+                    write(&[other_char])?;
                 } else {
                     // \u00XX style escaping
-                    let bytes = &[b'\\', b'u', b'0', b'0', to_hex(ch >> 4), to_hex(ch & 0xf)];
-                    write(bytes)?
+                    let bytes = &[
+                        b'\\',
+                        b'u',
+                        b'0',
+                        b'0',
+                        to_hex(other_char >> 4),
+                        to_hex(other_char & 0xf),
+                    ];
+                    write(bytes)?;
                 }
             }
         }
@@ -181,15 +186,17 @@ where
 #[must_use]
 pub fn to_hex(index: u8) -> u8 {
     const HEX_CHARS: &[u8; 16] = b"0123456789abcdef";
-    HEX_CHARS[index as usize]
+    #[expect(clippy::indexing_slicing, reason = "the range is safe")]
+    HEX_CHARS[(index & 0x0f) as usize]
 }
 
 pub fn from_hex(hex_digit: u8) -> Result<u8> {
-    if hex_digit >= b'0' && hex_digit <= b'9' {
+    // TODO use functions from std
+    if hex_digit.is_ascii_digit() {
         Ok(hex_digit - b'0')
-    } else if hex_digit >= b'a' && hex_digit <= b'f' {
+    } else if (b'a'..=b'f').contains(&hex_digit) {
         Ok(10 + (hex_digit - b'a'))
-    } else if hex_digit >= b'A' && hex_digit <= b'F' {
+    } else if (b'A'..=b'F').contains(&hex_digit) {
         Ok(10 + (hex_digit - b'A'))
     } else {
         bail!("Invalid hex digit: {}", hex_digit);
@@ -199,7 +206,9 @@ pub fn from_hex(hex_digit: u8) -> Result<u8> {
 // deSerializeJsonStringIfNeeded
 // Returns number of bytes consumed by the "json" string, so that parsing can continue after.
 pub fn deserialize_json_string_if_needed(input: &[u8]) -> Result<(Vec<u8>, usize), anyhow::Error> {
-    if input.len() > 0 {
+    if input.is_empty() {
+        Ok((Vec::new(), 0))
+    } else {
         if input[0] == b'"' {
             return deserialize_json_string(input);
         }
@@ -209,18 +218,16 @@ pub fn deserialize_json_string_if_needed(input: &[u8]) -> Result<(Vec<u8>, usize
             .position(|&ch| ch == b' ' || ch == b'\n')
             .unwrap_or(input.len());
         Ok((input[..endpos].to_vec(), endpos))
-    } else {
-        Ok((Vec::new(), 0))
     }
 }
 
-struct MiniReader<'a> {
-    input: &'a [u8],
+struct MiniReader<'input> {
+    input: &'input [u8],
     pos: usize,
 }
 
-impl<'a> MiniReader<'a> {
-    pub(crate) fn new(input: &'a [u8], pos: usize) -> Self {
+impl<'input> MiniReader<'input> {
+    pub(crate) fn new(input: &'input [u8], pos: usize) -> Self {
         Self { input, pos }
     }
 
@@ -228,7 +235,7 @@ impl<'a> MiniReader<'a> {
         self.input.len() - self.pos
     }
 
-    pub(crate) fn take(&mut self, count: usize) -> Result<&'a [u8]> {
+    pub(crate) fn take(&mut self, count: usize) -> Result<&'input [u8]> {
         if self.pos + count > self.input.len() {
             bail!("Luanti JSON string ended prematurely");
         }
