@@ -20,6 +20,9 @@ mod util;
 
 use anyhow::Result;
 use anyhow::bail;
+use log::debug;
+use log::error;
+use log::trace;
 use log::warn;
 use rand::Rng;
 use rand::SeedableRng;
@@ -34,6 +37,7 @@ use crate::wire::command::ToClientCommand;
 use crate::wire::deser::Deserialize;
 use crate::wire::deser::Deserializer;
 use crate::wire::packet::AckBody;
+use crate::wire::packet::CHANNEL_COUNT;
 use crate::wire::packet::ControlBody;
 use crate::wire::packet::InnerBody;
 use crate::wire::packet::Packet;
@@ -165,13 +169,12 @@ impl PeerIO {
     ///
     pub fn send(&mut self, data: &[u8]) {
         //TODO Add back-pressure
-        #[expect(
-            clippy::unwrap_used,
-            reason = "// TODO clarify error condition and handling"
-        )]
         self.relay
             .send(SocketToPeer::Received(data.to_vec()))
-            .unwrap();
+            .unwrap_or_else(|error| {
+                // TODO clarify error condition and handling
+                error!("failed to relay packet: {error}");
+            });
     }
 }
 
@@ -242,12 +245,17 @@ impl Channel {
     pub(crate) fn process_inner(&mut self, body: InnerBody) -> Result<()> {
         match body {
             InnerBody::Control(body) => self.process_control(body),
-            InnerBody::Original(body) => self.process_command(body.command),
+            InnerBody::Original(body) => {
+                if let Some(command) = body.command {
+                    self.process_command(command);
+                }
+            }
             InnerBody::Split(body) => {
                 if let Some(payload) = self.split_in.push(self.now, body)? {
                     let mut buf = Deserializer::new(self.recv_context, &payload);
-                    let command = Command::deserialize(&mut buf)?;
-                    self.process_command(command);
+                    if let Some(command) = Command::deserialize(&mut buf)? {
+                        self.process_command(command);
+                    }
                 }
             }
         }
@@ -409,11 +417,11 @@ impl PeerRunner {
                 .unwrap();
 
             // Tell the controller why we died
-            #[expect(
-                clippy::unwrap_used,
-                reason = "// TODO clarify error condition and handling"
-            )]
-            self.to_controller.send(Err(err)).unwrap();
+            self.to_controller.send(Err(err)).unwrap_or_else(|err| {
+                // This might fail if the controller has been disconnected already
+                // ignore the error in this case
+                debug!("controller is no longer available: {err}");
+            });
         }
     }
 
@@ -456,6 +464,11 @@ impl PeerRunner {
         };
         match msg {
             SocketToPeer::Received(buf) => {
+                trace!(
+                    "received {} bytes from socket: {:?}",
+                    buf.len(),
+                    &buf[0..buf.len().min(64)]
+                );
                 let mut deser = Deserializer::new(self.recv_context, &buf);
                 let pkt = Packet::deserialize(&mut deser)?;
                 self.last_received = self.now;
@@ -466,6 +479,8 @@ impl PeerRunner {
     }
 
     fn handle_from_controller(&mut self, command: Option<Command>) -> Result<()> {
+        trace!("received command from controller: {command:?}",);
+
         self.update_now();
         let Some(command) = command else {
             bail!(PeerError::ControllerClosed);
@@ -547,7 +562,7 @@ impl PeerRunner {
             }
         }
         // If this is a HELLO packet, sniff it to set our protocol context.
-        if let Some(command) = pkt.body.command_ref() {
+        if let Some(command) = pkt.body.command() {
             self.sniff_hello(command);
         }
 
@@ -582,7 +597,7 @@ impl PeerRunner {
     fn send_command(&mut self, command: Command) -> Result<()> {
         let channel = command.default_channel();
         let reliable = command.default_reliability();
-        assert!((0..=2).contains(&channel), "channel id out of range");
+        assert!(channel < CHANNEL_COUNT, "channel id out of range");
         self.channels[channel as usize].send(reliable, command)
     }
 

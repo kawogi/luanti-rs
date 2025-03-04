@@ -3,6 +3,7 @@ use std::collections::VecDeque;
 use std::io::Error;
 use std::net::SocketAddr;
 
+use log::debug;
 use log::error;
 use tokio::io::Interest;
 use tokio::io::Ready;
@@ -74,15 +75,18 @@ impl LuantiSocket {
     // they will be discarded.
     pub async fn add_peer(&mut self, remote: SocketAddr) -> Peer {
         assert!(!self.for_server, "//TODO add descriptive error message");
+        debug!("adding server as peer: {remote}");
         self.knock_tx.send(remote).unwrap();
 
         // Wait for the peer
         loop {
             let peer = self.accept().await.unwrap();
-            if peer.remote_addr() == remote {
+            let remote_address = peer.remote_addr();
+            if remote_address == remote {
+                debug!("peer responded from remote address: {remote_address}");
                 return peer;
             }
-            // Random connect from another address? Ignore it.
+            debug!("ignoring random connect from another address: {remote_address}",);
         }
     }
 }

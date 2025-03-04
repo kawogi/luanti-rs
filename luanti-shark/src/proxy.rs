@@ -19,6 +19,7 @@
 //! commands in both directions, in a human-readable format.
 use anyhow::Result;
 
+use log::debug;
 use log::error;
 use log::info;
 use log::trace;
@@ -46,7 +47,9 @@ impl LuantiProxy {
 }
 
 struct LuantiProxyRunner {
+    /// used to accept connection from clients
     bind_addr: SocketAddr,
+    /// used to connect to the server
     forwarding_addr: SocketAddr,
     verbosity: u8,
 }
@@ -61,7 +64,10 @@ impl LuantiProxyRunner {
                     let id = next_id;
                     next_id += 1;
                     info!("[P{}] New client connected from {:?}", id, conn.remote_addr());
+                    debug!("forwarding connection to {addr}", addr = self.forwarding_addr);
+                    // TODO(kawogi) this outgoing connection attempt blocks accepting new incoming connections
                     let client = LuantiClient::connect(self.forwarding_addr).await.expect("Connect failed");
+                    debug!("successfully connected to {addr}", addr = self.forwarding_addr);
                     ProxyAdapterRunner::spawn(id, conn, client, self.verbosity);
                 },
             }
@@ -88,6 +94,7 @@ impl ProxyAdapterRunner {
     }
 
     pub(crate) async fn run(mut self) {
+        debug!("starting proxy runner");
         match self.run_inner().await {
             Ok(()) => (),
             Err(err) => {
@@ -109,11 +116,13 @@ impl ProxyAdapterRunner {
         loop {
             tokio::select! {
                 command = self.conn.recv() => {
+                    trace!("conn.recv: {command:?}");
                     let command = command?;
                     self.maybe_show(&command);
                     self.client.send(command)?;
                 },
                 command = self.client.recv() => {
+                    trace!("client.recv: {command:?}");
                     let command = command?;
                     self.maybe_show(&command);
                     self.conn.send(command)?;

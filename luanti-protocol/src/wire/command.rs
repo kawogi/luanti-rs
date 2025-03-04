@@ -155,17 +155,25 @@ macro_rules! define_protocol {
 
         $crate::as_item! {
             impl Deserialize for $command_ty {
-                type Output = Self;
-                fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-                    let orig_buffer = deser.peek_all();
-                    let command_id = u16::deserialize(deser)?;
-                    let dir = deser.direction();
+                type Output = Option<Self>;
+                fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self::Output> {
+                    // The first packet a client sends doesn't contain a command but has an empty payload.
+                    // It only serves the purpose of triggering the creation of a peer entry within the server.
+                    // Rather than requesting every caller to perform a pre-check for a non-empty payload,
+                    // we just return an `Option` to force the caller to handle this case.
+                    if !deserializer.has_remaining() {
+                        return Ok(None);
+                    }
+                    let orig_buffer = deserializer.peek_all();
+                    log::trace!("orig_buffer: {:?}", &orig_buffer[0..(orig_buffer.len().min(64))]);
+                    let command_id = u16::deserialize(deserializer)?;
+                    let dir = deserializer.direction();
                     let result = match (dir, command_id) {
-                        $( (CommandDirection::$dir, $id) => $command_ty::$name(Box::new(<$spec_ty as Deserialize>::deserialize(deser)?)) ),*,
+                        $( (CommandDirection::$dir, $id) => $command_ty::$name(Box::new(<$spec_ty as Deserialize>::deserialize(deserializer)?)) ),*,
                         _ => bail!(DeserializeError::BadPacketId(dir, command_id)),
                     };
-                    audit_command(deser.context(), orig_buffer, &result);
-                    Ok(result)
+                    audit_command(deserializer.context(), orig_buffer, &result);
+                    Ok(Some(result))
                 }
             }
         }
@@ -741,11 +749,11 @@ impl Serialize for Command {
 }
 
 impl Deserialize for Command {
-    type Output = Self;
-    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+    type Output = Option<Self>;
+    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self::Output> {
         Ok(match deser.direction() {
-            CommandDirection::ToClient => Command::ToClient(ToClientCommand::deserialize(deser)?),
-            CommandDirection::ToServer => Command::ToServer(ToServerCommand::deserialize(deser)?),
+            CommandDirection::ToClient => ToClientCommand::deserialize(deser)?.map(Self::ToClient),
+            CommandDirection::ToServer => ToServerCommand::deserialize(deser)?.map(Self::ToServer),
         })
     }
 }

@@ -66,13 +66,15 @@ mod tests {
         let command = Command::ToClient(ToClientCommand::Hudrm(Box::new(HudrmSpec {
             server_id: index,
         })));
-        InnerBody::Original(OriginalBody { command })
+        InnerBody::Original(OriginalBody {
+            command: Some(command),
+        })
     }
 
     fn recover_index(body: &InnerBody) -> u32 {
         match body {
-            InnerBody::Original(body) => match &body.command {
-                Command::ToClient(ToClientCommand::Hudrm(spec)) => spec.server_id,
+            InnerBody::Original(body) => match body.command.as_ref() {
+                Some(Command::ToClient(ToClientCommand::Hudrm(spec))) => spec.server_id,
                 _ => panic!("Unexpected body"),
             },
             _ => panic!("Unexpected body"),

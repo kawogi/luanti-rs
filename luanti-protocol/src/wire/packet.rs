@@ -1,4 +1,6 @@
 use anyhow::bail;
+use log::trace;
+use log::warn;
 
 use super::command::Command;
 use super::deser::Deserialize;
@@ -12,6 +14,8 @@ use super::ser::Serializer;
 pub const PROTOCOL_ID: u32 = 0x4f45_7403;
 
 pub const LATEST_PROTOCOL_VERSION: u16 = 41;
+
+pub const CHANNEL_COUNT: u8 = 3;
 
 // Serialization format of map data
 pub const SER_FMT_HIGHEST_READ: u8 = 29;
@@ -134,6 +138,7 @@ impl Deserialize for ControlBody {
 
     fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         let control_type = u8::deserialize(deserializer)?;
+        trace!("ControlBody::control_type: {control_type}");
         match control_type {
             0 => Ok(ControlBody::Ack(AckBody::deserialize(deserializer)?)),
             1 => Ok(ControlBody::SetPeerId(SetPeerIdBody::deserialize(
@@ -150,13 +155,18 @@ impl Deserialize for ControlBody {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct OriginalBody {
-    pub command: Command,
+    pub command: Option<Command>,
 }
 
 impl Serialize for OriginalBody {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        Command::serialize(&value.command, ser)
+        if let Some(command) = value.command.as_ref() {
+            Command::serialize(command, ser)
+        } else {
+            // the deserializer of a command will handle an empty payload as `None`
+            Ok(())
+        }
     }
 }
 
@@ -222,13 +232,16 @@ impl Deserialize for ReliableBody {
     type Output = Self;
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         let packet_type = u8::deserialize(deser)?;
+        trace!("ReliableBody::packet_type: {packet_type}");
         if packet_type != 3 {
             bail!(DeserializeError::InvalidValue(
                 "Invalid packet_type for ReliableBody".into(),
             ))
         }
+        let seqnum = u16::deserialize(deser)?;
+        trace!("ReliableBody::seqnum: {seqnum}");
         Ok(ReliableBody {
-            seqnum: u16::deserialize(deser)?,
+            seqnum,
             inner: InnerBody::deserialize(deser)?,
         })
     }
@@ -242,14 +255,6 @@ pub enum InnerBody {
 }
 
 impl InnerBody {
-    #[must_use]
-    pub fn command_ref(&self) -> Option<&Command> {
-        match self {
-            InnerBody::Original(body) => Some(&body.command),
-            _ => None,
-        }
-    }
-
     #[must_use]
     pub fn into_reliable(self, seqnum: u16) -> PacketBody {
         PacketBody::Reliable(ReliableBody {
@@ -266,10 +271,13 @@ impl InnerBody {
     /// Get a reference to the Command this body contains, if any.
     /// If this is part of a split packet, None will be returned
     /// even though there is a fragment of a Command inside.
+    ///
+    /// This doesn't differentiate between a body which _cannot_ have a command and a body which
+    /// _doesn't_ have a command.
     #[must_use]
     pub fn command(&self) -> Option<&Command> {
         match self {
-            InnerBody::Original(body) => Some(&body.command),
+            InnerBody::Original(body) => body.command.as_ref(),
             InnerBody::Control(_) | InnerBody::Split(_) => None,
         }
     }
@@ -297,6 +305,7 @@ impl Deserialize for InnerBody {
 
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         let packet_type = u8::deserialize(deser)?;
+        trace!("InnerBody::type: {packet_type}");
         match packet_type {
             0 => Ok(InnerBody::Control(ControlBody::deserialize(deser)?)),
             1 => Ok(InnerBody::Original(OriginalBody::deserialize(deser)?)),
@@ -322,8 +331,8 @@ impl PacketBody {
     }
 
     #[must_use]
-    pub fn command_ref(&self) -> Option<&Command> {
-        self.inner().command_ref()
+    pub fn command(&self) -> Option<&Command> {
+        self.inner().command()
     }
 }
 
@@ -409,19 +418,41 @@ impl Serialize for Packet {
 
 impl Deserialize for Packet {
     type Output = Self;
-    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+    fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+        trace!("deserializing packet");
+
+        let protocol_id = u32::deserialize(deserializer)?;
+        if protocol_id != PROTOCOL_ID {
+            bail!(DeserializeError::InvalidProtocolId(protocol_id))
+        }
+
+        let sender_peer_id = PeerId::deserialize(deserializer)?;
+        let channel = u8::deserialize(deserializer)?;
+        if channel >= CHANNEL_COUNT {
+            bail!(DeserializeError::InvalidChannel(channel))
+        }
+
+        trace!("deserializing packet: sender_peer_id={sender_peer_id}, channel: {channel}");
+        let body = PacketBody::deserialize(deserializer)?;
+
+        // there might be more bytes to read if new fields have been added to the protocol
+        // those will be stripped off and might trip the receiver
+        if deserializer.has_remaining() {
+            warn!(
+                "left-over bytes after deserialization: {:?}",
+                deserializer.peek_all()
+            );
+        }
+
         let pkt = Packet {
-            protocol_id: u32::deserialize(deser)?,
-            sender_peer_id: PeerId::deserialize(deser)?,
-            channel: u8::deserialize(deser)?,
-            body: PacketBody::deserialize(deser)?,
+            protocol_id,
+            sender_peer_id,
+            channel,
+            body,
         };
-        if pkt.protocol_id != PROTOCOL_ID {
-            bail!(DeserializeError::InvalidProtocolId(pkt.protocol_id))
-        }
-        if !(0..=2).contains(&pkt.channel) {
-            bail!(DeserializeError::InvalidChannel(pkt.channel))
-        }
+
+        trace!("deserialized packet: {pkt:?}");
+
         Ok(pkt)
     }
 }

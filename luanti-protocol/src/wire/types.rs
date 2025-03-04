@@ -2831,7 +2831,7 @@ impl Deserialize for Inventory {
             }
         }
         // If we ran out before seeing the end marker, it's an error
-        bail!(DeserializeError::Eof)
+        bail!(DeserializeError::Eof("Inventory::deserialize(_)".into()))
     }
 }
 
@@ -2929,7 +2929,9 @@ impl Deserialize for InventoryList {
                 deser.take_line()?;
             }
         }
-        bail!(DeserializeError::Eof)
+        bail!(DeserializeError::Eof(
+            "InventoryList::deserialize(_)".into()
+        ))
     }
 }
 

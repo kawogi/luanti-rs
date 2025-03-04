@@ -37,7 +37,9 @@ impl SplitSender {
         // Packets should serialize to at most 512 bytes
         if total_size <= MAX_ORIGINAL_BODY_SIZE {
             // Doesn't need to be split
-            result.push(InnerBody::Original(OriginalBody { command }));
+            result.push(InnerBody::Original(OriginalBody {
+                command: Some(command),
+            }));
         } else {
             // TODO(paradust): Can this extra allocation be avoided?
             let mut ser = VecSerializer::new(context, total_size);
