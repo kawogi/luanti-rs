@@ -210,7 +210,9 @@ define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
     },
 
     AccessDenied, 0x0A, 0, true => AccessDeniedSpec {
-        code: AccessDeniedCode
+        code: AccessDeniedCode,
+        reason: String,
+        reconnect: bool
     },
 
     Blockdata, 0x20, 2, true => BlockdataSpec {
