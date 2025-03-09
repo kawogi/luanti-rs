@@ -2,6 +2,7 @@ use anyhow::bail;
 use log::trace;
 use log::warn;
 
+use super::channel_id::ChannelId;
 use super::command::Command;
 use super::deser::Deserialize;
 use super::deser::DeserializeError;
@@ -15,8 +16,6 @@ pub const PROTOCOL_ID: u32 = 0x4f45_7403;
 
 pub const LATEST_PROTOCOL_VERSION: u16 = 41;
 
-pub const CHANNEL_COUNT: u8 = 3;
-
 // Serialization format of map data
 pub const SER_FMT_HIGHEST_READ: u8 = 29;
 pub const SER_FMT_HIGHEST_WRITE: u8 = 29;
@@ -24,7 +23,6 @@ pub const SER_FMT_LOWEST_READ: u8 = 28;
 pub const SER_FMT_LOWEST_WRITE: u8 = 29;
 
 pub const MAX_PACKET_SIZE: usize = 512;
-pub const SEQNUM_INITIAL: u16 = 65500;
 pub const PACKET_HEADER_SIZE: usize = 7;
 pub const RELIABLE_HEADER_SIZE: usize = 3;
 pub const SPLIT_HEADER_SIZE: usize = 7;
@@ -368,13 +366,13 @@ impl Deserialize for PacketBody {
 pub struct Packet {
     pub protocol_id: u32,
     pub sender_peer_id: PeerId,
-    pub channel: u8,
+    pub channel: ChannelId,
     pub body: PacketBody,
 }
 
 impl Packet {
     #[must_use]
-    pub fn new(sender_peer_id: PeerId, channel: u8, body: PacketBody) -> Self {
+    pub fn new(sender_peer_id: PeerId, channel: ChannelId, body: PacketBody) -> Self {
         Self {
             protocol_id: PROTOCOL_ID,
             sender_peer_id,
@@ -410,7 +408,7 @@ impl Serialize for Packet {
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         u32::serialize(&value.protocol_id, ser)?;
         u16::serialize(&value.sender_peer_id, ser)?;
-        u8::serialize(&value.channel, ser)?;
+        ChannelId::serialize(&value.channel, ser)?;
         PacketBody::serialize(&value.body, ser)?;
         Ok(())
     }
@@ -427,10 +425,7 @@ impl Deserialize for Packet {
         }
 
         let sender_peer_id = PeerId::deserialize(deserializer)?;
-        let channel = u8::deserialize(deserializer)?;
-        if channel >= CHANNEL_COUNT {
-            bail!(DeserializeError::InvalidChannel(channel))
-        }
+        let channel = ChannelId::deserialize(deserializer)?;
 
         trace!("deserializing packet: sender_peer_id={sender_peer_id}, channel: {channel}");
         let body = PacketBody::deserialize(deserializer)?;

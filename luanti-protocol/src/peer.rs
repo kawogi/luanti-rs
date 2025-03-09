@@ -11,12 +11,11 @@
 //! of the assigned peer id and includes it on every packet.
 //!  
 
-mod channel;
 mod reliable_receiver;
 mod reliable_sender;
+mod sequence_number;
 mod split_receiver;
 mod split_sender;
-mod util;
 
 use anyhow::Result;
 use anyhow::bail;
@@ -31,13 +30,13 @@ use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::mpsc::unbounded_channel;
 
+use crate::wire::channel_id::ChannelId;
 use crate::wire::command::Command;
 use crate::wire::command::CommandProperties;
 use crate::wire::command::ToClientCommand;
 use crate::wire::deser::Deserialize;
 use crate::wire::deser::Deserializer;
 use crate::wire::packet::AckBody;
-use crate::wire::packet::CHANNEL_COUNT;
 use crate::wire::packet::ControlBody;
 use crate::wire::packet::InnerBody;
 use crate::wire::packet::Packet;
@@ -74,7 +73,6 @@ pub enum PeerError {
     InternalPeerError,
 }
 
-pub type ChannelNum = u8;
 pub type FullSeqNum = u64;
 
 // This is held by the driver that interfaces with the LuantiSocket
@@ -362,26 +360,26 @@ pub struct PeerRunner {
 impl PeerRunner {
     pub fn update_now(&mut self) {
         self.now = Instant::now();
-        for num in 0..=2 {
-            self.channels[num].update_now(&self.now);
-        }
+        self.channels
+            .iter_mut()
+            .for_each(|channel| channel.update_now(&self.now));
     }
 
-    pub fn serialize_for_send(&mut self, channel: u8, body: PacketBody) -> Result<Vec<u8>> {
+    pub fn serialize_for_send(&mut self, channel: ChannelId, body: PacketBody) -> Result<Vec<u8>> {
         let pkt = Packet::new(self.local_peer_id, channel, body);
         let mut serializer = VecSerializer::new(self.send_context, 512);
         Packet::serialize(&pkt, &mut serializer)?;
         Ok(serializer.take())
     }
 
-    pub fn send_raw(&mut self, channel: u8, body: PacketBody) -> Result<()> {
+    pub fn send_raw(&mut self, channel: ChannelId, body: PacketBody) -> Result<()> {
         let raw = self.serialize_for_send(channel, body)?;
         self.to_socket
             .send(PeerToSocket::Send(self.remote_addr, raw))?;
         Ok(())
     }
 
-    pub fn send_raw_priority(&mut self, channel: u8, body: PacketBody) -> Result<()> {
+    pub fn send_raw_priority(&mut self, channel: ChannelId, body: PacketBody) -> Result<()> {
         let raw = self.serialize_for_send(channel, body)?;
         self.to_socket
             .send(PeerToSocket::SendImmediate(self.remote_addr, raw))?;
@@ -405,8 +403,11 @@ impl PeerRunner {
                     clippy::unwrap_used,
                     reason = "// TODO clarify error condition and handling"
                 )]
-                self.send_raw(0, (ControlBody::Disconnect).into_inner().into_unreliable())
-                    .unwrap();
+                self.send_raw(
+                    ChannelId::Default,
+                    (ControlBody::Disconnect).into_inner().into_unreliable(),
+                )
+                .unwrap();
             }
             #[expect(
                 clippy::unwrap_used,
@@ -435,15 +436,15 @@ impl PeerRunner {
             // Before select, make sure everything ready to send has been sent,
             // and compute a resend timeout.
             let mut next_wakeup = never;
-            for num in 0_u8..=2 {
+            for channel_id in ChannelId::all() {
                 loop {
-                    let pkt = self.channels[usize::from(num)].next_send(self.now);
+                    let pkt = self.channels[usize::from(channel_id)].next_send(self.now);
                     match pkt {
-                        Some(body) => self.send_raw(num, body)?,
+                        Some(body) => self.send_raw(channel_id, body)?,
                         None => break,
                     }
                 }
-                if let Some(timeout) = self.channels[usize::from(num)].next_timeout() {
+                if let Some(timeout) = self.channels[usize::from(channel_id)].next_timeout() {
                     next_wakeup = std::cmp::min(next_wakeup, timeout);
                 }
             }
@@ -566,7 +567,7 @@ impl PeerRunner {
             self.sniff_hello(command);
         }
 
-        self.channels[pkt.channel as usize].process(pkt.body)
+        self.channels[usize::from(pkt.channel)].process(pkt.body)
     }
 
     fn sniff_hello(&mut self, command: &Command) {
@@ -580,14 +581,14 @@ impl PeerRunner {
         self.recv_context.ser_fmt = ser_fmt;
         self.send_context.protocol_version = protocol_version;
         self.send_context.ser_fmt = ser_fmt;
-        for num in 0..=2 {
-            self.channels[num].update_context(self.recv_context, self.send_context);
-        }
+        self.channels
+            .iter_mut()
+            .for_each(|channel| channel.update_context(self.recv_context, self.send_context));
     }
 
     /// If this is a reliable packet, send an ack right away
     /// using a higher-priority out-of-band channel.
-    fn send_ack(&mut self, channel: u8, rb: &ReliableBody) -> Result<()> {
+    fn send_ack(&mut self, channel: ChannelId, rb: &ReliableBody) -> Result<()> {
         let ack = AckBody::new(rb.seqnum).into_inner().into_unreliable();
         self.send_raw_priority(channel, ack)?;
         Ok(())
@@ -597,8 +598,7 @@ impl PeerRunner {
     fn send_command(&mut self, command: Command) -> Result<()> {
         let channel = command.default_channel();
         let reliable = command.default_reliability();
-        assert!(channel < CHANNEL_COUNT, "channel id out of range");
-        self.channels[channel as usize].send(reliable, command)
+        self.channels[usize::from(channel)].send(reliable, command)
     }
 
     #[expect(

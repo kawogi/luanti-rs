@@ -4,6 +4,7 @@
 )]
 
 use super::audit::audit_command;
+use super::channel_id::ChannelId;
 use super::deser::Deserialize;
 use super::deser::DeserializeError;
 use super::deser::DeserializeResult;
@@ -106,7 +107,7 @@ macro_rules! define_protocol {
      $protocol_id: literal,
      $dir: ident,
      $command_ty: ident => {
-         $($name: ident, $id: literal, $channel: literal, $reliable: literal => $spec_ty: ident
+         $($name: ident, $id: literal, $channel: ident, $reliable: literal => $spec_ty: ident
              { $($fname: ident : $ftype: ty $([$attr:meta])? ),* } ),*
     }) => {
         $crate::as_item! {
@@ -122,9 +123,9 @@ macro_rules! define_protocol {
                     CommandDirection::$dir
                 }
 
-                fn default_channel(&self) -> u8 {
+                fn default_channel(&self) -> ChannelId {
                     match self {
-                        $($command_ty::$name(_) => $channel),*,
+                        $($command_ty::$name(_) => ChannelId::$channel),*,
                     }
                 }
 
@@ -186,7 +187,7 @@ macro_rules! define_protocol {
 
 define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
     // CommandName, CommandType, Direction, Channel, Reliable
-    Hello, 0x02, 0, true => HelloSpec {
+    Hello, 0x02, Default, true => HelloSpec {
         serialization_ver: u8,
         compression_mode: u16,
         proto_ver: u16,
@@ -194,68 +195,68 @@ define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
         username_legacy: String
     },
 
-    AuthAccept, 0x03, 0, true => AuthAcceptSpec {
+    AuthAccept, 0x03, Default, true => AuthAcceptSpec {
         player_pos: v3f,
         map_seed: u64,
         recommended_send_interval: f32,
         sudo_auth_methods: u32
     },
 
-    AcceptSudoMode, 0x04, 0, true => AcceptSudoModeSpec {
+    AcceptSudoMode, 0x04, Default, true => AcceptSudoModeSpec {
         // No fields
     },
 
-    DenySudoMode, 0x05, 0, true => DenySudoModeSpec {
+    DenySudoMode, 0x05, Default, true => DenySudoModeSpec {
         // No fields
     },
 
-    AccessDenied, 0x0A, 0, true => AccessDeniedSpec {
+    AccessDenied, 0x0A, Default, true => AccessDeniedSpec {
         code: AccessDeniedCode,
         reason: String,
         reconnect: bool
     },
 
-    Blockdata, 0x20, 2, true => BlockdataSpec {
+    Blockdata, 0x20, Response, true => BlockdataSpec {
         pos: v3s16,
         block: MapBlock,
         network_specific_version: u8
     },
-    Addnode, 0x21, 0, true => AddnodeSpec {
+    Addnode, 0x21, Default, true => AddnodeSpec {
         pos: v3s16,
         node: MapNode,
         keep_metadata: bool
     },
 
-    Removenode, 0x22, 0, true => RemovenodeSpec {
+    Removenode, 0x22, Default, true => RemovenodeSpec {
         pos: v3s16
     },
 
-    Inventory, 0x27, 0, true => InventorySpec {
+    Inventory, 0x27, Default, true => InventorySpec {
         inventory: Inventory
     },
 
-    TimeOfDay, 0x29, 0, true => TimeOfDaySpec {
+    TimeOfDay, 0x29, Default, true => TimeOfDaySpec {
         time_of_day: u16,
         time_speed: Option<f32>
     },
 
-    CsmRestrictionFlags, 0x2A, 0, true => CsmRestrictionFlagsSpec {
+    CsmRestrictionFlags, 0x2A, Default, true => CsmRestrictionFlagsSpec {
         csm_restriction_flags: u64,
         csm_restriction_noderange: u32
     },
 
-    PlayerSpeed, 0x2B, 0, true => PlayerSpeedSpec {
+    PlayerSpeed, 0x2B, Default, true => PlayerSpeedSpec {
         added_vel: v3f
     },
 
-    MediaPush, 0x2C, 0, true => MediaPushSpec {
+    MediaPush, 0x2C, Default, true => MediaPushSpec {
         raw_hash: String,
         filename: String,
         cached: bool,
         token: u32
     },
 
-    TCChatMessage, 0x2F, 0, true => TCChatMessageSpec {
+    TCChatMessage, 0x2F, Default, true => TCChatMessageSpec {
         version: u8,
         message_type: u8,
         sender: String [wrap(WString)],
@@ -263,61 +264,61 @@ define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
         timestamp: u64
     },
 
-    ActiveObjectRemoveAdd, 0x31, 0, true => ActiveObjectRemoveAddSpec {
+    ActiveObjectRemoveAdd, 0x31, Default, true => ActiveObjectRemoveAddSpec {
         removed_object_ids: Vec<u16> [wrap(Array16<u16>)],
         added_objects: Vec<AddedObject> [wrap(Array16<AddedObject>)]
     },
 
-    ActiveObjectMessages, 0x32, 0, true => ActiveObjectMessagesSpec {
+    ActiveObjectMessages, 0x32, Default, true => ActiveObjectMessagesSpec {
         objects: Vec<ActiveObjectMessage> [wrap(Array0<ActiveObjectMessage>)]
     },
 
-    Hp, 0x33, 0, true => HpSpec {
+    Hp, 0x33, Default, true => HpSpec {
         hp: u16,
         damage_effect: Option<bool>
     },
 
-    MovePlayer, 0x34, 0, true => MovePlayerSpec {
+    MovePlayer, 0x34, Default, true => MovePlayerSpec {
         pos: v3f,
         pitch: f32,
         yaw: f32
     },
 
-    AccessDeniedLegacy, 0x35, 0, true => AccessDeniedLegacySpec {
+    AccessDeniedLegacy, 0x35, Default, true => AccessDeniedLegacySpec {
         reason: String [wrap(WString)]
     },
 
-    Fov, 0x36, 0, true => FovSpec {
+    Fov, 0x36, Default, true => FovSpec {
         fov: f32,
         is_multiplier: bool,
         transition_time: Option<f32>
     },
 
-    Deathscreen, 0x37, 0, true => DeathscreenSpec {
+    Deathscreen, 0x37, Default, true => DeathscreenSpec {
         set_camera_point_target: bool,
         camera_point_target: v3f
     },
 
-    Media, 0x38, 2, true => MediaSpec {
+    Media, 0x38, Response, true => MediaSpec {
         num_bunches: u16,
         bunch_index: u16,
         files: Vec<MediaFileData> [wrap(Array32<MediaFileData>)]
     },
 
-    Nodedef, 0x3a, 0, true => NodedefSpec {
+    Nodedef, 0x3a, Default, true => NodedefSpec {
         node_def: NodeDefManager [wrap(ZLibCompressed<NodeDefManager>)]
     },
 
-    AnnounceMedia, 0x3c, 0, true => AnnounceMediaSpec {
+    AnnounceMedia, 0x3c, Default, true => AnnounceMediaSpec {
         files: Vec<MediaAnnouncement> [wrap(Array16<MediaAnnouncement>)],
         remote_servers: String
     },
 
-    Itemdef, 0x3d, 0, true => ItemdefSpec {
+    Itemdef, 0x3d, Default, true => ItemdefSpec {
         item_def: ItemdefList [wrap(ZLibCompressed<ItemdefList>)]
     },
 
-    PlaySound, 0x3f, 0, true => PlaySoundSpec {
+    PlaySound, 0x3f, Default, true => PlaySoundSpec {
         server_id: s32,
         spec_name: String,
         spec_gain: f32,
@@ -330,19 +331,19 @@ define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
         ephemeral: Option<bool>
     },
 
-    StopSound, 0x40, 0, true => StopSoundSpec {
+    StopSound, 0x40, Default, true => StopSoundSpec {
         server_id: s32
     },
 
-    Privileges, 0x41, 0, true => PrivilegesSpec {
+    Privileges, 0x41, Default, true => PrivilegesSpec {
         privileges: Vec<String> [wrap(Array16<String>)]
     },
 
-    InventoryFormspec, 0x42, 0, true => InventoryFormspecSpec {
+    InventoryFormspec, 0x42, Default, true => InventoryFormspecSpec {
         formspec: String [wrap(LongString)]
     },
 
-    DetachedInventory, 0x43, 0, true => DetachedInventorySpec {
+    DetachedInventory, 0x43, Default, true => DetachedInventorySpec {
         name: String,
         keep_inv: bool,
         // These are present if keep_inv is true.
@@ -350,12 +351,12 @@ define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
         contents: Option<Inventory>
     },
 
-    ShowFormspec, 0x44, 0, true => ShowFormspecSpec {
+    ShowFormspec, 0x44, Default, true => ShowFormspecSpec {
         form_spec: String [wrap(LongString)],
         form_name: String
     },
 
-    Movement, 0x45, 0, true => MovementSpec {
+    Movement, 0x45, Default, true => MovementSpec {
         acceleration_default: f32,
         acceleration_air: f32,
         acceleration_fast: f32,
@@ -370,15 +371,15 @@ define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
         gravity: f32
     },
 
-    SpawnParticle, 0x46, 0, true => SpawnParticleSpec {
+    SpawnParticle, 0x46, Default, true => SpawnParticleSpec {
         data: ParticleParameters
     },
 
-    AddParticlespawner, 0x47, 0, true => AddParticlespawnerSpec {
+    AddParticlespawner, 0x47, Default, true => AddParticlespawnerSpec {
         legacy: AddParticleSpawnerLegacy
     },
 
-    Hudadd, 0x49, 1, true => HudaddSpec {
+    Hudadd, 0x49, Init, true => HudaddSpec {
         server_id: u32,
         typ: u8,
         pos: v2f,
@@ -397,38 +398,38 @@ define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
         style: Option<u32>
     },
 
-    Hudrm, 0x4a, 1, true => HudrmSpec {
+    Hudrm, 0x4a, Init, true => HudrmSpec {
         server_id: u32
     },
 
-    Hudchange, 0x4b, 1, true => HudchangeSpec {
+    Hudchange, 0x4b, Init, true => HudchangeSpec {
         server_id: u32,
         stat: HudStat
     },
 
-    HudSetFlags, 0x4c, 1, true => HudSetFlagsSpec {
+    HudSetFlags, 0x4c, Init, true => HudSetFlagsSpec {
         flags: HudFlags, // flags added
         mask: HudFlags   // flags possibly removed
     },
 
-    HudSetParam, 0x4d, 1, true => HudSetParamSpec {
+    HudSetParam, 0x4d, Init, true => HudSetParamSpec {
         value: HudSetParam
     },
 
-    Breath, 0x4e, 0, true => BreathSpec {
+    Breath, 0x4e, Default, true => BreathSpec {
         breath: u16
     },
 
-    SetSky, 0x4f, 0, true => SetSkySpec {
+    SetSky, 0x4f, Default, true => SetSkySpec {
         params: SkyboxParams
     },
 
-    OverrideDayNightRatio, 0x50, 0, true => OverrideDayNightRatioSpec {
+    OverrideDayNightRatio, 0x50, Default, true => OverrideDayNightRatioSpec {
         do_override: bool,
         day_night_ratio: u16
     },
 
-    LocalPlayerAnimations, 0x51, 0, true => LocalPlayerAnimationsSpec {
+    LocalPlayerAnimations, 0x51, Default, true => LocalPlayerAnimationsSpec {
         idle: v2s32,
         walk: v2s32,
         dig: v2s32,
@@ -436,16 +437,16 @@ define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
         frame_speed: f32
     },
 
-    EyeOffset, 0x52, 0, true => EyeOffsetSpec {
+    EyeOffset, 0x52, Default, true => EyeOffsetSpec {
         eye_offset_first: v3f,
         eye_offset_third: v3f
     },
 
-    DeleteParticlespawner, 0x53, 0, true => DeleteParticlespawnerSpec {
+    DeleteParticlespawner, 0x53, Default, true => DeleteParticlespawnerSpec {
         server_id: u32
     },
 
-    CloudParams, 0x54, 0, true => CloudParamsSpec {
+    CloudParams, 0x54, Default, true => CloudParamsSpec {
         density: f32,
         color_bright: SColor,
         color_ambient: SColor,
@@ -454,60 +455,60 @@ define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
         speed: v2f
     },
 
-    FadeSound, 0x55, 0, true => FadeSoundSpec {
+    FadeSound, 0x55, Default, true => FadeSoundSpec {
         sound_id: s32,
         step: f32,
         gain: f32
     },
 
-    UpdatePlayerList, 0x56, 0, true => UpdatePlayerListSpec {
+    UpdatePlayerList, 0x56, Default, true => UpdatePlayerListSpec {
         typ: u8,
         players: Vec<String> [wrap(Array16<String>)]
     },
 
-    TCModchannelMsg, 0x57, 0, true => TCModchannelMsgSpec {
+    TCModchannelMsg, 0x57, Default, true => TCModchannelMsgSpec {
         channel_name: String,
         sender: String,
         channel_msg: String
     },
 
-    ModchannelSignal, 0x58, 0, true => ModchannelSignalSpec {
+    ModchannelSignal, 0x58, Default, true => ModchannelSignalSpec {
         signal_tmp: u8,
         channel: String,
         // signal == MODCHANNEL_SIGNAL_SET_STATE
         state: Option<u8>
     },
 
-    NodemetaChanged, 0x59, 0, true => NodemetaChangedSpec {
+    NodemetaChanged, 0x59, Default, true => NodemetaChangedSpec {
         list: AbsNodeMetadataList [wrap(ZLibCompressed<AbsNodeMetadataList>)]
     },
 
-    SetSun, 0x5a, 0, true => SetSunSpec {
+    SetSun, 0x5a, Default, true => SetSunSpec {
         sun: SunParams
     },
 
-    SetMoon, 0x5b, 0, true => SetMoonSpec {
+    SetMoon, 0x5b, Default, true => SetMoonSpec {
         moon: MoonParams
     },
 
-    SetStars, 0x5c, 0, true => SetStarsSpec {
+    SetStars, 0x5c, Default, true => SetStarsSpec {
         stars: StarParams
     },
 
-    SrpBytesSB, 0x60, 0, true => SrpBytesSBSpec {
+    SrpBytesSB, 0x60, Default, true => SrpBytesSBSpec {
          s: Vec<u8> [wrap(BinaryData16)],
          b: Vec<u8> [wrap(BinaryData16)]
     },
 
-    FormspecPrepend, 0x61, 0, true => FormspecPrependSpec {
+    FormspecPrepend, 0x61, Default, true => FormspecPrependSpec {
         formspec_prepend: String
     },
 
-    MinimapModes, 0x62, 0, true => MinimapModesSpec {
+    MinimapModes, 0x62, Default, true => MinimapModesSpec {
         modes: MinimapModeList
     },
 
-    SetLighting, 0x63, 0, true => SetLightingSpec {
+    SetLighting, 0x63, Default, true => SetLightingSpec {
         lighting: Lighting
     }
 });
@@ -515,12 +516,12 @@ define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
 define_protocol!(41, 0x4f457403, ToServer, ToServerCommand => {
     /////////////////////////////////////////////////////////////////////////
     // ToServer
-    Null, 0x00, 0, false => NullSpec {
+    Null, 0x00, Default, false => NullSpec {
         // This appears to be sent before init to initialize
         // the reliable seqnum and peer id.
     },
 
-    Init, 0x02, 1, false => InitSpec {
+    Init, 0x02, Init, false => InitSpec {
         serialization_ver_max: u8,
         supp_compr_modes: u16,
         min_net_proto_version: u16,
@@ -528,87 +529,87 @@ define_protocol!(41, 0x4f457403, ToServer, ToServerCommand => {
         player_name: String
     },
 
-    Init2, 0x11, 1, true => Init2Spec {
+    Init2, 0x11, Init, true => Init2Spec {
         lang: Option<String>
     },
 
-    ModchannelJoin, 0x17, 0, true => ModchannelJoinSpec {
+    ModchannelJoin, 0x17, Default, true => ModchannelJoinSpec {
         channel_name: String
     },
 
-    ModchannelLeave, 0x18, 0, true => ModchannelLeaveSpec {
+    ModchannelLeave, 0x18, Default, true => ModchannelLeaveSpec {
         channel_name: String
     },
 
-    TSModchannelMsg, 0x19, 0, true => TSModchannelMsgSpec {
+    TSModchannelMsg, 0x19, Default, true => TSModchannelMsgSpec {
         channel_name: String,
         channel_msg: String
     },
 
-    Playerpos, 0x23, 0, false => PlayerposSpec {
+    Playerpos, 0x23, Default, false => PlayerposSpec {
         player_pos: PlayerPos
     },
 
-    Gotblocks, 0x24, 2, true => GotblocksSpec {
+    Gotblocks, 0x24, Response, true => GotblocksSpec {
         blocks: Vec<v3s16> [wrap(Array8<v3s16>)]
     },
 
-    Deletedblocks, 0x25, 2, true => DeletedblocksSpec {
+    Deletedblocks, 0x25, Response, true => DeletedblocksSpec {
         blocks: Vec<v3s16> [wrap(Array8<v3s16>)]
     },
 
-    InventoryAction, 0x31, 0, true => InventoryActionSpec {
+    InventoryAction, 0x31, Default, true => InventoryActionSpec {
         action: InventoryAction
     },
 
-    TSChatMessage, 0x32, 0, true => TSChatMessageSpec {
+    TSChatMessage, 0x32, Default, true => TSChatMessageSpec {
         message: String [wrap(WString)]
     },
 
-    Damage, 0x35, 0, true => DamageSpec {
+    Damage, 0x35, Default, true => DamageSpec {
         damage: u16
     },
 
-    Playeritem, 0x37, 0, true => PlayeritemSpec {
+    Playeritem, 0x37, Default, true => PlayeritemSpec {
         item: u16
     },
 
-    Respawn, 0x38, 0, true => RespawnSpec {
+    Respawn, 0x38, Default, true => RespawnSpec {
         // empty
     },
 
-    Interact, 0x39, 0, true => InteractSpec {
+    Interact, 0x39, Default, true => InteractSpec {
         action: InteractAction,
         item_index: u16,
         pointed_thing: PointedThing [wrap(Wrapped32<PointedThing>)],
         player_pos: PlayerPos
     },
 
-    RemovedSounds, 0x3a, 2, true => RemovedSoundsSpec {
+    RemovedSounds, 0x3a, Response, true => RemovedSoundsSpec {
         ids: Vec<s32> [wrap(Array16<s32>)]
     },
 
-    NodemetaFields, 0x3b, 0, true => NodemetaFieldsSpec {
+    NodemetaFields, 0x3b, Default, true => NodemetaFieldsSpec {
         p: v3s16,
         form_name: String,
         // (name, value)
         fields: Vec<(String, String)> [wrap(Array16<Pair<String, LongString>>)]
     },
 
-    InventoryFields, 0x3c, 0, true => InventoryFieldsSpec {
+    InventoryFields, 0x3c, Default, true => InventoryFieldsSpec {
         client_formspec_name: String,
         fields: Vec<(String, String)> [wrap(Array16<Pair<String, LongString>>)]
     },
 
-    RequestMedia, 0x40, 1, true => RequestMediaSpec {
+    RequestMedia, 0x40, Init, true => RequestMediaSpec {
         files: Vec<String> [wrap(Array16<String>)]
     },
 
-    HaveMedia, 0x41, 2, true => HaveMediaSpec {
+    HaveMedia, 0x41, Response, true => HaveMediaSpec {
         tokens: Vec<u32> [wrap(Array8<u32>)]
     },
 
-    ClientReady, 0x43, 1, true => ClientReadySpec {
+    ClientReady, 0x43, Init, true => ClientReadySpec {
         major_ver: u8,
         minor_ver: u8,
         patch_ver: u8,
@@ -617,22 +618,22 @@ define_protocol!(41, 0x4f457403, ToServer, ToServerCommand => {
         formspec_ver: Option<u16>
     },
 
-    FirstSrp, 0x50, 1, true => FirstSrpSpec {
+    FirstSrp, 0x50, Init, true => FirstSrpSpec {
         salt: Vec<u8> [wrap(BinaryData16)],
         verification_key: Vec<u8> [wrap(BinaryData16)],
         is_empty: bool
     },
 
-    SrpBytesA, 0x51, 1, true => SrpBytesASpec {
+    SrpBytesA, 0x51, Init, true => SrpBytesASpec {
         bytes_a: Vec<u8> [wrap(BinaryData16)],
         based_on: u8
     },
 
-    SrpBytesM, 0x52, 1, true => SrpBytesMSpec {
+    SrpBytesM, 0x52, Init, true => SrpBytesMSpec {
         bytes_m: Vec<u8> [wrap(BinaryData16)]
     },
 
-    UpdateClientInfo, 0x53, 1, true => UpdateClientInfoSpec {
+    UpdateClientInfo, 0x53, Init, true => UpdateClientInfoSpec {
         render_target_size: v2u32,
         real_gui_scaling: f32,
         real_hud_scaling: f32,
@@ -648,7 +649,7 @@ pub enum Command {
 
 pub trait CommandProperties {
     fn direction(&self) -> CommandDirection;
-    fn default_channel(&self) -> u8;
+    fn default_channel(&self) -> ChannelId;
     fn default_reliability(&self) -> bool;
     fn command_name(&self) -> &'static str;
 }
@@ -682,7 +683,7 @@ impl CommandProperties for Command {
         }
     }
 
-    fn default_channel(&self) -> u8 {
+    fn default_channel(&self) -> ChannelId {
         match self {
             Command::ToServer(command) => command.default_channel(),
             Command::ToClient(command) => command.default_channel(),
