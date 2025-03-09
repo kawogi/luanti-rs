@@ -11,6 +11,8 @@
 //! of the assigned peer id and includes it on every packet.
 //!  
 
+mod channel;
+mod peer_id;
 mod reliable_receiver;
 mod reliable_sender;
 mod sequence_number;
@@ -19,13 +21,12 @@ mod split_sender;
 
 use anyhow::Result;
 use anyhow::bail;
+use channel::Channel;
 use log::debug;
 use log::error;
 use log::trace;
 use log::warn;
-use rand::Rng;
-use rand::SeedableRng;
-use rand::rngs::StdRng;
+pub(crate) use peer_id::PeerId;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::mpsc::unbounded_channel;
@@ -38,10 +39,8 @@ use crate::wire::deser::Deserialize;
 use crate::wire::deser::Deserializer;
 use crate::wire::packet::AckBody;
 use crate::wire::packet::ControlBody;
-use crate::wire::packet::InnerBody;
 use crate::wire::packet::Packet;
 use crate::wire::packet::PacketBody;
-use crate::wire::packet::PeerId;
 use crate::wire::packet::ReliableBody;
 use crate::wire::packet::SetPeerIdBody;
 use crate::wire::ser::Serialize;
@@ -53,7 +52,6 @@ use reliable_sender::ReliableSender;
 use split_receiver::SplitReceiver;
 use split_sender::SplitSender;
 
-use std::collections::VecDeque;
 use std::net::SocketAddr;
 use std::time::Duration;
 use std::time::Instant;
@@ -142,8 +140,8 @@ pub fn new_peer(
         recv_context: ProtocolContext::latest_for_receive(remote_is_server),
         send_context: ProtocolContext::latest_for_send(remote_is_server),
         connect_time: Instant::now(),
-        remote_peer_id: 0,
-        local_peer_id: 0,
+        remote_peer_id: PeerId::NONE,
+        local_peer_id: PeerId::NONE,
         from_socket: relay_rx,
         from_controller: peer_send_rx,
         to_controller: peer_recv_tx.clone(),
@@ -153,7 +151,6 @@ pub fn new_peer(
             Channel::new(remote_is_server, peer_recv_tx.clone()),
             Channel::new(remote_is_server, peer_recv_tx.clone()),
         ],
-        rng: StdRng::from_os_rng(),
         now: Instant::now(),
         last_received: Instant::now(),
     };
@@ -173,141 +170,6 @@ impl PeerIO {
                 // TODO clarify error condition and handling
                 error!("failed to relay packet: {error}");
             });
-    }
-}
-
-struct Channel {
-    unreliable_out: VecDeque<InnerBody>,
-
-    reliable_in: ReliableReceiver,
-    reliable_out: ReliableSender,
-
-    split_in: SplitReceiver,
-    split_out: SplitSender,
-
-    to_controller: UnboundedSender<Result<Command>>,
-    now: Instant,
-    recv_context: ProtocolContext,
-    send_context: ProtocolContext,
-}
-
-impl Channel {
-    pub(crate) fn new(
-        remote_is_server: bool,
-        to_controller: UnboundedSender<Result<Command>>,
-    ) -> Self {
-        Self {
-            unreliable_out: VecDeque::new(),
-            reliable_in: ReliableReceiver::new(),
-            reliable_out: ReliableSender::new(),
-            split_in: SplitReceiver::new(),
-            split_out: SplitSender::new(),
-            to_controller,
-            now: Instant::now(),
-            recv_context: ProtocolContext::latest_for_receive(remote_is_server),
-            send_context: ProtocolContext::latest_for_send(remote_is_server),
-        }
-    }
-
-    pub(crate) fn update_now(&mut self, now: &Instant) {
-        self.now = *now;
-    }
-
-    pub(crate) fn update_context(
-        &mut self,
-        recv_context: ProtocolContext,
-        send_context: ProtocolContext,
-    ) {
-        self.recv_context = recv_context;
-        self.send_context = send_context;
-    }
-
-    /// Process a packet received from remote
-    /// Possibly dispatching one or more Commands
-    pub(crate) fn process(&mut self, body: PacketBody) -> Result<()> {
-        match body {
-            PacketBody::Reliable(rb) => self.process_reliable(rb)?,
-            PacketBody::Inner(ib) => self.process_inner(ib)?,
-        }
-        Ok(())
-    }
-
-    pub(crate) fn process_reliable(&mut self, body: ReliableBody) -> Result<()> {
-        self.reliable_in.push(body);
-        while let Some(inner) = self.reliable_in.pop() {
-            self.process_inner(inner)?;
-        }
-        Ok(())
-    }
-
-    pub(crate) fn process_inner(&mut self, body: InnerBody) -> Result<()> {
-        match body {
-            InnerBody::Control(body) => self.process_control(body),
-            InnerBody::Original(body) => {
-                if let Some(command) = body.command {
-                    self.process_command(command);
-                }
-            }
-            InnerBody::Split(body) => {
-                if let Some(payload) = self.split_in.push(self.now, body)? {
-                    let mut buf = Deserializer::new(self.recv_context, &payload);
-                    if let Some(command) = Command::deserialize(&mut buf)? {
-                        self.process_command(command);
-                    }
-                }
-            }
-        }
-        Ok(())
-    }
-
-    pub(crate) fn process_control(&mut self, body: ControlBody) {
-        match body {
-            ControlBody::Ack(ack) => {
-                self.reliable_out.process_ack(&ack);
-            }
-            // Everything else is handled one level up
-            _ => (),
-        }
-    }
-
-    pub(crate) fn process_command(&mut self, command: Command) {
-        match self.to_controller.send(Ok(command)) {
-            Ok(()) => (),
-            Err(error) => panic!("Unexpected command channel shutdown: {error:?}"),
-        }
-    }
-
-    /// Send command to remote
-    pub(crate) fn send(&mut self, reliable: bool, command: Command) -> Result<()> {
-        let bodies = self.split_out.push(self.send_context, command)?;
-        for body in bodies {
-            self.send_inner(reliable, body);
-        }
-        Ok(())
-    }
-
-    pub(crate) fn send_inner(&mut self, reliable: bool, body: InnerBody) {
-        if reliable {
-            self.reliable_out.push(body);
-        } else {
-            self.unreliable_out.push_back(body);
-        }
-    }
-
-    /// Check if the channel has anything ready to send.
-    pub(crate) fn next_send(&mut self, now: Instant) -> Option<PacketBody> {
-        if let Some(body) = self.unreliable_out.pop_front() {
-            return Some(PacketBody::Inner(body));
-        };
-        if let Some(body) = self.reliable_out.pop(now) {
-            return Some(body);
-        }
-        None
-    }
-
-    /// Only call after exhausting `next_send()`
-    pub(crate) fn next_timeout(&mut self) -> Option<Instant> {
-        self.reliable_out.next_timeout()
     }
 }
 
@@ -346,7 +208,6 @@ pub struct PeerRunner {
     // Special ids: 0 is unassigned, and 1 for the server.
     remote_peer_id: PeerId,
     local_peer_id: PeerId,
-    rng: StdRng,
 
     channels: Vec<Channel>,
 
@@ -501,22 +362,23 @@ impl PeerRunner {
     // Process a packet received over network
     fn process_packet(&mut self, pkt: Packet) -> Result<()> {
         if self.remote_is_server {
-            if pkt.sender_peer_id != 1 {
+            if !pkt.sender_peer_id.is_server() {
                 warn!("Server sending from wrong peer id");
                 return Ok(());
             }
         } else {
             // We're the server, assign the remote a peer_id.
-            if self.remote_peer_id == 0 {
+            if self.remote_peer_id.is_none() {
                 // Assign a peer id
-                self.local_peer_id = 1;
-                self.remote_peer_id = self.rng.random_range(2..0xFFFF);
+                self.local_peer_id = PeerId::SERVER;
+                // FIXME this may hand out peer ids that are already in use
+                self.remote_peer_id = PeerId::random();
 
                 // Tell the client about it
                 let set_peer_id = SetPeerIdBody::new(self.remote_peer_id).into_inner();
                 self.channels[0].send_inner(true, set_peer_id);
             }
-            if pkt.sender_peer_id == 0 {
+            if pkt.sender_peer_id.is_none() {
                 if self.now > self.connect_time + INEXISTENT_PEER_ID_GRACE {
                     // Malformed, ignore.
                     warn!("Ignoring peer_id 0 packet");
@@ -547,7 +409,7 @@ impl PeerRunner {
                 }
                 ControlBody::SetPeerId(set_peer_id) => {
                     if self.remote_is_server {
-                        if self.local_peer_id == 0 {
+                        if self.local_peer_id.is_none() {
                             self.local_peer_id = set_peer_id.peer_id;
                         } else if self.local_peer_id != set_peer_id.peer_id {
                             bail!("Peer id mismatch in duplicate SetPeerId");

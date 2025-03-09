@@ -12,12 +12,12 @@ use crate::peer::Peer;
 use crate::wire::command::*;
 
 pub struct LuantiClient {
-    remote_peer: Peer,
+    server: Peer,
 }
 
 impl LuantiClient {
-    pub async fn connect(connect_to: SocketAddr) -> anyhow::Result<Self> {
-        let bind_addr = if connect_to.is_ipv4() {
+    pub async fn connect(server_address: SocketAddr) -> anyhow::Result<Self> {
+        let bind_addr = if server_address.is_ipv4() {
             "0.0.0.0:0".parse()?
         } else {
             "[::]:0".parse()?
@@ -26,14 +26,14 @@ impl LuantiClient {
 
         // Send a null packet to server.
         // It should answer back, establishing a peer ids.
-        let remote_peer = socket.add_peer(connect_to).await;
+        let server = socket.add_peer(server_address).await;
 
-        Ok(Self { remote_peer })
+        Ok(Self { server })
     }
 
     /// If this fails, the client has disconnected.
     pub async fn recv(&mut self) -> anyhow::Result<ToClientCommand> {
-        match self.remote_peer.recv().await? {
+        match self.server.recv().await? {
             Command::ToClient(cmd) => Ok(cmd),
             Command::ToServer(_) => bail!("Invalid packet direction"),
         }
@@ -41,6 +41,6 @@ impl LuantiClient {
 
     /// If this fails, the client has disconnected.
     pub fn send(&mut self, command: ToServerCommand) -> anyhow::Result<()> {
-        self.remote_peer.send(Command::ToServer(command))
+        self.server.send(Command::ToServer(command))
     }
 }

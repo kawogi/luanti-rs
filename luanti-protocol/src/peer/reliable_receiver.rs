@@ -11,6 +11,7 @@ pub(super) struct ReliableReceiver {
     // Stores packets that have been received, but not yet processed,
     // because we're waiting for earlier packets.
     // It must always be true that: smallest key in buffer > next_seqnum
+    // TODO documentation doesn't match the implementation. After a `push`, `buffer` may equal `next_seqnum`
     buffer: BTreeMap<SequenceNumber, InnerBody>,
 }
 
@@ -25,12 +26,12 @@ impl ReliableReceiver {
     /// Push a reliable packet (from remote) into the receiver
     pub(super) fn push(&mut self, body: ReliableBody) {
         let seqnum = self.next_seqnum.goto(body.seqnum);
-        if seqnum < self.next_seqnum {
-            // Packet was already received and processed. Ignore
-        } else if seqnum >= self.next_seqnum {
+        if seqnum >= self.next_seqnum {
             // Future packet. Put it in the buffer.
             // Don't override it if it's already there.
             self.buffer.entry(seqnum).or_insert(body.inner);
+        } else {
+            // Packet was already received and processed. Ignore
         }
     }
 

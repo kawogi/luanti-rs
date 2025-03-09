@@ -115,13 +115,14 @@ impl LuantiSocketRunner {
 
     pub async fn run_inner(&mut self) -> anyhow::Result<()> {
         let mut knock_closed = false;
-        let mut buf: Vec<u8> = vec![0_u8; MAX_DATAGRAM_SIZE];
+        let mut buf = vec![0_u8; MAX_DATAGRAM_SIZE];
 
         loop {
-            let mut interest = Interest::READABLE;
-            if !self.outgoing.is_empty() {
-                interest |= Interest::WRITABLE;
-            }
+            let interest = if self.outgoing.is_empty() {
+                Interest::READABLE
+            } else {
+                Interest::READABLE | Interest::WRITABLE
+            };
             // rust-analyzer chokes on code inside select!, so keep it to a minimum.
             tokio::select! {
                 ready = self.socket.ready(interest) => self.handle_socket_io(ready, &mut buf),

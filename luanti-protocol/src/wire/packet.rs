@@ -2,6 +2,8 @@ use anyhow::bail;
 use log::trace;
 use log::warn;
 
+use crate::peer::PeerId;
+
 use super::channel_id::ChannelId;
 use super::command::Command;
 use super::deser::Deserialize;
@@ -29,8 +31,6 @@ pub const SPLIT_HEADER_SIZE: usize = 7;
 pub const MAX_ORIGINAL_BODY_SIZE: usize =
     MAX_PACKET_SIZE - PACKET_HEADER_SIZE - RELIABLE_HEADER_SIZE;
 pub const MAX_SPLIT_BODY_SIZE: usize = MAX_ORIGINAL_BODY_SIZE - SPLIT_HEADER_SIZE;
-
-pub type PeerId = u16;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AckBody {
@@ -66,12 +66,12 @@ impl Deserialize for AckBody {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SetPeerIdBody {
-    pub peer_id: u16,
+    pub peer_id: PeerId,
 }
 
 impl SetPeerIdBody {
     #[must_use]
-    pub fn new(peer_id: u16) -> Self {
+    pub fn new(peer_id: PeerId) -> Self {
         Self { peer_id }
     }
 
@@ -84,7 +84,7 @@ impl SetPeerIdBody {
 impl Serialize for SetPeerIdBody {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        u16::serialize(&value.peer_id, ser)
+        PeerId::serialize(&value.peer_id, ser)
     }
 }
 
@@ -92,7 +92,7 @@ impl Deserialize for SetPeerIdBody {
     type Output = Self;
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         Ok(Self {
-            peer_id: u16::deserialize(deser)?,
+            peer_id: PeerId::deserialize(deser)?,
         })
     }
 }
@@ -407,7 +407,7 @@ impl Serialize for Packet {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         u32::serialize(&value.protocol_id, ser)?;
-        u16::serialize(&value.sender_peer_id, ser)?;
+        PeerId::serialize(&value.sender_peer_id, ser)?;
         ChannelId::serialize(&value.channel, ser)?;
         PacketBody::serialize(&value.body, ser)?;
         Ok(())

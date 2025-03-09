@@ -72,10 +72,8 @@ impl ReliableSender {
     }
 
     fn safe_to_transmit(&self, seqnum: SequenceNumber) -> bool {
-        match self.oldest_unacked() {
-            Some(unacked_seqnum) => seqnum < unacked_seqnum + self.window_size,
-            None => true,
-        }
+        self.oldest_unacked()
+            .is_none_or(|unacked_seqnum| seqnum < unacked_seqnum + self.window_size)
     }
 
     pub(super) fn next_timeout(&self) -> Option<Instant> {
