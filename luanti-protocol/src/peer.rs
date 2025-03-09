@@ -12,7 +12,6 @@
 //!  
 
 mod channel;
-mod peer_id;
 mod reliable_receiver;
 mod reliable_sender;
 mod sequence_number;
@@ -26,7 +25,6 @@ use log::debug;
 use log::error;
 use log::trace;
 use log::warn;
-pub(crate) use peer_id::PeerId;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::mpsc::unbounded_channel;
@@ -43,6 +41,7 @@ use crate::wire::packet::Packet;
 use crate::wire::packet::PacketBody;
 use crate::wire::packet::ReliableBody;
 use crate::wire::packet::SetPeerIdBody;
+use crate::wire::peer_id::PeerId;
 use crate::wire::ser::Serialize;
 use crate::wire::ser::VecSerializer;
 use crate::wire::types::ProtocolContext;

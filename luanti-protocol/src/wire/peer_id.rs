@@ -7,16 +7,6 @@ use crate::wire::{
     ser::{Serialize, SerializeResult, Serializer},
 };
 
-/**
- * Channels used for Client -> Server communication
- *
- * - 2: Notifications back to the server (e.g. GOTBLOCKS)
- * - 1: Init and Authentication
- * - 0: everything else
- *
- * Packet order is only guaranteed inside a channel, so packets that operate on
- * the same objects are *required* to be in the same channel.
- */
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct PeerId(u16);
@@ -59,9 +49,3 @@ impl Serialize for PeerId {
         u16::serialize(&value.0, serializer)
     }
 }
-
-// impl From<PeerId> for usize {
-//     fn from(value: PeerId) -> Self {
-//         value.into()
-//     }
-// }

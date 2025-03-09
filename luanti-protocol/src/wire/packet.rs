@@ -2,14 +2,13 @@ use anyhow::bail;
 use log::trace;
 use log::warn;
 
-use crate::peer::PeerId;
-
 use super::channel_id::ChannelId;
 use super::command::Command;
 use super::deser::Deserialize;
 use super::deser::DeserializeError;
 use super::deser::DeserializeResult;
 use super::deser::Deserializer;
+use super::peer_id::PeerId;
 use super::sequence_number::WrappingSequenceNumber;
 use super::ser::Serialize;
 use super::ser::SerializeResult;
