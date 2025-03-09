@@ -1,4 +1,5 @@
 use crate::wire::packet::SplitBody;
+use crate::wire::sequence_number::WrappingSequenceNumber;
 use anyhow::bail;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
@@ -53,7 +54,7 @@ impl IncomingBuffer {
 }
 
 pub(super) struct SplitReceiver {
-    pending: HashMap<u16, IncomingBuffer>,
+    pending: HashMap<WrappingSequenceNumber, IncomingBuffer>,
 }
 
 impl SplitReceiver {

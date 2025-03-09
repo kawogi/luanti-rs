@@ -10,6 +10,7 @@ use super::deser::Deserialize;
 use super::deser::DeserializeError;
 use super::deser::DeserializeResult;
 use super::deser::Deserializer;
+use super::sequence_number::WrappingSequenceNumber;
 use super::ser::Serialize;
 use super::ser::SerializeResult;
 use super::ser::Serializer;
@@ -34,12 +35,12 @@ pub const MAX_SPLIT_BODY_SIZE: usize = MAX_ORIGINAL_BODY_SIZE - SPLIT_HEADER_SIZ
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AckBody {
-    pub seqnum: u16,
+    pub seqnum: WrappingSequenceNumber,
 }
 
 impl AckBody {
     #[must_use]
-    pub fn new(seqnum: u16) -> Self {
+    pub fn new(seqnum: WrappingSequenceNumber) -> Self {
         AckBody { seqnum }
     }
     #[must_use]
@@ -51,16 +52,15 @@ impl AckBody {
 impl Serialize for AckBody {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        u16::serialize(&value.seqnum, ser)
+        WrappingSequenceNumber::serialize(&value.seqnum, ser)
     }
 }
 
 impl Deserialize for AckBody {
     type Output = Self;
     fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-        Ok(Self {
-            seqnum: u16::deserialize(deserializer)?,
-        })
+        let seqnum = WrappingSequenceNumber::deserialize(deserializer)?;
+        Ok(Self { seqnum })
     }
 }
 
@@ -179,7 +179,7 @@ impl Deserialize for OriginalBody {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SplitBody {
-    pub seqnum: u16,
+    pub seqnum: WrappingSequenceNumber,
     pub chunk_count: u16,
     pub chunk_num: u16,
     pub chunk_data: Vec<u8>,
@@ -188,7 +188,7 @@ pub struct SplitBody {
 impl Serialize for SplitBody {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        u16::serialize(&value.seqnum, ser)?;
+        WrappingSequenceNumber::serialize(&value.seqnum, ser)?;
         u16::serialize(&value.chunk_count, ser)?;
         u16::serialize(&value.chunk_num, ser)?;
         ser.write_bytes(&value.chunk_data)?;
@@ -200,18 +200,22 @@ impl Deserialize for SplitBody {
     type Output = Self;
 
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+        let seqnum = WrappingSequenceNumber::deserialize(deser)?;
+        let chunk_count = u16::deserialize(deser)?;
+        let chunk_num = u16::deserialize(deser)?;
+        let chunk_data = Vec::from(deser.take_all());
         Ok(SplitBody {
-            seqnum: u16::deserialize(deser)?,
-            chunk_count: u16::deserialize(deser)?,
-            chunk_num: u16::deserialize(deser)?,
-            chunk_data: Vec::from(deser.take_all()),
+            seqnum,
+            chunk_count,
+            chunk_num,
+            chunk_data,
         })
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ReliableBody {
-    pub seqnum: u16,
+    pub seqnum: WrappingSequenceNumber,
     pub inner: InnerBody,
 }
 
@@ -220,7 +224,7 @@ impl Serialize for ReliableBody {
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         let packet_type: u8 = 3;
         u8::serialize(&packet_type, ser)?;
-        u16::serialize(&value.seqnum, ser)?;
+        WrappingSequenceNumber::serialize(&value.seqnum, ser)?;
         InnerBody::serialize(&value.inner, ser)?;
         Ok(())
     }
@@ -236,7 +240,7 @@ impl Deserialize for ReliableBody {
                 "Invalid packet_type for ReliableBody".into(),
             ))
         }
-        let seqnum = u16::deserialize(deser)?;
+        let seqnum = WrappingSequenceNumber::deserialize(deser)?;
         trace!("ReliableBody::seqnum: {seqnum}");
         Ok(ReliableBody {
             seqnum,
@@ -254,7 +258,7 @@ pub enum InnerBody {
 
 impl InnerBody {
     #[must_use]
-    pub fn into_reliable(self, seqnum: u16) -> PacketBody {
+    pub fn into_reliable(self, seqnum: WrappingSequenceNumber) -> PacketBody {
         PacketBody::Reliable(ReliableBody {
             seqnum,
             inner: self,

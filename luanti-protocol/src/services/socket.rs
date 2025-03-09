@@ -73,16 +73,19 @@ impl LuantiSocket {
     // NOTE: This is not cancel safe, and it should not
     // be used if incoming connections are expected, or else
     // they will be discarded.
-    pub async fn add_peer(&mut self, remote: SocketAddr) -> Peer {
-        assert!(!self.for_server, "//TODO add descriptive error message");
-        debug!("adding server as peer: {remote}");
-        self.knock_tx.send(remote).unwrap();
+    pub async fn add_server(&mut self, server_address: SocketAddr) -> Peer {
+        assert!(
+            !self.for_server,
+            "method my only be called for client sockets"
+        );
+        debug!("adding server as peer: {server_address}");
+        self.knock_tx.send(server_address).unwrap();
 
         // Wait for the peer
         loop {
             let peer = self.accept().await.unwrap();
             let remote_address = peer.remote_addr();
-            if remote_address == remote {
+            if remote_address == server_address {
                 debug!("peer responded from remote address: {remote_address}");
                 return peer;
             }

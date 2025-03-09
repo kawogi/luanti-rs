@@ -516,10 +516,6 @@ define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
 define_protocol!(41, 0x4f457403, ToServer, ToServerCommand => {
     /////////////////////////////////////////////////////////////////////////
     // ToServer
-    Null, 0x00, Default, false => NullSpec {
-        // This appears to be sent before init to initialize
-        // the reliable seqnum and peer id.
-    },
 
     Init, 0x02, Init, false => InitSpec {
         serialization_ver_max: u8,

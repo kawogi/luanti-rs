@@ -63,7 +63,7 @@ impl ReliableSender {
     pub(super) fn push(&mut self, body: InnerBody) {
         let seqnum = self.next_seqnum;
         self.next_seqnum.inc();
-        let body = body.into_reliable(seqnum.partial());
+        let body = body.into_reliable(seqnum.as_wrapping());
         self.queued.push_back((seqnum, body));
     }
 

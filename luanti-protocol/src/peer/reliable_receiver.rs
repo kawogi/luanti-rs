@@ -51,11 +51,10 @@ impl ReliableReceiver {
 
 #[cfg(test)]
 mod tests {
-    use std::num::Wrapping;
-
     use crate::wire::command::*;
     use crate::wire::packet::OriginalBody;
     use crate::wire::packet::PacketBody;
+    use crate::wire::sequence_number::WrappingSequenceNumber;
     use rand::prelude::*;
     use rand::rng;
 
@@ -98,10 +97,7 @@ mod tests {
             let mut packets: Vec<ReliableBody> = (offset..offset + CHUNK_LEN)
                 .map(|packet_index| {
                     #[expect(clippy::cast_possible_truncation, reason = "truncation is on purpose")]
-                    // let seqnum = (SequenceNumber::init() + i as u16).partial();
-                    let seqnum: u16 = (Wrapping(SequenceNumber::init().partial())
-                        + Wrapping(packet_index as u16))
-                    .0;
+                    let seqnum = WrappingSequenceNumber::INITIAL + (packet_index as u16);
                     match make_inner(packet_index).into_reliable(seqnum) {
                         PacketBody::Reliable(rb) => rb,
                         PacketBody::Inner(_) => panic!(),

@@ -1,22 +1,23 @@
 use std::ops::Add;
 
-const SEQUENCE_NUMBER_INITIAL: u16 = 0xffdc;
+use crate::wire::sequence_number::WrappingSequenceNumber;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
 pub(crate) struct SequenceNumber(u64);
 
 impl SequenceNumber {
-    pub(crate) const fn init() -> Self {
-        Self(SEQUENCE_NUMBER_INITIAL as u64)
+    pub(crate) fn init() -> Self {
+        Self(u64::from(u16::from(WrappingSequenceNumber::INITIAL)))
     }
 
     /// Apply the (shortened) sequence number to this one by replacing the lower bits.
     ///
     /// Depending on the resulting delta, decide whether the sequence number shall be increased or
     /// decreased and adjust the high bits accordingly.
-    pub(crate) fn goto(self, partial_sequence_number: u16) -> Self {
-        let distance = partial_sequence_number.wrapping_sub(self.partial());
+    pub(crate) fn goto(self, partial_sequence_number: impl Into<WrappingSequenceNumber>) -> Self {
+        let partial_sequence_number = u16::from(partial_sequence_number.into());
+        let distance = partial_sequence_number.wrapping_sub(self.0 as u16);
         // TODO(kawogi) this is an unusual boundary; if 0x7fff was used, this could be solved with a simple cast to i16
         let is_overflow = distance > 0x8000;
         let result = self.0 + u64::from(distance) - if is_overflow { 0x0001_0000 } else { 0 };
@@ -25,8 +26,8 @@ impl SequenceNumber {
     }
 
     #[inline]
-    pub(crate) fn partial(self) -> u16 {
-        self.0 as u16
+    pub(crate) fn as_wrapping(self) -> WrappingSequenceNumber {
+        (self.0 as u16).into()
     }
 
     pub(crate) const fn inc(&mut self) {
@@ -45,11 +46,16 @@ impl Add<u16> for SequenceNumber {
 #[cfg(test)]
 mod tests {
 
+    use crate::wire::sequence_number::WrappingSequenceNumber;
+
     use super::*;
 
     #[test]
     fn init() {
-        assert_eq!(SEQUENCE_NUMBER_INITIAL, SequenceNumber::init().partial());
+        assert_eq!(
+            WrappingSequenceNumber::INITIAL,
+            SequenceNumber::init().as_wrapping()
+        );
     }
 
     #[test]

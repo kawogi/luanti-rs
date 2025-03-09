@@ -253,7 +253,7 @@ impl PeerRunner {
             // If an error gets to this point, the peer is toast.
             // Send a disconnect packet, and a remove peer request to the socket
             // These channels might already be dead, so ignore any errors.
-            let disconnected_cleanly: bool = if let Some(error) = err.downcast_ref::<PeerError>() {
+            let disconnected_cleanly = if let Some(error) = err.downcast_ref::<PeerError>() {
                 matches!(error, PeerError::PeerSentDisconnect)
             } else {
                 false

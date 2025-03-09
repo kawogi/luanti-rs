@@ -26,7 +26,7 @@ impl LuantiClient {
 
         // Send a null packet to server.
         // It should answer back, establishing a peer ids.
-        let server = socket.add_peer(server_address).await;
+        let server = socket.add_server(server_address).await;
 
         Ok(Self { server })
     }

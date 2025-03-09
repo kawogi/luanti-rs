@@ -53,7 +53,7 @@ impl SplitSender {
             while offset < total_size {
                 let end = std::cmp::min(offset + MAX_SPLIT_BODY_SIZE, total_size);
                 result.push(InnerBody::Split(SplitBody {
-                    seqnum: self.next_seqnum.partial(),
+                    seqnum: self.next_seqnum.as_wrapping(),
                     chunk_count: total_chunks as u16,
                     chunk_num: index as u16,
                     chunk_data: data[offset..end].to_vec(),

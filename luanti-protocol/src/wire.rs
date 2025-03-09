@@ -3,6 +3,7 @@ pub mod channel_id;
 pub mod command;
 pub mod deser;
 pub mod packet;
+pub mod sequence_number;
 pub mod ser;
 pub mod types;
 pub mod util;
