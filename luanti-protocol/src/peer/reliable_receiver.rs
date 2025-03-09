@@ -1,30 +1,30 @@
-use super::util::rel_to_abs;
 use crate::wire::packet::InnerBody;
 use crate::wire::packet::ReliableBody;
-use crate::wire::packet::SEQNUM_INITIAL;
 use std::collections::BTreeMap;
+
+use super::sequence_number::SequenceNumber;
 
 pub(super) struct ReliableReceiver {
     // Next sequence number in the reliable stream
-    next_seqnum: u64,
+    next_seqnum: SequenceNumber,
 
     // Stores packets that have been received, but not yet processed,
     // because we're waiting for earlier packets.
     // It must always be true that: smallest key in buffer > next_seqnum
-    buffer: BTreeMap<u64, InnerBody>,
+    buffer: BTreeMap<SequenceNumber, InnerBody>,
 }
 
 impl ReliableReceiver {
     pub(super) fn new() -> Self {
         ReliableReceiver {
-            next_seqnum: u64::from(SEQNUM_INITIAL),
+            next_seqnum: SequenceNumber::init(),
             buffer: BTreeMap::new(),
         }
     }
 
     /// Push a reliable packet (from remote) into the receiver
     pub(super) fn push(&mut self, body: ReliableBody) {
-        let seqnum = rel_to_abs(self.next_seqnum, body.seqnum);
+        let seqnum = self.next_seqnum.goto(body.seqnum);
         if seqnum < self.next_seqnum {
             // Packet was already received and processed. Ignore
         } else if seqnum >= self.next_seqnum {
@@ -40,7 +40,7 @@ impl ReliableReceiver {
     pub(super) fn pop(&mut self) -> Option<InnerBody> {
         match self.buffer.first_key_value().map(|(seqnum, _)| *seqnum) {
             Some(seqnum) => (seqnum == self.next_seqnum).then(|| {
-                self.next_seqnum += 1;
+                self.next_seqnum.inc();
                 self.buffer.pop_first().unwrap().1
             }),
             None => None,
@@ -95,10 +95,13 @@ mod tests {
         let mut offset: u32 = 0;
         for _ in 0..5 {
             let mut packets: Vec<ReliableBody> = (offset..offset + CHUNK_LEN)
-                .map(|i| {
+                .map(|packet_index| {
                     #[expect(clippy::cast_possible_truncation, reason = "truncation is on purpose")]
-                    let seqnum: u16 = (Wrapping(SEQNUM_INITIAL) + Wrapping(i as u16)).0;
-                    match make_inner(i).into_reliable(seqnum) {
+                    // let seqnum = (SequenceNumber::init() + i as u16).partial();
+                    let seqnum: u16 = (Wrapping(SequenceNumber::init().partial())
+                        + Wrapping(packet_index as u16))
+                    .0;
+                    match make_inner(packet_index).into_reliable(seqnum) {
                         PacketBody::Reliable(rb) => rb,
                         PacketBody::Inner(_) => panic!(),
                     }

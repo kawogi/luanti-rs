@@ -3,21 +3,22 @@ use crate::wire::packet::InnerBody;
 use crate::wire::packet::MAX_ORIGINAL_BODY_SIZE;
 use crate::wire::packet::MAX_SPLIT_BODY_SIZE;
 use crate::wire::packet::OriginalBody;
-use crate::wire::packet::SEQNUM_INITIAL;
 use crate::wire::packet::SplitBody;
 use crate::wire::ser::MockSerializer;
 use crate::wire::ser::Serialize;
 use crate::wire::ser::VecSerializer;
 use crate::wire::types::ProtocolContext;
 
+use super::sequence_number::SequenceNumber;
+
 pub(super) struct SplitSender {
-    next_seqnum: u64,
+    next_seqnum: SequenceNumber,
 }
 
 impl SplitSender {
     pub(super) fn new() -> Self {
         Self {
-            next_seqnum: u64::from(SEQNUM_INITIAL),
+            next_seqnum: SequenceNumber::init(),
         }
     }
 
@@ -52,7 +53,7 @@ impl SplitSender {
             while offset < total_size {
                 let end = std::cmp::min(offset + MAX_SPLIT_BODY_SIZE, total_size);
                 result.push(InnerBody::Split(SplitBody {
-                    seqnum: self.next_seqnum as u16,
+                    seqnum: self.next_seqnum.partial(),
                     chunk_count: total_chunks as u16,
                     chunk_num: index as u16,
                     chunk_data: data[offset..end].to_vec(),
@@ -61,7 +62,7 @@ impl SplitSender {
                 index += 1;
             }
             assert_eq!(index, total_chunks, "size mismatch");
-            self.next_seqnum += 1;
+            self.next_seqnum.inc();
         }
         Ok(result)
     }
