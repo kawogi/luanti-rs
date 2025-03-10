@@ -14,8 +14,8 @@ use anyhow::bail;
 use log::error;
 
 use super::command::CommandRef;
-use super::command::ToClientCommand;
 use super::command::serialize_commandref;
+use super::command::server_to_client::ToClientCommand;
 use super::ser::VecSerializer;
 use super::types::ProtocolContext;
 use super::util::decompress_zlib;

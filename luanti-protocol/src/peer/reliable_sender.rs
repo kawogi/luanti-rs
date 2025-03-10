@@ -161,6 +161,8 @@ mod tests {
     use rand::Rng;
     use rand::rng;
 
+    use crate::wire::command::server_to_client::HudrmSpec;
+    use crate::wire::command::server_to_client::ToClientCommand;
     use crate::wire::command::*;
     use crate::wire::packet::OriginalBody;
 

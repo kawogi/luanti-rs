@@ -32,7 +32,7 @@ use tokio::sync::mpsc::unbounded_channel;
 use crate::wire::channel_id::ChannelId;
 use crate::wire::command::Command;
 use crate::wire::command::CommandProperties;
-use crate::wire::command::ToClientCommand;
+use crate::wire::command::server_to_client::ToClientCommand;
 use crate::wire::deser::Deserialize;
 use crate::wire::deser::Deserializer;
 use crate::wire::packet::AckBody;

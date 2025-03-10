@@ -3,7 +3,10 @@ use std::net::SocketAddr;
 use anyhow::bail;
 
 use super::socket::LuantiSocket;
-use crate::peer::Peer;
+use crate::{
+    peer::Peer,
+    wire::command::{client_to_server::ToServerCommand, server_to_client::ToClientCommand},
+};
 
 #[allow(
     clippy::wildcard_imports,
