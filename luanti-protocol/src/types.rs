@@ -339,13 +339,6 @@ pub struct GenericInitData {
     pub messages: Vec<ActiveObjectCommand>,
 }
 
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct ActiveObjectMessage {
-    pub id: u16,
-    #[wrap(Wrapped16<ActiveObjectCommand>)]
-    pub data: ActiveObjectCommand,
-}
-
 // TODO(paradust): Handle this in derive macros
 #[derive(Debug, Clone, PartialEq)]
 #[expect(clippy::large_enum_variant, reason = "consider `Box`ing variants")]

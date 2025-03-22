@@ -1,3 +1,5 @@
+mod active_object_messages;
+
 use super::CommandProperties;
 #[allow(clippy::wildcard_imports, reason = "greatly simplifies macros")]
 use crate::types::*;
@@ -10,6 +12,7 @@ use crate::wire::deser::Deserializer;
 use crate::wire::ser::Serialize;
 use crate::wire::ser::SerializeResult;
 use crate::wire::ser::Serializer;
+pub use active_object_messages::*;
 use anyhow::bail;
 use luanti_protocol_derive::LuantiDeserialize;
 use luanti_protocol_derive::LuantiSerialize;
@@ -32,7 +35,7 @@ define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
     MediaPush, 0x2C, Default, true => MediaPushSpec,
     TCChatMessage, 0x2F, Default, true => TCChatMessageSpec,
     ActiveObjectRemoveAdd, 0x31, Default, true => ActiveObjectRemoveAddSpec,
-    ActiveObjectMessages, 0x32, Default, true => ActiveObjectMessagesSpec,
+    ActiveObjectMessages, 0x32, Default, true => ActiveObjectMessagesCommand,
     Hp, 0x33, Default, true => HpSpec,
     MovePlayer, 0x34, Default, true => MovePlayerSpec,
     AccessDeniedLegacy, 0x35, Default, true => AccessDeniedLegacySpec,
@@ -173,12 +176,6 @@ pub struct ActiveObjectRemoveAddSpec {
     pub removed_object_ids: Vec<u16>,
     #[wrap(Array16<AddedObject>)]
     pub added_objects: Vec<AddedObject>,
-}
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct ActiveObjectMessagesSpec {
-    #[wrap(Array0<ActiveObjectMessage>)]
-    pub objects: Vec<ActiveObjectMessage>,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
