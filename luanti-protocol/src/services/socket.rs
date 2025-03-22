@@ -3,6 +3,7 @@ use std::collections::VecDeque;
 use std::io::Error;
 use std::net::SocketAddr;
 
+use log::debug;
 use log::error;
 use tokio::io::Interest;
 use tokio::io::Ready;
@@ -72,17 +73,23 @@ impl LuantiSocket {
     // NOTE: This is not cancel safe, and it should not
     // be used if incoming connections are expected, or else
     // they will be discarded.
-    pub async fn add_peer(&mut self, remote: SocketAddr) -> Peer {
-        assert!(!self.for_server, "//TODO add descriptive error message");
-        self.knock_tx.send(remote).unwrap();
+    pub async fn add_server(&mut self, server_address: SocketAddr) -> Peer {
+        assert!(
+            !self.for_server,
+            "method my only be called for client sockets"
+        );
+        debug!("adding server as peer: {server_address}");
+        self.knock_tx.send(server_address).unwrap();
 
         // Wait for the peer
         loop {
             let peer = self.accept().await.unwrap();
-            if peer.remote_addr() == remote {
+            let remote_address = peer.remote_addr();
+            if remote_address == server_address {
+                debug!("peer responded from remote address: {remote_address}");
                 return peer;
             }
-            // Random connect from another address? Ignore it.
+            debug!("ignoring random connect from another address: {remote_address}",);
         }
     }
 }
@@ -111,13 +118,14 @@ impl LuantiSocketRunner {
 
     pub async fn run_inner(&mut self) -> anyhow::Result<()> {
         let mut knock_closed = false;
-        let mut buf: Vec<u8> = vec![0_u8; MAX_DATAGRAM_SIZE];
+        let mut buf = vec![0_u8; MAX_DATAGRAM_SIZE];
 
         loop {
-            let mut interest = Interest::READABLE;
-            if !self.outgoing.is_empty() {
-                interest |= Interest::WRITABLE;
-            }
+            let interest = if self.outgoing.is_empty() {
+                Interest::READABLE
+            } else {
+                Interest::READABLE | Interest::WRITABLE
+            };
             // rust-analyzer chokes on code inside select!, so keep it to a minimum.
             tokio::select! {
                 ready = self.socket.ready(interest) => self.handle_socket_io(ready, &mut buf),

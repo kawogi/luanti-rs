@@ -4,11 +4,11 @@ use std::collections::VecDeque;
 use std::time::Duration;
 use std::time::Instant;
 
-use super::util::rel_to_abs;
 use crate::wire::packet::AckBody;
 use crate::wire::packet::InnerBody;
 use crate::wire::packet::PacketBody;
-use crate::wire::packet::SEQNUM_INITIAL;
+
+use super::sequence_number::SequenceNumber;
 
 //const MIN_RELIABLE_WINDOW_SIZE: u16 = 0x40; // 64
 const START_RELIABLE_WINDOW_SIZE: u16 = 0x400; // 1024
@@ -23,26 +23,26 @@ const RESEND_RESOLUTION: Duration = Duration::from_millis(20);
 
 pub(super) struct ReliableSender {
     // Next reliable send seqnum
-    next_seqnum: u64,
+    next_seqnum: SequenceNumber,
     window_size: u16,
 
     // Packets that have yet to be sent at all
     // These are not in the buffer yet
-    queued: VecDeque<(u64, PacketBody)>,
+    queued: VecDeque<(SequenceNumber, PacketBody)>,
 
     // Sent packets that haven't yet been ack'd
     // seq num -> packet
-    buffer: BTreeMap<u64, PacketBody>,
+    buffer: BTreeMap<SequenceNumber, PacketBody>,
 
     // TODO(paradust): Use a better data structure for this
-    timeouts: BTreeSet<(Instant, u64)>,
+    timeouts: BTreeSet<(Instant, SequenceNumber)>,
     resend_timeout: Duration,
 }
 
 impl ReliableSender {
     pub(super) fn new() -> Self {
         ReliableSender {
-            next_seqnum: u64::from(SEQNUM_INITIAL),
+            next_seqnum: SequenceNumber::init(),
             window_size: START_RELIABLE_WINDOW_SIZE,
             buffer: BTreeMap::new(),
             timeouts: BTreeSet::new(),
@@ -55,27 +55,25 @@ impl ReliableSender {
         let Some(unacked_base) = self.oldest_unacked() else {
             return;
         };
-        let seqnum = rel_to_abs(unacked_base, ack.seqnum);
+        let seqnum = unacked_base.goto(ack.seqnum);
         self.buffer.remove(&seqnum);
     }
 
     /// Push a packet for reliable send.
     pub(super) fn push(&mut self, body: InnerBody) {
         let seqnum = self.next_seqnum;
-        self.next_seqnum += 1;
-        let body = body.into_reliable(seqnum as u16);
+        self.next_seqnum.inc();
+        let body = body.into_reliable(seqnum.as_wrapping());
         self.queued.push_back((seqnum, body));
     }
 
-    fn oldest_unacked(&self) -> Option<u64> {
+    fn oldest_unacked(&self) -> Option<SequenceNumber> {
         self.buffer.first_key_value().map(|(seqnum, _)| *seqnum)
     }
 
-    fn safe_to_transmit(&self, seqnum: u64) -> bool {
-        match self.oldest_unacked() {
-            Some(unacked_seqnum) => seqnum < (unacked_seqnum + u64::from(self.window_size)),
-            None => true,
-        }
+    fn safe_to_transmit(&self, seqnum: SequenceNumber) -> bool {
+        self.oldest_unacked()
+            .is_none_or(|unacked_seqnum| seqnum < unacked_seqnum + self.window_size)
     }
 
     pub(super) fn next_timeout(&self) -> Option<Instant> {
@@ -163,6 +161,8 @@ mod tests {
     use rand::Rng;
     use rand::rng;
 
+    use crate::wire::command::server_to_client::HudrmSpec;
+    use crate::wire::command::server_to_client::ToClientCommand;
     use crate::wire::command::*;
     use crate::wire::packet::OriginalBody;
 
@@ -174,13 +174,15 @@ mod tests {
         let command = Command::ToClient(ToClientCommand::Hudrm(Box::new(HudrmSpec {
             server_id: index,
         })));
-        InnerBody::Original(OriginalBody { command })
+        InnerBody::Original(OriginalBody {
+            command: Some(command),
+        })
     }
 
     fn recover_index(body: &InnerBody) -> u32 {
         match body {
-            InnerBody::Original(body) => match &body.command {
-                Command::ToClient(ToClientCommand::Hudrm(spec)) => spec.server_id,
+            InnerBody::Original(body) => match body.command.as_ref() {
+                Some(Command::ToClient(ToClientCommand::Hudrm(spec))) => spec.server_id,
                 _ => panic!("Unexpected body"),
             },
             _ => panic!("Unexpected body"),

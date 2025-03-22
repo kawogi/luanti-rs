@@ -5,10 +5,10 @@
 use std::net::SocketAddr;
 
 use crate::peer::Peer;
-use crate::wire::command::AccessDeniedSpec;
 use crate::wire::command::Command;
-use crate::wire::command::ToClientCommand;
-use crate::wire::command::ToServerCommand;
+use crate::wire::command::client_to_server::ToServerCommand;
+use crate::wire::command::server_to_client::AccessDeniedSpec;
+use crate::wire::command::server_to_client::ToClientCommand;
 use crate::wire::types::AccessDeniedCode;
 use anyhow::Result;
 use anyhow::bail;
@@ -34,8 +34,20 @@ impl LuantiConnection {
         self.peer.send(Command::ToClient(command))
     }
 
-    pub fn send_access_denied(&self, code: AccessDeniedCode) -> Result<()> {
-        self.send(AccessDeniedSpec { code }.into())
+    pub fn send_access_denied(
+        &self,
+        code: AccessDeniedCode,
+        reason: String,
+        reconnect: bool,
+    ) -> Result<()> {
+        self.send(
+            AccessDeniedSpec {
+                code,
+                reason,
+                reconnect,
+            }
+            .into(),
+        )
     }
 
     /// Await a command from the peer

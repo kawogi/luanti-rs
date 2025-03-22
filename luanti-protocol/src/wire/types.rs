@@ -10,8 +10,20 @@
 //!
 //! TODO(paradust): Having an assert!-like macro that generates Serialize/Deserialize
 //! errors instead of aborts may be helpful for cleaning this up.
+
+#![expect(
+    clippy::pub_underscore_fields,
+    clippy::used_underscore_binding,
+    reason = "required for de-/serialization macros"
+)]
+#![expect(
+    clippy::min_ident_chars,
+    reason = "those identifiers are well-known and clear from the context"
+)]
+
 use anyhow::anyhow;
 use anyhow::bail;
+use log::trace;
 use luanti_protocol_derive::LuantiDeserialize;
 use luanti_protocol_derive::LuantiSerialize;
 
@@ -328,6 +340,11 @@ impl Deserialize for String {
     type Output = Self;
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         let num_bytes = u16::deserialize(deser)? as usize;
+        trace!(
+            "String with {} bytes - {} bytes remaining",
+            num_bytes,
+            deser.remaining()
+        );
         match std::str::from_utf8(deser.take(num_bytes)?) {
             Ok(str) => Ok(str.into()),
             Err(error) => bail!(DeserializeError::InvalidValue(error.to_string())),
@@ -534,10 +551,6 @@ impl v3s32 {
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-#[expect(
-    clippy::min_ident_chars,
-    reason = "those identifiers are well-known and clear from the context"
-)]
 pub struct SColor {
     pub r: u8,
     pub g: u8,
@@ -921,11 +934,6 @@ pub struct ObjectProperties {
     pub version: u8, // must be 4
     pub hp_max: u16,
     pub physical: bool,
-    #[expect(
-        clippy::pub_underscore_fields,
-        clippy::used_underscore_binding,
-        reason = "required for de-/serialization macros"
-    )]
     pub _unused: u32,
     pub collision_box: aabb3f,
     pub selection_box: aabb3f,
@@ -1721,6 +1729,7 @@ impl<T: Deserialize> Deserialize for ZLibCompressed<T> {
     type Output = T::Output;
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self::Output> {
         let num_bytes = u32::deserialize(deser)? as usize;
+        trace!("deserialize {num_bytes} bytes of compressed data");
         let data = deser.take(num_bytes)?;
         // TODO(paradust): DANGEROUS. There is no decompression size bound.
         match miniz_oxide::inflate::decompress_to_vec_zlib(data) {
@@ -1845,9 +1854,9 @@ pub struct ItemDef {
     pub inventory_overlay: String,
     pub wield_overlay: String,
     pub short_description: Option<String>,
-    pub place_param2: Option<u8>,
     pub sound_use: Option<SimpleSoundSpec>,
     pub sound_use_air: Option<SimpleSoundSpec>,
+    pub place_param2: Option<u8>,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
@@ -2391,6 +2400,7 @@ impl Serialize for MapBlock {
 ///
 /// This is a helper for `MapBlock` ser/deser
 /// Not exposed publicly.
+#[derive(Debug)]
 struct MapBlockHeader {
     pub is_underground: bool,
     pub day_night_diff: bool,
@@ -2831,7 +2841,7 @@ impl Deserialize for Inventory {
             }
         }
         // If we ran out before seeing the end marker, it's an error
-        bail!(DeserializeError::Eof)
+        bail!(DeserializeError::Eof("Inventory::deserialize(_)".into()))
     }
 }
 
@@ -2929,7 +2939,9 @@ impl Deserialize for InventoryList {
                 deser.take_line()?;
             }
         }
-        bail!(DeserializeError::Eof)
+        bail!(DeserializeError::Eof(
+            "InventoryList::deserialize(_)".into()
+        ))
     }
 }
 

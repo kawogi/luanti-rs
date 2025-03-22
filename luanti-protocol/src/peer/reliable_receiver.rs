@@ -1,36 +1,37 @@
-use super::util::rel_to_abs;
 use crate::wire::packet::InnerBody;
 use crate::wire::packet::ReliableBody;
-use crate::wire::packet::SEQNUM_INITIAL;
 use std::collections::BTreeMap;
+
+use super::sequence_number::SequenceNumber;
 
 pub(super) struct ReliableReceiver {
     // Next sequence number in the reliable stream
-    next_seqnum: u64,
+    next_seqnum: SequenceNumber,
 
     // Stores packets that have been received, but not yet processed,
     // because we're waiting for earlier packets.
     // It must always be true that: smallest key in buffer > next_seqnum
-    buffer: BTreeMap<u64, InnerBody>,
+    // TODO documentation doesn't match the implementation. After a `push`, `buffer` may equal `next_seqnum`
+    buffer: BTreeMap<SequenceNumber, InnerBody>,
 }
 
 impl ReliableReceiver {
     pub(super) fn new() -> Self {
         ReliableReceiver {
-            next_seqnum: u64::from(SEQNUM_INITIAL),
+            next_seqnum: SequenceNumber::init(),
             buffer: BTreeMap::new(),
         }
     }
 
     /// Push a reliable packet (from remote) into the receiver
     pub(super) fn push(&mut self, body: ReliableBody) {
-        let seqnum = rel_to_abs(self.next_seqnum, body.seqnum);
-        if seqnum < self.next_seqnum {
-            // Packet was already received and processed. Ignore
-        } else if seqnum >= self.next_seqnum {
+        let seqnum = self.next_seqnum.goto(body.seqnum);
+        if seqnum >= self.next_seqnum {
             // Future packet. Put it in the buffer.
             // Don't override it if it's already there.
             self.buffer.entry(seqnum).or_insert(body.inner);
+        } else {
+            // Packet was already received and processed. Ignore
         }
     }
 
@@ -40,7 +41,7 @@ impl ReliableReceiver {
     pub(super) fn pop(&mut self) -> Option<InnerBody> {
         match self.buffer.first_key_value().map(|(seqnum, _)| *seqnum) {
             Some(seqnum) => (seqnum == self.next_seqnum).then(|| {
-                self.next_seqnum += 1;
+                self.next_seqnum.inc();
                 self.buffer.pop_first().unwrap().1
             }),
             None => None,
@@ -50,11 +51,12 @@ impl ReliableReceiver {
 
 #[cfg(test)]
 mod tests {
-    use std::num::Wrapping;
-
+    use crate::wire::command::server_to_client::HudrmSpec;
+    use crate::wire::command::server_to_client::ToClientCommand;
     use crate::wire::command::*;
     use crate::wire::packet::OriginalBody;
     use crate::wire::packet::PacketBody;
+    use crate::wire::sequence_number::WrappingSequenceNumber;
     use rand::prelude::*;
     use rand::rng;
 
@@ -66,13 +68,15 @@ mod tests {
         let command = Command::ToClient(ToClientCommand::Hudrm(Box::new(HudrmSpec {
             server_id: index,
         })));
-        InnerBody::Original(OriginalBody { command })
+        InnerBody::Original(OriginalBody {
+            command: Some(command),
+        })
     }
 
     fn recover_index(body: &InnerBody) -> u32 {
         match body {
-            InnerBody::Original(body) => match &body.command {
-                Command::ToClient(ToClientCommand::Hudrm(spec)) => spec.server_id,
+            InnerBody::Original(body) => match body.command.as_ref() {
+                Some(Command::ToClient(ToClientCommand::Hudrm(spec))) => spec.server_id,
                 _ => panic!("Unexpected body"),
             },
             _ => panic!("Unexpected body"),
@@ -93,10 +97,10 @@ mod tests {
         let mut offset: u32 = 0;
         for _ in 0..5 {
             let mut packets: Vec<ReliableBody> = (offset..offset + CHUNK_LEN)
-                .map(|i| {
+                .map(|packet_index| {
                     #[expect(clippy::cast_possible_truncation, reason = "truncation is on purpose")]
-                    let seqnum: u16 = (Wrapping(SEQNUM_INITIAL) + Wrapping(i as u16)).0;
-                    match make_inner(i).into_reliable(seqnum) {
+                    let seqnum = WrappingSequenceNumber::INITIAL + (packet_index as u16);
+                    match make_inner(packet_index).into_reliable(seqnum) {
                         PacketBody::Reliable(rb) => rb,
                         PacketBody::Inner(_) => panic!(),
                     }

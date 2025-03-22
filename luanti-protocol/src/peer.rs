@@ -14,33 +14,34 @@
 mod channel;
 mod reliable_receiver;
 mod reliable_sender;
+mod sequence_number;
 mod split_receiver;
 mod split_sender;
-mod util;
 
 use anyhow::Result;
 use anyhow::bail;
+use channel::Channel;
+use log::debug;
+use log::error;
+use log::trace;
 use log::warn;
-use rand::Rng;
-use rand::SeedableRng;
-use rand::rngs::StdRng;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::mpsc::unbounded_channel;
 
+use crate::wire::channel_id::ChannelId;
 use crate::wire::command::Command;
 use crate::wire::command::CommandProperties;
-use crate::wire::command::ToClientCommand;
+use crate::wire::command::server_to_client::ToClientCommand;
 use crate::wire::deser::Deserialize;
 use crate::wire::deser::Deserializer;
 use crate::wire::packet::AckBody;
 use crate::wire::packet::ControlBody;
-use crate::wire::packet::InnerBody;
 use crate::wire::packet::Packet;
 use crate::wire::packet::PacketBody;
-use crate::wire::packet::PeerId;
 use crate::wire::packet::ReliableBody;
 use crate::wire::packet::SetPeerIdBody;
+use crate::wire::peer_id::PeerId;
 use crate::wire::ser::Serialize;
 use crate::wire::ser::VecSerializer;
 use crate::wire::types::ProtocolContext;
@@ -50,7 +51,6 @@ use reliable_sender::ReliableSender;
 use split_receiver::SplitReceiver;
 use split_sender::SplitSender;
 
-use std::collections::VecDeque;
 use std::net::SocketAddr;
 use std::time::Duration;
 use std::time::Instant;
@@ -70,7 +70,6 @@ pub enum PeerError {
     InternalPeerError,
 }
 
-pub type ChannelNum = u8;
 pub type FullSeqNum = u64;
 
 // This is held by the driver that interfaces with the LuantiSocket
@@ -140,8 +139,8 @@ pub fn new_peer(
         recv_context: ProtocolContext::latest_for_receive(remote_is_server),
         send_context: ProtocolContext::latest_for_send(remote_is_server),
         connect_time: Instant::now(),
-        remote_peer_id: 0,
-        local_peer_id: 0,
+        remote_peer_id: PeerId::NONE,
+        local_peer_id: PeerId::NONE,
         from_socket: relay_rx,
         from_controller: peer_send_rx,
         to_controller: peer_recv_tx.clone(),
@@ -151,7 +150,6 @@ pub fn new_peer(
             Channel::new(remote_is_server, peer_recv_tx.clone()),
             Channel::new(remote_is_server, peer_recv_tx.clone()),
         ],
-        rng: StdRng::from_os_rng(),
         now: Instant::now(),
         last_received: Instant::now(),
     };
@@ -165,143 +163,12 @@ impl PeerIO {
     ///
     pub fn send(&mut self, data: &[u8]) {
         //TODO Add back-pressure
-        #[expect(
-            clippy::unwrap_used,
-            reason = "// TODO clarify error condition and handling"
-        )]
         self.relay
             .send(SocketToPeer::Received(data.to_vec()))
-            .unwrap();
-    }
-}
-
-struct Channel {
-    unreliable_out: VecDeque<InnerBody>,
-
-    reliable_in: ReliableReceiver,
-    reliable_out: ReliableSender,
-
-    split_in: SplitReceiver,
-    split_out: SplitSender,
-
-    to_controller: UnboundedSender<Result<Command>>,
-    now: Instant,
-    recv_context: ProtocolContext,
-    send_context: ProtocolContext,
-}
-
-impl Channel {
-    pub(crate) fn new(
-        remote_is_server: bool,
-        to_controller: UnboundedSender<Result<Command>>,
-    ) -> Self {
-        Self {
-            unreliable_out: VecDeque::new(),
-            reliable_in: ReliableReceiver::new(),
-            reliable_out: ReliableSender::new(),
-            split_in: SplitReceiver::new(),
-            split_out: SplitSender::new(),
-            to_controller,
-            now: Instant::now(),
-            recv_context: ProtocolContext::latest_for_receive(remote_is_server),
-            send_context: ProtocolContext::latest_for_send(remote_is_server),
-        }
-    }
-
-    pub(crate) fn update_now(&mut self, now: &Instant) {
-        self.now = *now;
-    }
-
-    pub(crate) fn update_context(
-        &mut self,
-        recv_context: ProtocolContext,
-        send_context: ProtocolContext,
-    ) {
-        self.recv_context = recv_context;
-        self.send_context = send_context;
-    }
-
-    /// Process a packet received from remote
-    /// Possibly dispatching one or more Commands
-    pub(crate) fn process(&mut self, body: PacketBody) -> Result<()> {
-        match body {
-            PacketBody::Reliable(rb) => self.process_reliable(rb)?,
-            PacketBody::Inner(ib) => self.process_inner(ib)?,
-        }
-        Ok(())
-    }
-
-    pub(crate) fn process_reliable(&mut self, body: ReliableBody) -> Result<()> {
-        self.reliable_in.push(body);
-        while let Some(inner) = self.reliable_in.pop() {
-            self.process_inner(inner)?;
-        }
-        Ok(())
-    }
-
-    pub(crate) fn process_inner(&mut self, body: InnerBody) -> Result<()> {
-        match body {
-            InnerBody::Control(body) => self.process_control(body),
-            InnerBody::Original(body) => self.process_command(body.command),
-            InnerBody::Split(body) => {
-                if let Some(payload) = self.split_in.push(self.now, body)? {
-                    let mut buf = Deserializer::new(self.recv_context, &payload);
-                    let command = Command::deserialize(&mut buf)?;
-                    self.process_command(command);
-                }
-            }
-        }
-        Ok(())
-    }
-
-    pub(crate) fn process_control(&mut self, body: ControlBody) {
-        match body {
-            ControlBody::Ack(ack) => {
-                self.reliable_out.process_ack(&ack);
-            }
-            // Everything else is handled one level up
-            _ => (),
-        }
-    }
-
-    pub(crate) fn process_command(&mut self, command: Command) {
-        match self.to_controller.send(Ok(command)) {
-            Ok(()) => (),
-            Err(error) => panic!("Unexpected command channel shutdown: {error:?}"),
-        }
-    }
-
-    /// Send command to remote
-    pub(crate) fn send(&mut self, reliable: bool, command: Command) -> Result<()> {
-        let bodies = self.split_out.push(self.send_context, command)?;
-        for body in bodies {
-            self.send_inner(reliable, body);
-        }
-        Ok(())
-    }
-
-    pub(crate) fn send_inner(&mut self, reliable: bool, body: InnerBody) {
-        if reliable {
-            self.reliable_out.push(body);
-        } else {
-            self.unreliable_out.push_back(body);
-        }
-    }
-
-    /// Check if the channel has anything ready to send.
-    pub(crate) fn next_send(&mut self, now: Instant) -> Option<PacketBody> {
-        if let Some(body) = self.unreliable_out.pop_front() {
-            return Some(PacketBody::Inner(body));
-        };
-        if let Some(body) = self.reliable_out.pop(now) {
-            return Some(body);
-        }
-        None
-    }
-
-    /// Only call after exhausting `next_send()`
-    pub(crate) fn next_timeout(&mut self) -> Option<Instant> {
-        self.reliable_out.next_timeout()
+            .unwrap_or_else(|error| {
+                // TODO clarify error condition and handling
+                error!("failed to relay packet: {error}");
+            });
     }
 }
 
@@ -340,7 +207,6 @@ pub struct PeerRunner {
     // Special ids: 0 is unassigned, and 1 for the server.
     remote_peer_id: PeerId,
     local_peer_id: PeerId,
-    rng: StdRng,
 
     channels: Vec<Channel>,
 
@@ -354,26 +220,26 @@ pub struct PeerRunner {
 impl PeerRunner {
     pub fn update_now(&mut self) {
         self.now = Instant::now();
-        for num in 0..=2 {
-            self.channels[num].update_now(&self.now);
-        }
+        self.channels
+            .iter_mut()
+            .for_each(|channel| channel.update_now(&self.now));
     }
 
-    pub fn serialize_for_send(&mut self, channel: u8, body: PacketBody) -> Result<Vec<u8>> {
+    pub fn serialize_for_send(&mut self, channel: ChannelId, body: PacketBody) -> Result<Vec<u8>> {
         let pkt = Packet::new(self.local_peer_id, channel, body);
         let mut serializer = VecSerializer::new(self.send_context, 512);
         Packet::serialize(&pkt, &mut serializer)?;
         Ok(serializer.take())
     }
 
-    pub fn send_raw(&mut self, channel: u8, body: PacketBody) -> Result<()> {
+    pub fn send_raw(&mut self, channel: ChannelId, body: PacketBody) -> Result<()> {
         let raw = self.serialize_for_send(channel, body)?;
         self.to_socket
             .send(PeerToSocket::Send(self.remote_addr, raw))?;
         Ok(())
     }
 
-    pub fn send_raw_priority(&mut self, channel: u8, body: PacketBody) -> Result<()> {
+    pub fn send_raw_priority(&mut self, channel: ChannelId, body: PacketBody) -> Result<()> {
         let raw = self.serialize_for_send(channel, body)?;
         self.to_socket
             .send(PeerToSocket::SendImmediate(self.remote_addr, raw))?;
@@ -386,7 +252,7 @@ impl PeerRunner {
             // If an error gets to this point, the peer is toast.
             // Send a disconnect packet, and a remove peer request to the socket
             // These channels might already be dead, so ignore any errors.
-            let disconnected_cleanly: bool = if let Some(error) = err.downcast_ref::<PeerError>() {
+            let disconnected_cleanly = if let Some(error) = err.downcast_ref::<PeerError>() {
                 matches!(error, PeerError::PeerSentDisconnect)
             } else {
                 false
@@ -397,8 +263,11 @@ impl PeerRunner {
                     clippy::unwrap_used,
                     reason = "// TODO clarify error condition and handling"
                 )]
-                self.send_raw(0, (ControlBody::Disconnect).into_inner().into_unreliable())
-                    .unwrap();
+                self.send_raw(
+                    ChannelId::Default,
+                    (ControlBody::Disconnect).into_inner().into_unreliable(),
+                )
+                .unwrap();
             }
             #[expect(
                 clippy::unwrap_used,
@@ -409,11 +278,11 @@ impl PeerRunner {
                 .unwrap();
 
             // Tell the controller why we died
-            #[expect(
-                clippy::unwrap_used,
-                reason = "// TODO clarify error condition and handling"
-            )]
-            self.to_controller.send(Err(err)).unwrap();
+            self.to_controller.send(Err(err)).unwrap_or_else(|err| {
+                // This might fail if the controller has been disconnected already
+                // ignore the error in this case
+                debug!("controller is no longer available: {err}");
+            });
         }
     }
 
@@ -427,15 +296,15 @@ impl PeerRunner {
             // Before select, make sure everything ready to send has been sent,
             // and compute a resend timeout.
             let mut next_wakeup = never;
-            for num in 0_u8..=2 {
+            for channel_id in ChannelId::all() {
                 loop {
-                    let pkt = self.channels[usize::from(num)].next_send(self.now);
+                    let pkt = self.channels[usize::from(channel_id)].next_send(self.now);
                     match pkt {
-                        Some(body) => self.send_raw(num, body)?,
+                        Some(body) => self.send_raw(channel_id, body)?,
                         None => break,
                     }
                 }
-                if let Some(timeout) = self.channels[usize::from(num)].next_timeout() {
+                if let Some(timeout) = self.channels[usize::from(channel_id)].next_timeout() {
                     next_wakeup = std::cmp::min(next_wakeup, timeout);
                 }
             }
@@ -456,6 +325,11 @@ impl PeerRunner {
         };
         match msg {
             SocketToPeer::Received(buf) => {
+                trace!(
+                    "received {} bytes from socket: {:?}",
+                    buf.len(),
+                    &buf[0..buf.len().min(64)]
+                );
                 let mut deser = Deserializer::new(self.recv_context, &buf);
                 let pkt = Packet::deserialize(&mut deser)?;
                 self.last_received = self.now;
@@ -466,6 +340,8 @@ impl PeerRunner {
     }
 
     fn handle_from_controller(&mut self, command: Option<Command>) -> Result<()> {
+        trace!("received command from controller: {command:?}",);
+
         self.update_now();
         let Some(command) = command else {
             bail!(PeerError::ControllerClosed);
@@ -485,22 +361,23 @@ impl PeerRunner {
     // Process a packet received over network
     fn process_packet(&mut self, pkt: Packet) -> Result<()> {
         if self.remote_is_server {
-            if pkt.sender_peer_id != 1 {
+            if !pkt.sender_peer_id.is_server() {
                 warn!("Server sending from wrong peer id");
                 return Ok(());
             }
         } else {
             // We're the server, assign the remote a peer_id.
-            if self.remote_peer_id == 0 {
+            if self.remote_peer_id.is_none() {
                 // Assign a peer id
-                self.local_peer_id = 1;
-                self.remote_peer_id = self.rng.random_range(2..0xFFFF);
+                self.local_peer_id = PeerId::SERVER;
+                // FIXME this may hand out peer ids that are already in use
+                self.remote_peer_id = PeerId::random();
 
                 // Tell the client about it
                 let set_peer_id = SetPeerIdBody::new(self.remote_peer_id).into_inner();
                 self.channels[0].send_inner(true, set_peer_id);
             }
-            if pkt.sender_peer_id == 0 {
+            if pkt.sender_peer_id.is_none() {
                 if self.now > self.connect_time + INEXISTENT_PEER_ID_GRACE {
                     // Malformed, ignore.
                     warn!("Ignoring peer_id 0 packet");
@@ -531,7 +408,7 @@ impl PeerRunner {
                 }
                 ControlBody::SetPeerId(set_peer_id) => {
                     if self.remote_is_server {
-                        if self.local_peer_id == 0 {
+                        if self.local_peer_id.is_none() {
                             self.local_peer_id = set_peer_id.peer_id;
                         } else if self.local_peer_id != set_peer_id.peer_id {
                             bail!("Peer id mismatch in duplicate SetPeerId");
@@ -547,11 +424,11 @@ impl PeerRunner {
             }
         }
         // If this is a HELLO packet, sniff it to set our protocol context.
-        if let Some(command) = pkt.body.command_ref() {
+        if let Some(command) = pkt.body.command() {
             self.sniff_hello(command);
         }
 
-        self.channels[pkt.channel as usize].process(pkt.body)
+        self.channels[usize::from(pkt.channel)].process(pkt.body)
     }
 
     fn sniff_hello(&mut self, command: &Command) {
@@ -565,14 +442,14 @@ impl PeerRunner {
         self.recv_context.ser_fmt = ser_fmt;
         self.send_context.protocol_version = protocol_version;
         self.send_context.ser_fmt = ser_fmt;
-        for num in 0..=2 {
-            self.channels[num].update_context(self.recv_context, self.send_context);
-        }
+        self.channels
+            .iter_mut()
+            .for_each(|channel| channel.update_context(self.recv_context, self.send_context));
     }
 
     /// If this is a reliable packet, send an ack right away
     /// using a higher-priority out-of-band channel.
-    fn send_ack(&mut self, channel: u8, rb: &ReliableBody) -> Result<()> {
+    fn send_ack(&mut self, channel: ChannelId, rb: &ReliableBody) -> Result<()> {
         let ack = AckBody::new(rb.seqnum).into_inner().into_unreliable();
         self.send_raw_priority(channel, ack)?;
         Ok(())
@@ -582,8 +459,7 @@ impl PeerRunner {
     fn send_command(&mut self, command: Command) -> Result<()> {
         let channel = command.default_channel();
         let reliable = command.default_reliability();
-        assert!((0..=2).contains(&channel), "channel id out of range");
-        self.channels[channel as usize].send(reliable, command)
+        self.channels[usize::from(channel)].send(reliable, command)
     }
 
     #[expect(

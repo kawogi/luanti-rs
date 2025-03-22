@@ -1,10 +1,15 @@
 use anyhow::bail;
+use log::trace;
+use log::warn;
 
+use super::channel_id::ChannelId;
 use super::command::Command;
 use super::deser::Deserialize;
 use super::deser::DeserializeError;
 use super::deser::DeserializeResult;
 use super::deser::Deserializer;
+use super::peer_id::PeerId;
+use super::sequence_number::WrappingSequenceNumber;
 use super::ser::Serialize;
 use super::ser::SerializeResult;
 use super::ser::Serializer;
@@ -20,7 +25,6 @@ pub const SER_FMT_LOWEST_READ: u8 = 28;
 pub const SER_FMT_LOWEST_WRITE: u8 = 29;
 
 pub const MAX_PACKET_SIZE: usize = 512;
-pub const SEQNUM_INITIAL: u16 = 65500;
 pub const PACKET_HEADER_SIZE: usize = 7;
 pub const RELIABLE_HEADER_SIZE: usize = 3;
 pub const SPLIT_HEADER_SIZE: usize = 7;
@@ -28,16 +32,14 @@ pub const MAX_ORIGINAL_BODY_SIZE: usize =
     MAX_PACKET_SIZE - PACKET_HEADER_SIZE - RELIABLE_HEADER_SIZE;
 pub const MAX_SPLIT_BODY_SIZE: usize = MAX_ORIGINAL_BODY_SIZE - SPLIT_HEADER_SIZE;
 
-pub type PeerId = u16;
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct AckBody {
-    pub seqnum: u16,
+    pub seqnum: WrappingSequenceNumber,
 }
 
 impl AckBody {
     #[must_use]
-    pub fn new(seqnum: u16) -> Self {
+    pub fn new(seqnum: WrappingSequenceNumber) -> Self {
         AckBody { seqnum }
     }
     #[must_use]
@@ -49,27 +51,26 @@ impl AckBody {
 impl Serialize for AckBody {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        u16::serialize(&value.seqnum, ser)
+        WrappingSequenceNumber::serialize(&value.seqnum, ser)
     }
 }
 
 impl Deserialize for AckBody {
     type Output = Self;
     fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-        Ok(Self {
-            seqnum: u16::deserialize(deserializer)?,
-        })
+        let seqnum = WrappingSequenceNumber::deserialize(deserializer)?;
+        Ok(Self { seqnum })
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SetPeerIdBody {
-    pub peer_id: u16,
+    pub peer_id: PeerId,
 }
 
 impl SetPeerIdBody {
     #[must_use]
-    pub fn new(peer_id: u16) -> Self {
+    pub fn new(peer_id: PeerId) -> Self {
         Self { peer_id }
     }
 
@@ -82,7 +83,7 @@ impl SetPeerIdBody {
 impl Serialize for SetPeerIdBody {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        u16::serialize(&value.peer_id, ser)
+        PeerId::serialize(&value.peer_id, ser)
     }
 }
 
@@ -90,7 +91,7 @@ impl Deserialize for SetPeerIdBody {
     type Output = Self;
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         Ok(Self {
-            peer_id: u16::deserialize(deser)?,
+            peer_id: PeerId::deserialize(deser)?,
         })
     }
 }
@@ -134,6 +135,7 @@ impl Deserialize for ControlBody {
 
     fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         let control_type = u8::deserialize(deserializer)?;
+        trace!("ControlBody::control_type: {control_type}");
         match control_type {
             0 => Ok(ControlBody::Ack(AckBody::deserialize(deserializer)?)),
             1 => Ok(ControlBody::SetPeerId(SetPeerIdBody::deserialize(
@@ -150,13 +152,18 @@ impl Deserialize for ControlBody {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct OriginalBody {
-    pub command: Command,
+    pub command: Option<Command>,
 }
 
 impl Serialize for OriginalBody {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        Command::serialize(&value.command, ser)
+        if let Some(command) = value.command.as_ref() {
+            Command::serialize(command, ser)
+        } else {
+            // the deserializer of a command will handle an empty payload as `None`
+            Ok(())
+        }
     }
 }
 
@@ -169,18 +176,30 @@ impl Deserialize for OriginalBody {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct SplitBody {
-    pub seqnum: u16,
+    pub seqnum: WrappingSequenceNumber,
     pub chunk_count: u16,
     pub chunk_num: u16,
     pub chunk_data: Vec<u8>,
 }
 
+impl std::fmt::Debug for SplitBody {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("SplitBody")
+            .field("seqnum", &self.seqnum)
+            .field("chunk_count", &self.chunk_count)
+            .field("chunk_num", &self.chunk_num)
+            .field("chunk_data", &format!("{} bytes", self.chunk_data.len()))
+            .finish()
+    }
+}
+
 impl Serialize for SplitBody {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        u16::serialize(&value.seqnum, ser)?;
+        WrappingSequenceNumber::serialize(&value.seqnum, ser)?;
         u16::serialize(&value.chunk_count, ser)?;
         u16::serialize(&value.chunk_num, ser)?;
         ser.write_bytes(&value.chunk_data)?;
@@ -192,18 +211,22 @@ impl Deserialize for SplitBody {
     type Output = Self;
 
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+        let seqnum = WrappingSequenceNumber::deserialize(deser)?;
+        let chunk_count = u16::deserialize(deser)?;
+        let chunk_num = u16::deserialize(deser)?;
+        let chunk_data = Vec::from(deser.take_all());
         Ok(SplitBody {
-            seqnum: u16::deserialize(deser)?,
-            chunk_count: u16::deserialize(deser)?,
-            chunk_num: u16::deserialize(deser)?,
-            chunk_data: Vec::from(deser.take_all()),
+            seqnum,
+            chunk_count,
+            chunk_num,
+            chunk_data,
         })
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ReliableBody {
-    pub seqnum: u16,
+    pub seqnum: WrappingSequenceNumber,
     pub inner: InnerBody,
 }
 
@@ -212,7 +235,7 @@ impl Serialize for ReliableBody {
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         let packet_type: u8 = 3;
         u8::serialize(&packet_type, ser)?;
-        u16::serialize(&value.seqnum, ser)?;
+        WrappingSequenceNumber::serialize(&value.seqnum, ser)?;
         InnerBody::serialize(&value.inner, ser)?;
         Ok(())
     }
@@ -222,13 +245,16 @@ impl Deserialize for ReliableBody {
     type Output = Self;
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         let packet_type = u8::deserialize(deser)?;
+        trace!("ReliableBody::packet_type: {packet_type}");
         if packet_type != 3 {
             bail!(DeserializeError::InvalidValue(
                 "Invalid packet_type for ReliableBody".into(),
             ))
         }
+        let seqnum = WrappingSequenceNumber::deserialize(deser)?;
+        trace!("ReliableBody::seqnum: {seqnum}");
         Ok(ReliableBody {
-            seqnum: u16::deserialize(deser)?,
+            seqnum,
             inner: InnerBody::deserialize(deser)?,
         })
     }
@@ -243,15 +269,7 @@ pub enum InnerBody {
 
 impl InnerBody {
     #[must_use]
-    pub fn command_ref(&self) -> Option<&Command> {
-        match self {
-            InnerBody::Original(body) => Some(&body.command),
-            _ => None,
-        }
-    }
-
-    #[must_use]
-    pub fn into_reliable(self, seqnum: u16) -> PacketBody {
+    pub fn into_reliable(self, seqnum: WrappingSequenceNumber) -> PacketBody {
         PacketBody::Reliable(ReliableBody {
             seqnum,
             inner: self,
@@ -266,10 +284,13 @@ impl InnerBody {
     /// Get a reference to the Command this body contains, if any.
     /// If this is part of a split packet, None will be returned
     /// even though there is a fragment of a Command inside.
+    ///
+    /// This doesn't differentiate between a body which _cannot_ have a command and a body which
+    /// _doesn't_ have a command.
     #[must_use]
     pub fn command(&self) -> Option<&Command> {
         match self {
-            InnerBody::Original(body) => Some(&body.command),
+            InnerBody::Original(body) => body.command.as_ref(),
             InnerBody::Control(_) | InnerBody::Split(_) => None,
         }
     }
@@ -297,6 +318,7 @@ impl Deserialize for InnerBody {
 
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         let packet_type = u8::deserialize(deser)?;
+        trace!("InnerBody::type: {packet_type}");
         match packet_type {
             0 => Ok(InnerBody::Control(ControlBody::deserialize(deser)?)),
             1 => Ok(InnerBody::Original(OriginalBody::deserialize(deser)?)),
@@ -322,8 +344,8 @@ impl PacketBody {
     }
 
     #[must_use]
-    pub fn command_ref(&self) -> Option<&Command> {
-        self.inner().command_ref()
+    pub fn command(&self) -> Option<&Command> {
+        self.inner().command()
     }
 }
 
@@ -359,13 +381,13 @@ impl Deserialize for PacketBody {
 pub struct Packet {
     pub protocol_id: u32,
     pub sender_peer_id: PeerId,
-    pub channel: u8,
+    pub channel: ChannelId,
     pub body: PacketBody,
 }
 
 impl Packet {
     #[must_use]
-    pub fn new(sender_peer_id: PeerId, channel: u8, body: PacketBody) -> Self {
+    pub fn new(sender_peer_id: PeerId, channel: ChannelId, body: PacketBody) -> Self {
         Self {
             protocol_id: PROTOCOL_ID,
             sender_peer_id,
@@ -400,8 +422,8 @@ impl Serialize for Packet {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         u32::serialize(&value.protocol_id, ser)?;
-        u16::serialize(&value.sender_peer_id, ser)?;
-        u8::serialize(&value.channel, ser)?;
+        PeerId::serialize(&value.sender_peer_id, ser)?;
+        ChannelId::serialize(&value.channel, ser)?;
         PacketBody::serialize(&value.body, ser)?;
         Ok(())
     }
@@ -409,19 +431,38 @@ impl Serialize for Packet {
 
 impl Deserialize for Packet {
     type Output = Self;
-    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+    fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+        trace!("deserializing packet");
+
+        let protocol_id = u32::deserialize(deserializer)?;
+        if protocol_id != PROTOCOL_ID {
+            bail!(DeserializeError::InvalidProtocolId(protocol_id))
+        }
+
+        let sender_peer_id = PeerId::deserialize(deserializer)?;
+        let channel = ChannelId::deserialize(deserializer)?;
+
+        trace!("deserializing packet: sender_peer_id={sender_peer_id}, channel: {channel}");
+        let body = PacketBody::deserialize(deserializer)?;
+
+        // there might be more bytes to read if new fields have been added to the protocol
+        // those will be stripped off and might trip the receiver
+        if deserializer.has_remaining() {
+            warn!(
+                "left-over bytes after deserialization: {:?}",
+                deserializer.peek_all()
+            );
+        }
+
         let pkt = Packet {
-            protocol_id: u32::deserialize(deser)?,
-            sender_peer_id: PeerId::deserialize(deser)?,
-            channel: u8::deserialize(deser)?,
-            body: PacketBody::deserialize(deser)?,
+            protocol_id,
+            sender_peer_id,
+            channel,
+            body,
         };
-        if pkt.protocol_id != PROTOCOL_ID {
-            bail!(DeserializeError::InvalidProtocolId(pkt.protocol_id))
-        }
-        if !(0..=2).contains(&pkt.channel) {
-            bail!(DeserializeError::InvalidChannel(pkt.channel))
-        }
+
+        trace!("deserialized packet: {pkt:?}");
+
         Ok(pkt)
     }
 }

@@ -1,6 +1,7 @@
 use super::types::CommandDirection;
 use super::types::ProtocolContext;
 use anyhow::bail;
+use std::fmt::Debug;
 use std::num::ParseIntError;
 use std::str::Utf8Error;
 
@@ -20,8 +21,8 @@ pub enum DeserializeError {
     DecompressionFailed(String),
     #[error("OtherError: {0}")]
     OtherError(String),
-    #[error("EOF during deserialization")]
-    Eof, // Data ended prematurely
+    #[error("EOF during deserialization: {0}")]
+    Eof(String), // Data ended prematurely
 }
 
 impl From<Utf8Error> for DeserializeError {
@@ -74,6 +75,12 @@ impl<'data> Deserializer<'data> {
         self.context.dir
     }
 
+    /// reports whether there are still bytes left for deserialization
+    #[must_use]
+    pub fn has_remaining(&self) -> bool {
+        self.remaining() > 0
+    }
+
     #[must_use]
     pub fn remaining(&self) -> usize {
         self.data.len()
@@ -87,7 +94,9 @@ impl<'data> Deserializer<'data> {
 
     pub fn peek(&mut self, count: usize) -> DeserializeResult<&'data [u8]> {
         if count > self.data.len() {
-            bail!(DeserializeError::Eof)
+            bail!(DeserializeError::Eof(format!(
+                "Deserializer::peek({count})"
+            )))
         }
         Ok(&self.data[0..count])
     }
@@ -98,7 +107,9 @@ impl<'data> Deserializer<'data> {
 
     pub fn take(&mut self, count: usize) -> DeserializeResult<&'data [u8]> {
         if count > self.data.len() {
-            bail!(DeserializeError::Eof)
+            bail!(DeserializeError::Eof(format!(
+                "Deserializer::take({count})"
+            )))
         }
         let (ret, data) = self.data.split_at(count);
         self.data = data;
@@ -167,8 +178,8 @@ impl<'data> Deserializer<'data> {
     }
 }
 
-pub trait Deserialize: Sized {
+pub trait Deserialize: Sized + Debug {
     /// Output should be Self, except for wrapper types.
     type Output;
-    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self::Output>;
+    fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self::Output>;
 }

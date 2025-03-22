@@ -22,10 +22,10 @@ pub struct LuantiServer {
 
 impl LuantiServer {
     #[must_use]
-    pub fn new(bind_addr: SocketAddr) -> Self {
+    pub fn new(server_address: SocketAddr) -> Self {
         let (accept_tx, accept_rx) = unbounded_channel();
         let runner = LuantiServerRunner {
-            bind_addr,
+            server_address,
             accept_tx,
         };
         tokio::spawn(async move {
@@ -40,15 +40,15 @@ impl LuantiServer {
 }
 
 struct LuantiServerRunner {
-    bind_addr: SocketAddr,
+    server_address: SocketAddr,
     accept_tx: UnboundedSender<LuantiConnection>,
 }
 
 impl LuantiServerRunner {
     async fn run(self) {
-        info!("LuantiServer starting on {}", self.bind_addr.to_string());
+        info!("LuantiServer listening on {}", self.server_address);
         let mut socket = loop {
-            match LuantiSocket::new(self.bind_addr, true).await {
+            match LuantiSocket::new(self.server_address, true).await {
                 Ok(socket) => break socket,
                 Err(err) => {
                     warn!("LuantiServer: bind failed: {}", err);
