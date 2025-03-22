@@ -151,42 +151,52 @@ fn make_serialize_body(input_name: &Ident, data: &Data) -> TokenStream {
 
 fn make_deserialize_body(input_name: &Ident, data: &Data) -> TokenStream {
     match *data {
-        Data::Struct(ref data) => {
-            let inner = match data.fields {
-                syn::Fields::Named(ref fields) => {
-                    let recurse = fields.named.iter().map(|field| {
-                        let name = &field.ident;
-                        let ty = get_wrapped_type(field);
-                        quote_spanned! {field.span() =>
-                            #name: <#ty as Deserialize>::deserialize(deser)?,
-                        }
-                    });
-                    quote! {
-                        #(#recurse)*
+        Data::Struct(ref data) => match data.fields {
+            syn::Fields::Named(ref fields) => {
+                let assignments = fields.named.iter().map(|field| {
+                    let name = &field.ident;
+                    let ty = get_wrapped_type(field);
+                    quote_spanned! {field.span() =>
+                        log::trace!(stringify!("deserializing field", #input_name, #name));
+                        let #name = <#ty as Deserialize>::deserialize(deser)?;
+                        log::trace!("result: {:?} - {} bytes left", #name, deser.remaining());
                     }
+                });
+                let fields = fields.named.iter().map(|field| {
+                    let name = &field.ident;
+                    quote_spanned! { field.span() => #name, }
+                });
+                quote! {
+                    #(#assignments)*
+                    Ok(Self { #(#fields)* })
                 }
-                syn::Fields::Unnamed(ref fields) => {
-                    let recurse = fields.unnamed.iter().enumerate().map(|(index, field)| {
-                        let index = Index::from(index);
-                        let ty = get_wrapped_type(field);
-                        quote_spanned! {field.span() =>
-                            #index: <#ty as Deserialize>::deserialize(deser)?,
-                        }
-                    });
-                    quote! {
-                        #(#recurse)*
-                    }
-                }
-                syn::Fields::Unit => {
-                    quote! {}
-                }
-            };
-            quote! {
-                Ok(Self {
-                    #inner
-                })
             }
-        }
+            syn::Fields::Unnamed(ref fields) => {
+                let recurse = fields.unnamed.iter().enumerate().map(|(index, field)| {
+                    let index = Index::from(index);
+                    let ty = get_wrapped_type(field);
+                    quote_spanned! {field.span() =>
+                        #index: <#ty as Deserialize>::deserialize(deser)?,
+                    }
+                });
+                let inner = quote! {
+                    #(#recurse)*
+                };
+                quote! {
+                    Ok(Self {
+                        #inner
+                    })
+                }
+            }
+            syn::Fields::Unit => {
+                let inner = quote! {};
+                quote! {
+                    Ok(Self {
+                        #inner
+                    })
+                }
+            }
+        },
         Data::Enum(ref body) => {
             let recurse = body.variants.iter().enumerate().map(|(index, variant)| {
                 if !variant.fields.is_empty() {

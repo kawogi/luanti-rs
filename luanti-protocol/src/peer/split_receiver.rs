@@ -1,6 +1,7 @@
 use crate::wire::packet::SplitBody;
 use crate::wire::sequence_number::WrappingSequenceNumber;
 use anyhow::bail;
+use log::warn;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::time::Duration;
@@ -32,7 +33,13 @@ impl IncomingBuffer {
             bail!("Split packet corrupt: chunk_num >= chunk_count");
         }
         self.timeout = now + SPLIT_TIMEOUT;
-        self.chunks.insert(body.chunk_num, body.chunk_data);
+        if self
+            .chunks
+            .insert(body.chunk_num, body.chunk_data)
+            .is_some()
+        {
+            warn!("received duplicate packet for chunk #{}", body.chunk_num);
+        };
         Ok(self.chunks.len() == self.chunk_count as usize)
     }
 

@@ -29,7 +29,7 @@ use luanti_protocol::LuantiClient;
 use luanti_protocol::LuantiConnection;
 use luanti_protocol::LuantiServer;
 use luanti_protocol::peer::PeerError;
-use luanti_protocol::wire::command::ToClientCommand;
+use luanti_protocol::wire::command::server_to_client::ToClientCommand;
 use std::net::SocketAddr;
 
 pub(crate) struct LuantiProxy;

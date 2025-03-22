@@ -5,52 +5,54 @@ macro_rules! as_item {
     };
 }
 
-#[macro_export]
-macro_rules! default_serializer {
-    ($spec_ty: ident { }) => {
-        impl Serialize for $spec_ty {
-            type Input = Self;
-            fn serialize<S: Serializer>(value: &Self::Input, _: &mut S) -> SerializeResult {
-                Ok(())
-            }
-        }
-    };
-    ($spec_ty: ident { $($fname: ident: $ftyp: ty ),+ }) => {
-        impl Serialize for $spec_ty {
-            type Input = Self;
-            fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-                $(
-                    <$ftyp as Serialize>::serialize(&value.$fname, ser)?;
-                )+
-                Ok(())
-            }
-        }
-    };
-}
+// #[macro_export]
+// macro_rules! default_serializer {
+//     ($spec_ty: ident { }) => {
+//         impl Serialize for $spec_ty {
+//             type Input = Self;
+//             fn serialize<S: Serializer>(value: &Self::Input, _: &mut S) -> SerializeResult {
+//                 Ok(())
+//             }
+//         }
+//     };
+//     ($spec_ty: ident { $($fname: ident: $ftyp: ty ),+ }) => {
+//         impl Serialize for $spec_ty {
+//             type Input = Self;
+//             fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
+//                 $(
+//                     <$ftyp as Serialize>::serialize(&value.$fname, ser)?;
+//                 )+
+//                 Ok(())
+//             }
+//         }
+//     };
+// }
 
-#[macro_export]
-macro_rules! default_deserializer {
-    ($spec_ty: ident { }) => {
-        impl Deserialize for $spec_ty {
-            type Output = Self;
-            fn deserialize(_deserializer: &mut Deserializer) -> DeserializeResult<Self> {
-                Ok($spec_ty)
-            }
-        }
-    };
-    ($spec_ty: ident { $($fname: ident: $ftyp: ty ),+ }) => {
-        impl Deserialize for $spec_ty {
-            type Output = Self;
-            fn deserialize(deserializer: &mut Deserializer) -> DeserializeResult<Self> {
-                Ok($spec_ty {
-                    $(
-                        $fname: <$ftyp>::deserialize(deser)?,
-                    )+
-                })
-            }
-        }
-    };
-}
+// #[macro_export]
+// macro_rules! default_deserializer {
+//     ($spec_ty: ident { }) => {
+//         impl Deserialize for $spec_ty {
+//             type Output = Self;
+//             fn deserialize(_deserializer: &mut Deserializer) -> DeserializeResult<Self> {
+//                 log::trace!(stringify!("deserializing ", $spec_ty));
+//                 Ok($spec_ty)
+//             }
+//         }
+//     };
+//     ($spec_ty: ident { $($fname: ident: $ftyp: ty ),+ }) => {
+//         impl Deserialize for $spec_ty {
+//             type Output = Self;
+//             fn deserialize(deserializer: &mut Deserializer) -> DeserializeResult<Self> {
+//                 log::trace!(stringify!("deserializing ", $spec_ty));
+//                 $(
+//                     log::trace!(stringify!("deserializing field ", $fname, ": ", $ftyp));
+//                     let $fname = <$ftyp>::deserialize(deser)?;
+//                 )+
+//                 Ok($spec_ty { $($fname, )+ })
+//             }
+//         }
+//     };
+// }
 
 #[macro_export]
 macro_rules! implicit_from {
@@ -145,7 +147,7 @@ macro_rules! define_protocol {
                         return Ok(None);
                     }
                     let orig_buffer = deserializer.peek_all();
-                    log::trace!("orig_buffer: {:?}", &orig_buffer[0..(orig_buffer.len().min(64))]);
+                    // log::trace!("orig_buffer: {:?}", &orig_buffer[0..(orig_buffer.len().min(64))]);
                     let command_id = u16::deserialize(deserializer)?;
                     let dir = deserializer.direction();
                     let result = match (dir, command_id) {

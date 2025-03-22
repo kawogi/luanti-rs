@@ -85,26 +85,4 @@ mod tests {
             SequenceNumber(0x0001_0000).goto(0x8001)
         );
     }
-
-    // #[test]
-    // fn test_relative_distance() {
-    //     use super::SequenceNumber::relative_distance;
-
-    //     assert_eq!(0, relative_distance(0x0000, 0x0000));
-    //     assert_eq!(0, relative_distance(0x7fff, 0x7fff));
-    //     assert_eq!(0, relative_distance(0x8000, 0x8000));
-    //     assert_eq!(0, relative_distance(0xffff, 0xffff));
-
-    //     assert_eq!(1, relative_distance(0x0000, 0x0001));
-    //     assert_eq!(1, relative_distance(0xfffe, 0xffff));
-    //     assert_eq!(1, relative_distance(0xffff, 0x0000));
-    //     assert_eq!(1, relative_distance(0x7fff, 0x8000));
-    //     assert_eq!(-1, relative_distance(0x0000, 0xffff));
-    //     assert_eq!(i64::from(i16::MIN), relative_distance(0x0000, 0x8000));
-    //     assert_eq!(i64::from(i16::MAX), relative_distance(0x0000, 0x7fff));
-    //     assert_eq!(i64::from(i16::MIN), relative_distance(0x8000, 0x0000));
-    //     assert_eq!(-i64::from(i16::MAX), relative_distance(0x7fff, 0x0000));
-    //     assert_eq!(i64::from(i16::MIN), relative_distance(0xffff, 0x7fff));
-    //     assert_eq!(-i64::from(i16::MAX), relative_distance(0xffff, 0x8000));
-    // }
 }

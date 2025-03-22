@@ -176,12 +176,24 @@ impl Deserialize for OriginalBody {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct SplitBody {
     pub seqnum: WrappingSequenceNumber,
     pub chunk_count: u16,
     pub chunk_num: u16,
     pub chunk_data: Vec<u8>,
+}
+
+impl std::fmt::Debug for SplitBody {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("SplitBody")
+            .field("seqnum", &self.seqnum)
+            .field("chunk_count", &self.chunk_count)
+            .field("chunk_num", &self.chunk_num)
+            .field("chunk_data", &format!("{} bytes", self.chunk_data.len()))
+            .finish()
+    }
 }
 
 impl Serialize for SplitBody {

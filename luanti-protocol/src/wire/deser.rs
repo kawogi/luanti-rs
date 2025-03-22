@@ -1,6 +1,7 @@
 use super::types::CommandDirection;
 use super::types::ProtocolContext;
 use anyhow::bail;
+use std::fmt::Debug;
 use std::num::ParseIntError;
 use std::str::Utf8Error;
 
@@ -177,7 +178,7 @@ impl<'data> Deserializer<'data> {
     }
 }
 
-pub trait Deserialize: Sized {
+pub trait Deserialize: Sized + Debug {
     /// Output should be Self, except for wrapper types.
     type Output;
     fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self::Output>;
