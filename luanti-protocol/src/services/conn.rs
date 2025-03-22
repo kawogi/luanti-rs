@@ -6,10 +6,10 @@ use std::net::SocketAddr;
 
 use crate::commands::Command;
 use crate::commands::client_to_server::ToServerCommand;
-use crate::commands::server_to_client::AccessDeniedSpec;
+use crate::commands::server_to_client::AccessDeniedCode;
+use crate::commands::server_to_client::AccessDeniedCommand;
 use crate::commands::server_to_client::ToClientCommand;
 use crate::peer::Peer;
-use crate::types::AccessDeniedCode;
 use anyhow::Result;
 use anyhow::bail;
 
@@ -41,7 +41,7 @@ impl LuantiConnection {
         reconnect: bool,
     ) -> Result<()> {
         self.send(
-            AccessDeniedSpec {
+            AccessDeniedCommand {
                 code,
                 reason,
                 reconnect,

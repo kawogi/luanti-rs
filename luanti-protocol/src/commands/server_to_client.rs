@@ -1,3 +1,4 @@
+mod access_denied;
 mod active_object_messages;
 
 use super::CommandProperties;
@@ -12,6 +13,7 @@ use crate::wire::deser::Deserializer;
 use crate::wire::ser::Serialize;
 use crate::wire::ser::SerializeResult;
 use crate::wire::ser::Serializer;
+pub use access_denied::{AccessDeniedCode, AccessDeniedCommand};
 pub use active_object_messages::*;
 use anyhow::bail;
 use luanti_protocol_derive::LuantiDeserialize;
@@ -24,7 +26,7 @@ define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
     AuthAccept, 0x03, Default, true => AuthAcceptSpec,
     AcceptSudoMode, 0x04, Default, true => AcceptSudoModeSpec,
     DenySudoMode, 0x05, Default, true => DenySudoModeSpec,
-    AccessDenied, 0x0A, Default, true => AccessDeniedSpec,
+    AccessDenied, 0x0A, Default, true => AccessDeniedCommand,
     Blockdata, 0x20, Response, true => BlockdataSpec,
     Addnode, 0x21, Default, true => AddnodeSpec,
     Removenode, 0x22, Default, true => RemovenodeSpec,
@@ -102,13 +104,6 @@ pub struct AcceptSudoModeSpec;
 
 #[derive(Debug, Clone, PartialEq, Default, LuantiSerialize, LuantiDeserialize)]
 pub struct DenySudoModeSpec;
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct AccessDeniedSpec {
-    pub code: AccessDeniedCode,
-    pub reason: String,
-    pub reconnect: bool,
-}
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct BlockdataSpec {
