@@ -1,6 +1,5 @@
 pub mod audit;
 pub mod channel_id;
-pub mod command;
 pub mod deser;
 pub mod packet;
 pub mod peer_id;

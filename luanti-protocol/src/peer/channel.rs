@@ -3,11 +3,13 @@ use std::{collections::VecDeque, time::Instant};
 use anyhow::Result;
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::wire::{
-    command::Command,
-    deser::{Deserialize, Deserializer},
-    packet::{ControlBody, InnerBody, PacketBody, ReliableBody},
-    types::ProtocolContext,
+use crate::{
+    commands::Command,
+    wire::{
+        deser::{Deserialize, Deserializer},
+        packet::{ControlBody, InnerBody, PacketBody, ReliableBody},
+        types::ProtocolContext,
+    },
 };
 
 use super::{ReliableReceiver, ReliableSender, SplitReceiver, SplitSender};

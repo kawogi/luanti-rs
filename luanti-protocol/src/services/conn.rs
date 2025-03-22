@@ -4,11 +4,11 @@
 //!
 use std::net::SocketAddr;
 
+use crate::commands::Command;
+use crate::commands::client_to_server::ToServerCommand;
+use crate::commands::server_to_client::AccessDeniedSpec;
+use crate::commands::server_to_client::ToClientCommand;
 use crate::peer::Peer;
-use crate::wire::command::Command;
-use crate::wire::command::client_to_server::ToServerCommand;
-use crate::wire::command::server_to_client::AccessDeniedSpec;
-use crate::wire::command::server_to_client::ToClientCommand;
 use crate::wire::types::AccessDeniedCode;
 use anyhow::Result;
 use anyhow::bail;

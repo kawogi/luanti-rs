@@ -8,15 +8,14 @@ mod macros;
 pub mod client_to_server;
 pub mod server_to_client;
 
-use super::channel_id::ChannelId;
-use super::deser::Deserialize;
-use super::deser::DeserializeResult;
-use super::deser::Deserializer;
-use super::ser::Serialize;
-use super::ser::SerializeResult;
-use super::ser::Serializer;
-#[allow(clippy::wildcard_imports, reason = "greatly simplifies macros")]
-use super::types::*;
+use crate::CommandDirection;
+use crate::wire::channel_id::ChannelId;
+use crate::wire::deser::Deserialize;
+use crate::wire::deser::DeserializeResult;
+use crate::wire::deser::Deserializer;
+use crate::wire::ser::Serialize;
+use crate::wire::ser::SerializeResult;
+use crate::wire::ser::Serializer;
 use client_to_server::ToServerCommand;
 use server_to_client::ToClientCommand;
 

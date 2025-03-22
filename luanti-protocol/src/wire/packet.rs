@@ -3,7 +3,6 @@ use log::trace;
 use log::warn;
 
 use super::channel_id::ChannelId;
-use super::command::Command;
 use super::deser::Deserialize;
 use super::deser::DeserializeError;
 use super::deser::DeserializeResult;
@@ -13,6 +12,7 @@ use super::sequence_number::WrappingSequenceNumber;
 use super::ser::Serialize;
 use super::ser::SerializeResult;
 use super::ser::Serializer;
+use crate::commands::Command;
 
 pub const PROTOCOL_ID: u32 = 0x4f45_7403;
 

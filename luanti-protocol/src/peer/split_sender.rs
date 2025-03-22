@@ -1,4 +1,4 @@
-use crate::wire::command::Command;
+use crate::commands::Command;
 use crate::wire::packet::InnerBody;
 use crate::wire::packet::MAX_ORIGINAL_BODY_SIZE;
 use crate::wire::packet::MAX_SPLIT_BODY_SIZE;

@@ -13,13 +13,13 @@ use anyhow::Result;
 use anyhow::bail;
 use log::error;
 
-use super::command::CommandRef;
-use super::command::serialize_commandref;
-use super::command::server_to_client::ToClientCommand;
 use super::ser::VecSerializer;
 use super::types::ProtocolContext;
 use super::util::decompress_zlib;
 use super::util::zstd_decompress;
+use crate::commands::CommandRef;
+use crate::commands::serialize_commandref;
+use crate::commands::server_to_client::ToClientCommand;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 

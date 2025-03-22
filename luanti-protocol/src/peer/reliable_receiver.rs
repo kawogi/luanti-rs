@@ -51,9 +51,9 @@ impl ReliableReceiver {
 
 #[cfg(test)]
 mod tests {
-    use crate::wire::command::server_to_client::HudrmSpec;
-    use crate::wire::command::server_to_client::ToClientCommand;
-    use crate::wire::command::*;
+    use crate::commands::server_to_client::HudrmSpec;
+    use crate::commands::server_to_client::ToClientCommand;
+    use crate::commands::*;
     use crate::wire::packet::OriginalBody;
     use crate::wire::packet::PacketBody;
     use crate::wire::sequence_number::WrappingSequenceNumber;

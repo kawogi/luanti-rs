@@ -20,13 +20,14 @@
     reason = "//TODO there's some unidiomatic code left"
 )]
 
+pub mod commands;
 pub mod peer;
 pub mod services;
 pub mod wire;
 
+pub use commands::CommandRef;
 pub use services::client::LuantiClient;
 pub use services::conn::LuantiConnection;
 pub use services::server::LuantiServer;
 pub use wire::audit::audit_on;
-pub use wire::command::CommandRef;
 pub use wire::types::CommandDirection;

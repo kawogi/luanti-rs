@@ -4,15 +4,15 @@ use anyhow::bail;
 
 use super::socket::LuantiSocket;
 use crate::{
+    commands::{client_to_server::ToServerCommand, server_to_client::ToClientCommand},
     peer::Peer,
-    wire::command::{client_to_server::ToServerCommand, server_to_client::ToClientCommand},
 };
 
 #[allow(
     clippy::wildcard_imports,
     reason = "commands are expected to be used in bulk"
 )]
-use crate::wire::command::*;
+use crate::commands::*;
 
 pub struct LuantiClient {
     server: Peer,
