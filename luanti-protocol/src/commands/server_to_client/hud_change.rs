@@ -1,0 +1,129 @@
+use anyhow::bail;
+use luanti_protocol_derive::{LuantiDeserialize, LuantiSerialize};
+
+use crate::{
+    types::{v2f, v2s32, v3f},
+    wire::{
+        deser::{Deserialize, DeserializeError, DeserializeResult, Deserializer},
+        ser::{Serialize, SerializeResult, Serializer},
+    },
+};
+
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct HudchangeSpec {
+    pub server_id: u32,
+    pub stat: HudStat,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum HudStat {
+    Pos(v2f),
+    Name(String),
+    Scale(v2f),
+    Text(String),
+    Number(u32),
+    Item(u32),
+    Dir(u32),
+    Align(v2f),
+    Offset(v2f),
+    WorldPos(v3f),
+    Size(v2s32),
+    ZIndex(u32),
+    Text2(String),
+    Style(u32),
+}
+
+impl Serialize for HudStat {
+    type Input = Self;
+    fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
+        #![allow(clippy::enum_glob_use, reason = "improves readability")]
+        use HudStat::*;
+        match value {
+            Pos(value) => {
+                u8::serialize(&0, ser)?;
+                v2f::serialize(value, ser)?;
+            }
+            Name(value) => {
+                u8::serialize(&1, ser)?;
+                String::serialize(value, ser)?;
+            }
+            Scale(value) => {
+                u8::serialize(&2, ser)?;
+                v2f::serialize(value, ser)?;
+            }
+            Text(value) => {
+                u8::serialize(&3, ser)?;
+                String::serialize(value, ser)?;
+            }
+            Number(value) => {
+                u8::serialize(&4, ser)?;
+                u32::serialize(value, ser)?;
+            }
+            Item(value) => {
+                u8::serialize(&5, ser)?;
+                u32::serialize(value, ser)?;
+            }
+            Dir(value) => {
+                u8::serialize(&6, ser)?;
+                u32::serialize(value, ser)?;
+            }
+            Align(value) => {
+                u8::serialize(&7, ser)?;
+                v2f::serialize(value, ser)?;
+            }
+            Offset(value) => {
+                u8::serialize(&8, ser)?;
+                v2f::serialize(value, ser)?;
+            }
+            WorldPos(value) => {
+                u8::serialize(&9, ser)?;
+                v3f::serialize(value, ser)?;
+            }
+            Size(value) => {
+                u8::serialize(&10, ser)?;
+                v2s32::serialize(value, ser)?;
+            }
+            ZIndex(value) => {
+                u8::serialize(&11, ser)?;
+                u32::serialize(value, ser)?;
+            }
+            Text2(value) => {
+                u8::serialize(&12, ser)?;
+                String::serialize(value, ser)?;
+            }
+            Style(value) => {
+                u8::serialize(&13, ser)?;
+                u32::serialize(value, ser)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl Deserialize for HudStat {
+    type Output = Self;
+    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+        #![allow(clippy::enum_glob_use, reason = "improves readability")]
+        use HudStat::*;
+        let stat = u8::deserialize(deser)?;
+        match stat {
+            0 => Ok(Pos(v2f::deserialize(deser)?)),
+            1 => Ok(Name(String::deserialize(deser)?)),
+            2 => Ok(Scale(v2f::deserialize(deser)?)),
+            3 => Ok(Text(String::deserialize(deser)?)),
+            4 => Ok(Number(u32::deserialize(deser)?)),
+            5 => Ok(Item(u32::deserialize(deser)?)),
+            6 => Ok(Dir(u32::deserialize(deser)?)),
+            7 => Ok(Align(v2f::deserialize(deser)?)),
+            8 => Ok(Offset(v2f::deserialize(deser)?)),
+            9 => Ok(WorldPos(v3f::deserialize(deser)?)),
+            10 => Ok(Size(v2s32::deserialize(deser)?)),
+            11 => Ok(ZIndex(u32::deserialize(deser)?)),
+            12 => Ok(Text2(String::deserialize(deser)?)),
+            13 => Ok(Style(u32::deserialize(deser)?)),
+            _ => bail!(DeserializeError::InvalidValue(String::from(
+                "HudStat invalid stat",
+            ))),
+        }
+    }
+}

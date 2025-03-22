@@ -25,6 +25,7 @@ mod active_object;
 mod arrays;
 mod binary;
 mod compressed;
+mod node_box;
 mod options;
 mod primitives;
 mod strings;
@@ -59,6 +60,7 @@ pub use binary::*;
 pub use compressed::*;
 use luanti_protocol_derive::LuantiDeserialize;
 use luanti_protocol_derive::LuantiSerialize;
+pub use node_box::*;
 pub use options::*;
 pub use primitives::*;
 use std::marker::PhantomData;
@@ -271,188 +273,6 @@ impl<T1: Deserialize, T2: Deserialize> Deserialize for Pair<T1, T2> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum HudStat {
-    Pos(v2f),
-    Name(String),
-    Scale(v2f),
-    Text(String),
-    Number(u32),
-    Item(u32),
-    Dir(u32),
-    Align(v2f),
-    Offset(v2f),
-    WorldPos(v3f),
-    Size(v2s32),
-    ZIndex(u32),
-    Text2(String),
-    Style(u32),
-}
-
-impl Serialize for HudStat {
-    type Input = Self;
-    fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        #![allow(clippy::enum_glob_use, reason = "improves readability")]
-        use HudStat::*;
-        match value {
-            Pos(value) => {
-                u8::serialize(&0, ser)?;
-                v2f::serialize(value, ser)?;
-            }
-            Name(value) => {
-                u8::serialize(&1, ser)?;
-                String::serialize(value, ser)?;
-            }
-            Scale(value) => {
-                u8::serialize(&2, ser)?;
-                v2f::serialize(value, ser)?;
-            }
-            Text(value) => {
-                u8::serialize(&3, ser)?;
-                String::serialize(value, ser)?;
-            }
-            Number(value) => {
-                u8::serialize(&4, ser)?;
-                u32::serialize(value, ser)?;
-            }
-            Item(value) => {
-                u8::serialize(&5, ser)?;
-                u32::serialize(value, ser)?;
-            }
-            Dir(value) => {
-                u8::serialize(&6, ser)?;
-                u32::serialize(value, ser)?;
-            }
-            Align(value) => {
-                u8::serialize(&7, ser)?;
-                v2f::serialize(value, ser)?;
-            }
-            Offset(value) => {
-                u8::serialize(&8, ser)?;
-                v2f::serialize(value, ser)?;
-            }
-            WorldPos(value) => {
-                u8::serialize(&9, ser)?;
-                v3f::serialize(value, ser)?;
-            }
-            Size(value) => {
-                u8::serialize(&10, ser)?;
-                v2s32::serialize(value, ser)?;
-            }
-            ZIndex(value) => {
-                u8::serialize(&11, ser)?;
-                u32::serialize(value, ser)?;
-            }
-            Text2(value) => {
-                u8::serialize(&12, ser)?;
-                String::serialize(value, ser)?;
-            }
-            Style(value) => {
-                u8::serialize(&13, ser)?;
-                u32::serialize(value, ser)?;
-            }
-        }
-        Ok(())
-    }
-}
-
-impl Deserialize for HudStat {
-    type Output = Self;
-    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-        #![allow(clippy::enum_glob_use, reason = "improves readability")]
-        use HudStat::*;
-        let stat = u8::deserialize(deser)?;
-        match stat {
-            0 => Ok(Pos(v2f::deserialize(deser)?)),
-            1 => Ok(Name(String::deserialize(deser)?)),
-            2 => Ok(Scale(v2f::deserialize(deser)?)),
-            3 => Ok(Text(String::deserialize(deser)?)),
-            4 => Ok(Number(u32::deserialize(deser)?)),
-            5 => Ok(Item(u32::deserialize(deser)?)),
-            6 => Ok(Dir(u32::deserialize(deser)?)),
-            7 => Ok(Align(v2f::deserialize(deser)?)),
-            8 => Ok(Offset(v2f::deserialize(deser)?)),
-            9 => Ok(WorldPos(v3f::deserialize(deser)?)),
-            10 => Ok(Size(v2s32::deserialize(deser)?)),
-            11 => Ok(ZIndex(u32::deserialize(deser)?)),
-            12 => Ok(Text2(String::deserialize(deser)?)),
-            13 => Ok(Style(u32::deserialize(deser)?)),
-            _ => bail!(DeserializeError::InvalidValue(String::from(
-                "HudStat invalid stat",
-            ))),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct SkyboxParams {
-    pub bgcolor: SColor,
-    pub clouds: bool,
-    pub fog_sun_tint: SColor,
-    pub fog_moon_tint: SColor,
-    pub fog_tint_type: String,
-    pub data: SkyboxData,
-    pub body_orbit_tilt: Option<f32>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum SkyboxData {
-    None,                  // If skybox_type == "plain"
-    Textures(Vec<String>), // If skybox_type == "skybox"
-    Color(SkyColor),       // If skybox_type == "regular"
-}
-
-impl Serialize for SkyboxParams {
-    type Input = Self;
-    fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        SColor::serialize(&value.bgcolor, ser)?;
-        let skybox_type = match &value.data {
-            SkyboxData::None => "plain",
-            SkyboxData::Textures(..) => "skybox",
-            SkyboxData::Color(..) => "regular",
-        };
-        str::serialize(skybox_type, ser)?;
-        bool::serialize(&value.clouds, ser)?;
-        SColor::serialize(&value.fog_sun_tint, ser)?;
-        SColor::serialize(&value.fog_moon_tint, ser)?;
-        String::serialize(&value.fog_tint_type, ser)?;
-        match &value.data {
-            SkyboxData::None => (),
-            SkyboxData::Textures(value) => <Array16<String> as Serialize>::serialize(value, ser)?,
-            SkyboxData::Color(value) => SkyColor::serialize(value, ser)?,
-        }
-        <Option<f32> as Serialize>::serialize(&value.body_orbit_tilt, ser)?;
-        Ok(())
-    }
-}
-
-impl Deserialize for SkyboxParams {
-    type Output = Self;
-    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-        let bgcolor = SColor::deserialize(deser)?;
-        let typ = String::deserialize(deser)?;
-        Ok(SkyboxParams {
-            bgcolor,
-            clouds: bool::deserialize(deser)?,
-            fog_sun_tint: SColor::deserialize(deser)?,
-            fog_moon_tint: SColor::deserialize(deser)?,
-            fog_tint_type: String::deserialize(deser)?,
-            data: {
-                if typ == "skybox" {
-                    SkyboxData::Textures(<Array16<String> as Deserialize>::deserialize(deser)?)
-                } else if typ == "regular" {
-                    SkyboxData::Color(SkyColor::deserialize(deser)?)
-                } else if typ == "plain" {
-                    SkyboxData::None
-                } else {
-                    bail!("Invalid skybox type: {:?}", typ)
-                }
-            },
-            body_orbit_tilt: <Option<f32> as Deserialize>::deserialize(deser)?,
-        })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub struct MinimapModeList {
     pub mode: u16,
     pub vec: Vec<MinimapMode>,
@@ -522,86 +342,11 @@ impl Deserialize for AuthMechsBitset {
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct ItemdefList {
-    pub itemdef_manager_version: u8,
-    #[wrap(Array16<Wrapped16<ItemDef>>)]
-    pub defs: Vec<ItemDef>,
-    #[wrap(Array16<ItemAlias>)]
-    pub aliases: Vec<ItemAlias>,
-}
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub enum ItemType {
-    None,
-    Node,
-    Craft,
-    Tool,
-}
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct ToolGroupCap {
-    pub uses: s16,
-    pub maxlevel: s16,
-    // (level, time)
-    #[wrap(Array32<Pair<s16, f32>>)]
-    pub times: Vec<(s16, f32)>,
-}
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct ToolCapabilities {
-    pub version: u8,
-    pub full_punch_interval: f32,
-    pub max_drop_level: s16,
-    // (name, tool group cap)
-    #[wrap(Array32<Pair<String, ToolGroupCap>>)]
-    pub group_caps: Vec<(String, ToolGroupCap)>,
-    // (name, rating)
-    #[wrap(Array32<Pair<String, s16>>)]
-    pub damage_groups: Vec<(String, s16)>,
-    pub punch_attack_uses: Option<u16>,
-}
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct SimpleSoundSpec {
     pub name: String,
     pub gain: f32,
     pub pitch: f32,
     pub fade: f32,
-}
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct ItemDef {
-    pub version: u8,
-    pub item_type: ItemType,
-    pub name: String,
-    pub description: String,
-    pub inventory_image: String,
-    pub wield_image: String,
-    pub wield_scale: v3f,
-    pub stack_max: s16,
-    pub usable: bool,
-    pub liquids_pointable: bool,
-    pub tool_capabilities: Option16<ToolCapabilities>,
-    #[wrap(Array16<Pair<String, s16>>)]
-    pub groups: Vec<(String, s16)>,
-    pub node_placement_prediction: String,
-    pub sound_place: SimpleSoundSpec,
-    pub sound_place_failed: SimpleSoundSpec,
-    pub range: f32,
-    pub palette_image: String,
-    pub color: SColor,
-    pub inventory_overlay: String,
-    pub wield_overlay: String,
-    pub short_description: Option<String>,
-    pub sound_use: Option<SimpleSoundSpec>,
-    pub sound_use_air: Option<SimpleSoundSpec>,
-    pub place_param2: Option<u8>,
-}
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct ItemAlias {
-    pub name: String,
-    pub convert_to: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -882,126 +627,6 @@ pub struct ContentFeatures {
     pub alpha: Option<AlphaMode>,
     pub move_resistance: Option<u8>,
     pub liquid_move_physics: Option<bool>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-#[expect(
-    clippy::large_enum_variant,
-    reason = "// TODO consider `Box`ing variants"
-)]
-pub enum NodeBox {
-    Regular,
-    Fixed(NodeBoxFixed),
-    Wallmounted(NodeBoxWallmounted),
-    Leveled(NodeBoxLeveled),
-    Connected(NodeBoxConnected),
-}
-
-impl Serialize for NodeBox {
-    type Input = Self;
-    fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        // Unused version number, always 6
-        u8::serialize(&6, ser)?;
-
-        let typ = match value {
-            NodeBox::Regular => 0,
-            NodeBox::Fixed(_) => 1,
-            NodeBox::Wallmounted(_) => 2,
-            NodeBox::Leveled(_) => 3,
-            NodeBox::Connected(_) => 4,
-        };
-        u8::serialize(&typ, ser)?;
-        match value {
-            NodeBox::Regular => Ok(()),
-            NodeBox::Fixed(value) => NodeBoxFixed::serialize(value, ser),
-            NodeBox::Wallmounted(value) => NodeBoxWallmounted::serialize(value, ser),
-            NodeBox::Leveled(value) => NodeBoxLeveled::serialize(value, ser),
-            NodeBox::Connected(value) => NodeBoxConnected::serialize(value, ser),
-        }
-    }
-}
-
-impl Deserialize for NodeBox {
-    type Output = Self;
-    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-        let ver = u8::deserialize(deser)?;
-        if ver != 6 {
-            bail!(DeserializeError::InvalidValue("Invalid NodeBox ver".into(),));
-        }
-        let typ = u8::deserialize(deser)?;
-        match typ {
-            0 => Ok(NodeBox::Regular),
-            1 => Ok(NodeBox::Fixed(NodeBoxFixed::deserialize(deser)?)),
-            2 => Ok(NodeBox::Wallmounted(NodeBoxWallmounted::deserialize(
-                deser,
-            )?)),
-            3 => Ok(NodeBox::Leveled(NodeBoxLeveled::deserialize(deser)?)),
-            4 => Ok(NodeBox::Connected(NodeBoxConnected::deserialize(deser)?)),
-            _ => bail!(DeserializeError::InvalidValue(
-                "Invalid NodeBox type".into(),
-            )),
-        }
-    }
-}
-
-#[allow(non_camel_case_types, reason = "aligns with the original C++ codebase")]
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct aabb3f {
-    pub min_edge: v3f,
-    pub max_edge: v3f,
-}
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct NodeBoxLeveled {
-    #[wrap(Array16<aabb3f>)]
-    pub fixed: Vec<aabb3f>,
-}
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct NodeBoxFixed {
-    #[wrap(Array16<aabb3f>)]
-    pub fixed: Vec<aabb3f>,
-}
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct NodeBoxWallmounted {
-    pub wall_top: aabb3f,
-    pub wall_bottom: aabb3f,
-    pub wall_side: aabb3f,
-}
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct NodeBoxConnected {
-    #[wrap(Array16<aabb3f>)]
-    pub fixed: Vec<aabb3f>,
-    #[wrap(Array16<aabb3f>)]
-    pub connect_top: Vec<aabb3f>,
-    #[wrap(Array16<aabb3f>)]
-    pub connect_bottom: Vec<aabb3f>,
-    #[wrap(Array16<aabb3f>)]
-    pub connect_front: Vec<aabb3f>,
-    #[wrap(Array16<aabb3f>)]
-    pub connect_left: Vec<aabb3f>,
-    #[wrap(Array16<aabb3f>)]
-    pub connect_back: Vec<aabb3f>,
-    #[wrap(Array16<aabb3f>)]
-    pub connect_right: Vec<aabb3f>,
-    #[wrap(Array16<aabb3f>)]
-    pub disconnected_top: Vec<aabb3f>,
-    #[wrap(Array16<aabb3f>)]
-    pub disconnected_bottom: Vec<aabb3f>,
-    #[wrap(Array16<aabb3f>)]
-    pub disconnected_front: Vec<aabb3f>,
-    #[wrap(Array16<aabb3f>)]
-    pub disconnected_left: Vec<aabb3f>,
-    #[wrap(Array16<aabb3f>)]
-    pub disconnected_back: Vec<aabb3f>,
-    #[wrap(Array16<aabb3f>)]
-    pub disconnected_right: Vec<aabb3f>,
-    #[wrap(Array16<aabb3f>)]
-    pub disconnected: Vec<aabb3f>,
-    #[wrap(Array16<aabb3f>)]
-    pub disconnected_sides: Vec<aabb3f>,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]

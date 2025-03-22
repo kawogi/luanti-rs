@@ -1,5 +1,8 @@
 mod access_denied;
 mod active_object_messages;
+mod hud_change;
+mod item_def;
+mod set_sky;
 
 use super::CommandProperties;
 #[allow(clippy::wildcard_imports, reason = "greatly simplifies macros")]
@@ -16,8 +19,11 @@ use crate::wire::ser::Serializer;
 pub use access_denied::{AccessDeniedCode, AccessDeniedCommand};
 pub use active_object_messages::*;
 use anyhow::bail;
+use hud_change::HudchangeSpec;
+use item_def::ItemdefCommand;
 use luanti_protocol_derive::LuantiDeserialize;
 use luanti_protocol_derive::LuantiSerialize;
+use set_sky::SetSkyCommand;
 use std::ops::Deref;
 
 define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
@@ -46,7 +52,7 @@ define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
     Media, 0x38, Response, true => MediaSpec,
     Nodedef, 0x3a, Default, true => NodedefSpec,
     AnnounceMedia, 0x3c, Default, true => AnnounceMediaSpec,
-    Itemdef, 0x3d, Default, true => ItemdefSpec,
+    Itemdef, 0x3d, Default, true => ItemdefCommand,
     PlaySound, 0x3f, Default, true => PlaySoundSpec,
     StopSound, 0x40, Default, true => StopSoundSpec,
     Privileges, 0x41, Default, true => PrivilegesSpec,
@@ -62,7 +68,7 @@ define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
     HudSetFlags, 0x4c, Init, true => HudSetFlagsSpec,
     HudSetParam, 0x4d, Init, true => HudSetParamSpec,
     Breath, 0x4e, Default, true => BreathSpec,
-    SetSky, 0x4f, Default, true => SetSkySpec,
+    SetSky, 0x4f, Default, true => SetSkyCommand,
     OverrideDayNightRatio, 0x50, Default, true => OverrideDayNightRatioSpec,
     LocalPlayerAnimations, 0x51, Default, true => LocalPlayerAnimationsSpec,
     EyeOffset, 0x52, Default, true => EyeOffsetSpec,
@@ -227,12 +233,6 @@ pub struct AnnounceMediaSpec {
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct ItemdefSpec {
-    #[wrap(ZLibCompressed<ItemdefList>)]
-    pub item_def: ItemdefList,
-}
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct PlaySoundSpec {
     pub server_id: s32,
     pub spec_name: String,
@@ -330,12 +330,6 @@ pub struct HudrmSpec {
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct HudchangeSpec {
-    pub server_id: u32,
-    pub stat: HudStat,
-}
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct HudSetFlagsSpec {
     pub flags: HudFlags,
     pub mask: HudFlags,
@@ -349,11 +343,6 @@ pub struct HudSetParamSpec {
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct BreathSpec {
     pub breath: u16,
-}
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct SetSkySpec {
-    pub params: SkyboxParams,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
