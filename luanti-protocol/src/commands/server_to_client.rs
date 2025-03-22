@@ -77,444 +77,397 @@ define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
     SetLighting, 0x63, Default, true => SetLightingSpec
 });
 
-proto_struct! {
-    HelloSpec {
-        serialization_ver: u8,
-        compression_mode: u16,
-        proto_ver: u16,
-        auth_mechs: AuthMechsBitset,
-        username_legacy: String
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct HelloSpec {
+    pub serialization_ver: u8,
+    pub compression_mode: u16,
+    pub proto_ver: u16,
+    pub auth_mechs: AuthMechsBitset,
+    pub username_legacy: String,
 }
 
-proto_struct! {
-    AuthAcceptSpec {
-        player_pos: v3f,
-        map_seed: u64,
-        recommended_send_interval: f32,
-        sudo_auth_methods: u32
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct AuthAcceptSpec {
+    pub player_pos: v3f,
+    pub map_seed: u64,
+    pub recommended_send_interval: f32,
+    pub sudo_auth_methods: u32,
 }
 
-proto_struct! {
-    AcceptSudoModeSpec {
-        // No fields
-    }
+#[derive(Debug, Clone, PartialEq, Default, LuantiSerialize, LuantiDeserialize)]
+pub struct AcceptSudoModeSpec;
+
+#[derive(Debug, Clone, PartialEq, Default, LuantiSerialize, LuantiDeserialize)]
+pub struct DenySudoModeSpec;
+
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct AccessDeniedSpec {
+    pub code: AccessDeniedCode,
+    pub reason: String,
+    pub reconnect: bool,
 }
 
-proto_struct! {
-    DenySudoModeSpec {
-        // No fields
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct BlockdataSpec {
+    pub pos: v3s16,
+    pub block: MapBlock,
+    pub network_specific_version: u8,
 }
 
-proto_struct! {
-    AccessDeniedSpec {
-        code: AccessDeniedCode,
-        reason: String,
-        reconnect: bool
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct AddnodeSpec {
+    pub pos: v3s16,
+    pub node: MapNode,
+    pub keep_metadata: bool,
 }
 
-proto_struct! {
-    BlockdataSpec {
-        pos: v3s16,
-        block: MapBlock,
-        network_specific_version: u8
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct RemovenodeSpec {
+    pub pos: v3s16,
 }
 
-proto_struct! {
-    AddnodeSpec {
-        pos: v3s16,
-        node: MapNode,
-        keep_metadata: bool
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct InventorySpec {
+    pub inventory: Inventory,
 }
 
-proto_struct! {
-    RemovenodeSpec {
-        pos: v3s16
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct TimeOfDaySpec {
+    pub time_of_day: u16,
+    pub time_speed: Option<f32>,
 }
 
-proto_struct! {
-    InventorySpec {
-        inventory: Inventory
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct CsmRestrictionFlagsSpec {
+    pub csm_restriction_flags: u64,
+    pub csm_restriction_noderange: u32,
 }
 
-proto_struct! {
-    TimeOfDaySpec {
-        time_of_day: u16,
-        time_speed: Option<f32>
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct PlayerSpeedSpec {
+    pub added_vel: v3f,
 }
 
-proto_struct! {
-    CsmRestrictionFlagsSpec {
-        csm_restriction_flags: u64,
-        csm_restriction_noderange: u32
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct MediaPushSpec {
+    pub raw_hash: String,
+    pub filename: String,
+    pub cached: bool,
+    pub token: u32,
 }
 
-proto_struct! {
-    PlayerSpeedSpec {
-        added_vel: v3f
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct TCChatMessageSpec {
+    pub version: u8,
+    pub message_type: u8,
+    #[wrap(WString)]
+    pub sender: String,
+    #[wrap(WString)]
+    pub message: String,
+    pub timestamp: u64,
 }
 
-proto_struct! {
-    MediaPushSpec {
-        raw_hash: String,
-        filename: String,
-        cached: bool,
-        token: u32
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct ActiveObjectRemoveAddSpec {
+    #[wrap(Array16<u16>)]
+    pub removed_object_ids: Vec<u16>,
+    #[wrap(Array16<AddedObject>)]
+    pub added_objects: Vec<AddedObject>,
 }
 
-proto_struct! {
-    TCChatMessageSpec {
-        version: u8,
-        message_type: u8,
-        sender: String [wrap(WString)],
-        message: String [wrap(WString)],
-        timestamp: u64
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct ActiveObjectMessagesSpec {
+    #[wrap(Array0<ActiveObjectMessage>)]
+    pub objects: Vec<ActiveObjectMessage>,
 }
 
-proto_struct! {
-    ActiveObjectRemoveAddSpec {
-        removed_object_ids: Vec<u16> [wrap(Array16<u16>)],
-        added_objects: Vec<AddedObject> [wrap(Array16<AddedObject>)]
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct HpSpec {
+    pub hp: u16,
+    pub damage_effect: Option<bool>,
 }
 
-proto_struct! {
-    ActiveObjectMessagesSpec {
-        objects: Vec<ActiveObjectMessage> [wrap(Array0<ActiveObjectMessage>)]
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct MovePlayerSpec {
+    pub pos: v3f,
+    pub pitch: f32,
+    pub yaw: f32,
 }
 
-proto_struct! {
-    HpSpec {
-        hp: u16,
-        damage_effect: Option<bool>
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct AccessDeniedLegacySpec {
+    #[wrap(WString)]
+    pub reason: String,
 }
 
-proto_struct! {
-    MovePlayerSpec {
-        pos: v3f,
-        pitch: f32,
-        yaw: f32
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct FovSpec {
+    pub fov: f32,
+    pub is_multiplier: bool,
+    pub transition_time: Option<f32>,
 }
 
-proto_struct! {
-    AccessDeniedLegacySpec {
-        reason: String [wrap(WString)]
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct DeathscreenSpec {
+    pub set_camera_point_target: bool,
+    pub camera_point_target: v3f,
 }
 
-proto_struct! {
-    FovSpec {
-        fov: f32,
-        is_multiplier: bool,
-        transition_time: Option<f32>
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct MediaSpec {
+    pub num_bunches: u16,
+    pub bunch_index: u16,
+    #[wrap(Array32<MediaFileData>)]
+    pub files: Vec<MediaFileData>,
 }
 
-proto_struct! {
-    DeathscreenSpec {
-        set_camera_point_target: bool,
-        camera_point_target: v3f
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct NodedefSpec {
+    #[wrap(ZLibCompressed<NodeDefManager>)]
+    pub node_def: NodeDefManager,
 }
 
-proto_struct! {
-    MediaSpec {
-        num_bunches: u16,
-        bunch_index: u16,
-        files: Vec<MediaFileData> [wrap(Array32<MediaFileData>)]
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct AnnounceMediaSpec {
+    #[wrap(Array16<MediaAnnouncement>)]
+    pub files: Vec<MediaAnnouncement>,
+    pub remote_servers: String,
 }
 
-proto_struct! {
-    NodedefSpec {
-        node_def: NodeDefManager [wrap(ZLibCompressed<NodeDefManager>)]
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct ItemdefSpec {
+    #[wrap(ZLibCompressed<ItemdefList>)]
+    pub item_def: ItemdefList,
 }
 
-proto_struct! {
-    AnnounceMediaSpec {
-        files: Vec<MediaAnnouncement> [wrap(Array16<MediaAnnouncement>)],
-        remote_servers: String
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct PlaySoundSpec {
+    pub server_id: s32,
+    pub spec_name: String,
+    pub spec_gain: f32,
+    pub typ: u8,
+    pub pos: v3f,
+    pub object_id: u16,
+    pub spec_loop: bool,
+    pub spec_fade: Option<f32>,
+    pub spec_pitch: Option<f32>,
+    pub ephemeral: Option<bool>,
 }
 
-proto_struct! {
-    ItemdefSpec {
-        item_def: ItemdefList [wrap(ZLibCompressed<ItemdefList>)]
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct StopSoundSpec {
+    pub server_id: s32,
 }
 
-proto_struct! {
-    PlaySoundSpec {
-        server_id: s32,
-        spec_name: String,
-        spec_gain: f32,
-        typ: u8, // 0=local, 1=positional, 2=object
-        pos: v3f,
-        object_id: u16,
-        spec_loop: bool,
-        spec_fade: Option<f32>,
-        spec_pitch: Option<f32>,
-        ephemeral: Option<bool>
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct PrivilegesSpec {
+    #[wrap(Array16<String>)]
+    pub privileges: Vec<String>,
 }
 
-proto_struct! {
-    StopSoundSpec {
-        server_id: s32
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct InventoryFormspecSpec {
+    #[wrap(LongString)]
+    pub formspec: String,
 }
 
-proto_struct! {
-    PrivilegesSpec {
-        privileges: Vec<String> [wrap(Array16<String>)]
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct DetachedInventorySpec {
+    pub name: String,
+    pub keep_inv: bool,
+    pub ignore: Option<u16>,
+    pub contents: Option<Inventory>,
 }
 
-proto_struct! {
-    InventoryFormspecSpec {
-        formspec: String [wrap(LongString)]
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct ShowFormspecSpec {
+    #[wrap(LongString)]
+    pub form_spec: String,
+    pub form_name: String,
 }
 
-proto_struct! {
-    DetachedInventorySpec {
-        name: String,
-        keep_inv: bool,
-        // These are present if keep_inv is true.
-        ignore: Option<u16>,
-        contents: Option<Inventory>
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct MovementSpec {
+    pub acceleration_default: f32,
+    pub acceleration_air: f32,
+    pub acceleration_fast: f32,
+    pub speed_walk: f32,
+    pub speed_crouch: f32,
+    pub speed_fast: f32,
+    pub speed_climb: f32,
+    pub speed_jump: f32,
+    pub liquid_fluidity: f32,
+    pub liquid_fluidity_smooth: f32,
+    pub liquid_sink: f32,
+    pub gravity: f32,
 }
 
-proto_struct! {
-    ShowFormspecSpec {
-        form_spec: String [wrap(LongString)],
-        form_name: String
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct SpawnParticleSpec {
+    pub data: ParticleParameters,
 }
 
-proto_struct! {
-    MovementSpec {
-        acceleration_default: f32,
-        acceleration_air: f32,
-        acceleration_fast: f32,
-        speed_walk: f32,
-        speed_crouch: f32,
-        speed_fast: f32,
-        speed_climb: f32,
-        speed_jump: f32,
-        liquid_fluidity: f32,
-        liquid_fluidity_smooth: f32,
-        liquid_sink: f32,
-        gravity: f32
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct AddParticlespawnerSpec {
+    pub legacy: AddParticleSpawnerLegacy,
 }
 
-proto_struct! {
-    SpawnParticleSpec {
-        data: ParticleParameters
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct HudaddSpec {
+    pub server_id: u32,
+    pub typ: u8,
+    pub pos: v2f,
+    pub name: String,
+    pub scale: v2f,
+    pub text: String,
+    pub number: u32,
+    pub item: u32,
+    pub dir: u32,
+    pub align: v2f,
+    pub offset: v2f,
+    pub world_pos: Option<v3f>,
+    pub size: Option<v2s32>,
+    pub z_index: Option<s16>,
+    pub text2: Option<String>,
+    pub style: Option<u32>,
 }
 
-proto_struct! {
-    AddParticlespawnerSpec {
-        legacy: AddParticleSpawnerLegacy
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct HudrmSpec {
+    pub server_id: u32,
 }
 
-proto_struct! {
-    HudaddSpec {
-        server_id: u32,
-        typ: u8,
-        pos: v2f,
-        name: String,
-        scale: v2f,
-        text: String,
-        number: u32,
-        item: u32,
-        dir: u32,
-        align: v2f,
-        offset: v2f,
-        world_pos: Option<v3f>,
-        size: Option<v2s32>,
-        z_index: Option<s16>,
-        text2: Option<String>,
-        style: Option<u32>
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct HudchangeSpec {
+    pub server_id: u32,
+    pub stat: HudStat,
 }
 
-proto_struct! {
-    HudrmSpec {
-        server_id: u32
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct HudSetFlagsSpec {
+    pub flags: HudFlags,
+    pub mask: HudFlags,
 }
 
-proto_struct! {
-    HudchangeSpec {
-        server_id: u32,
-        stat: HudStat
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct HudSetParamSpec {
+    pub value: HudSetParam,
 }
 
-proto_struct! {
-    HudSetFlagsSpec {
-        flags: HudFlags, // flags added
-        mask: HudFlags   // flags possibly removed
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct BreathSpec {
+    pub breath: u16,
 }
 
-proto_struct! {
-    HudSetParamSpec {
-        value: HudSetParam
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct SetSkySpec {
+    pub params: SkyboxParams,
 }
 
-proto_struct! {
-    BreathSpec {
-        breath: u16
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct OverrideDayNightRatioSpec {
+    pub do_override: bool,
+    pub day_night_ratio: u16,
 }
 
-proto_struct! {
-    SetSkySpec {
-        params: SkyboxParams
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct LocalPlayerAnimationsSpec {
+    pub idle: v2s32,
+    pub walk: v2s32,
+    pub dig: v2s32,
+    pub walk_dig: v2s32,
+    pub frame_speed: f32,
 }
 
-proto_struct! {
-    OverrideDayNightRatioSpec {
-        do_override: bool,
-        day_night_ratio: u16
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct EyeOffsetSpec {
+    pub eye_offset_first: v3f,
+    pub eye_offset_third: v3f,
 }
 
-proto_struct! {
-    LocalPlayerAnimationsSpec {
-        idle: v2s32,
-        walk: v2s32,
-        dig: v2s32,
-        walk_dig: v2s32,
-        frame_speed: f32
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct DeleteParticlespawnerSpec {
+    pub server_id: u32,
 }
 
-proto_struct! {
-    EyeOffsetSpec {
-        eye_offset_first: v3f,
-        eye_offset_third: v3f
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct CloudParamsSpec {
+    pub density: f32,
+    pub color_bright: SColor,
+    pub color_ambient: SColor,
+    pub height: f32,
+    pub thickness: f32,
+    pub speed: v2f,
 }
 
-proto_struct! {
-    DeleteParticlespawnerSpec {
-        server_id: u32
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct FadeSoundSpec {
+    pub sound_id: s32,
+    pub step: f32,
+    pub gain: f32,
 }
 
-proto_struct! {
-    CloudParamsSpec {
-        density: f32,
-        color_bright: SColor,
-        color_ambient: SColor,
-        height: f32,
-        thickness: f32,
-        speed: v2f
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct UpdatePlayerListSpec {
+    pub typ: u8,
+    #[wrap(Array16<String>)]
+    pub players: Vec<String>,
 }
 
-proto_struct! {
-    FadeSoundSpec {
-        sound_id: s32,
-        step: f32,
-        gain: f32
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct TCModchannelMsgSpec {
+    pub channel_name: String,
+    pub sender: String,
+    pub channel_msg: String,
 }
 
-proto_struct! {
-    UpdatePlayerListSpec {
-        typ: u8,
-        players: Vec<String> [wrap(Array16<String>)]
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct ModchannelSignalSpec {
+    pub signal_tmp: u8,
+    pub channel: String,
+    pub state: Option<u8>,
 }
 
-proto_struct! {
-    TCModchannelMsgSpec {
-        channel_name: String,
-        sender: String,
-        channel_msg: String
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct NodemetaChangedSpec {
+    #[wrap(ZLibCompressed<AbsNodeMetadataList>)]
+    pub list: AbsNodeMetadataList,
 }
 
-proto_struct! {
-    ModchannelSignalSpec {
-        signal_tmp: u8,
-        channel: String,
-        // signal == MODCHANNEL_SIGNAL_SET_STATE
-        state: Option<u8>
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct SetSunSpec {
+    pub sun: SunParams,
 }
 
-proto_struct! {
-    NodemetaChangedSpec {
-        list: AbsNodeMetadataList [wrap(ZLibCompressed<AbsNodeMetadataList>)]
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct SetMoonSpec {
+    pub moon: MoonParams,
 }
 
-proto_struct! {
-    SetSunSpec {
-        sun: SunParams
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct SetStarsSpec {
+    pub stars: StarParams,
 }
 
-proto_struct! {
-    SetMoonSpec {
-        moon: MoonParams
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct SrpBytesSBSpec {
+    #[wrap(BinaryData16)]
+    pub s: Vec<u8>,
+    #[wrap(BinaryData16)]
+    pub b: Vec<u8>,
 }
 
-proto_struct! {
-    SetStarsSpec {
-        stars: StarParams
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct FormspecPrependSpec {
+    pub formspec_prepend: String,
 }
 
-proto_struct! {
-    SrpBytesSBSpec {
-         s: Vec<u8> [wrap(BinaryData16)],
-         b: Vec<u8> [wrap(BinaryData16)]
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct MinimapModesSpec {
+    pub modes: MinimapModeList,
 }
 
-proto_struct! {
-    FormspecPrependSpec {
-        formspec_prepend: String
-    }
-}
-
-proto_struct! {
-    MinimapModesSpec {
-        modes: MinimapModeList
-    }
-}
-
-proto_struct! {
-    SetLightingSpec {
-        lighting: Lighting
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct SetLightingSpec {
+    pub lighting: Lighting,
 }

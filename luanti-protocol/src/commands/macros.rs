@@ -65,24 +65,6 @@ macro_rules! implicit_from {
     };
 }
 
-#[macro_export]
-macro_rules! proto_struct {
-    ($spec_ty: ident { }) => {
-        #[derive(Debug, Clone, PartialEq, Default, LuantiSerialize, LuantiDeserialize)]
-        pub struct $spec_ty;
-    };
-    ($spec_ty: ident {
-        $($fname: ident: $ftype: ty $([$attr:meta])? ),+
-    }) => {
-        $crate::as_item! {
-            #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-            pub struct $spec_ty {
-               $( $(#[$attr])? pub $fname: $ftype),+
-            }
-        }
-    };
-}
-
 macro_rules! define_protocol {
     ($version: literal,
      $protocol_id: literal,
@@ -159,8 +141,6 @@ macro_rules! define_protocol {
             }
         }
 
-        // $($crate::proto_struct!($spec_ty { $($fname: $ftype $([$attr])?),* });)*
         $($crate::implicit_from!($command_ty, $name, $spec_ty);)*
-
     };
 }

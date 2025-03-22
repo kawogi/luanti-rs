@@ -45,171 +45,155 @@ define_protocol!(41, 0x4f457403, ToServer, ToServerCommand => {
     UpdateClientInfo, 0x53, Init, true => UpdateClientInfoSpec
 });
 
-// $($crate::proto_struct!($spec_ty { $($fname: $ftype $([$attr])?),* });)*
-
-proto_struct! {
-    UpdateClientInfoSpec {
-        render_target_size: v2u32,
-        real_gui_scaling: f32,
-        real_hud_scaling: f32,
-        max_fs_size: v2f
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct UpdateClientInfoSpec {
+    pub render_target_size: v2u32,
+    pub real_gui_scaling: f32,
+    pub real_hud_scaling: f32,
+    pub max_fs_size: v2f,
 }
 
-proto_struct! {
-    InitSpec {
-        serialization_ver_max: u8,
-        supp_compr_modes: u16,
-        min_net_proto_version: u16,
-        max_net_proto_version: u16,
-        player_name: String
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct InitSpec {
+    pub serialization_ver_max: u8,
+    pub supp_compr_modes: u16,
+    pub min_net_proto_version: u16,
+    pub max_net_proto_version: u16,
+    pub player_name: String,
 }
 
-proto_struct! {
-    Init2Spec {
-        lang: Option<String>
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct Init2Spec {
+    pub lang: Option<String>,
 }
 
-proto_struct! {
-    ModchannelJoinSpec {
-        channel_name: String
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct ModchannelJoinSpec {
+    pub channel_name: String,
 }
 
-proto_struct! {
-    ModchannelLeaveSpec {
-        channel_name: String
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct ModchannelLeaveSpec {
+    pub channel_name: String,
 }
 
-proto_struct! {
-    TSModchannelMsgSpec {
-        channel_name: String,
-        channel_msg: String
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct TSModchannelMsgSpec {
+    pub channel_name: String,
+    pub channel_msg: String,
 }
 
-proto_struct! {
-    PlayerposSpec {
-        player_pos: PlayerPos
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct PlayerposSpec {
+    pub player_pos: PlayerPos,
 }
 
-proto_struct! {
-    GotblocksSpec {
-        blocks: Vec<v3s16> [wrap(Array8<v3s16>)]
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct GotblocksSpec {
+    #[wrap(Array8<v3s16>)]
+    pub blocks: Vec<v3s16>,
 }
 
-proto_struct! {
-    DeletedblocksSpec {
-        blocks: Vec<v3s16> [wrap(Array8<v3s16>)]
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct DeletedblocksSpec {
+    #[wrap(Array8<v3s16>)]
+    pub blocks: Vec<v3s16>,
 }
 
-proto_struct! {
-    InventoryActionSpec {
-        action: InventoryAction
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct InventoryActionSpec {
+    pub action: InventoryAction,
 }
 
-proto_struct! {
-    TSChatMessageSpec {
-        message: String [wrap(WString)]
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct TSChatMessageSpec {
+    #[wrap(WString)]
+    pub message: String,
 }
 
-proto_struct! {
-    DamageSpec {
-        damage: u16
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct DamageSpec {
+    pub damage: u16,
 }
 
-proto_struct! {
-    PlayeritemSpec {
-        item: u16
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct PlayeritemSpec {
+    pub item: u16,
 }
 
-proto_struct! {
-    RespawnSpec {
-        // empty
-    }
+#[derive(Debug, Clone, PartialEq, Default, LuantiSerialize, LuantiDeserialize)]
+pub struct RespawnSpec;
+
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct InteractSpec {
+    pub action: InteractAction,
+    pub item_index: u16,
+    #[wrap(Wrapped32<PointedThing>)]
+    pub pointed_thing: PointedThing,
+    pub player_pos: PlayerPos,
 }
 
-proto_struct! {
-    InteractSpec {
-        action: InteractAction,
-        item_index: u16,
-        pointed_thing: PointedThing [wrap(Wrapped32<PointedThing>)],
-        player_pos: PlayerPos
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct RemovedSoundsSpec {
+    #[wrap(Array16<s32>)]
+    pub ids: Vec<s32>,
 }
 
-proto_struct! {
-    RemovedSoundsSpec {
-        ids: Vec<s32> [wrap(Array16<s32>)]
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct NodemetaFieldsSpec {
+    pub p: v3s16,
+    pub form_name: String,
+    #[wrap(Array16<Pair<String,LongString>>)]
+    pub fields: Vec<(String, String)>,
 }
 
-proto_struct! {
-    NodemetaFieldsSpec {
-        p: v3s16,
-        form_name: String,
-        // (name, value)
-        fields: Vec<(String, String)> [wrap(Array16<Pair<String, LongString>>)]
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct InventoryFieldsSpec {
+    pub client_formspec_name: String,
+    #[wrap(Array16<Pair<String,LongString>>)]
+    pub fields: Vec<(String, String)>,
 }
 
-proto_struct! {
-    InventoryFieldsSpec {
-        client_formspec_name: String,
-        fields: Vec<(String, String)> [wrap(Array16<Pair<String, LongString>>)]
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct RequestMediaSpec {
+    #[wrap(Array16<String>)]
+    pub files: Vec<String>,
 }
 
-proto_struct! {
-    RequestMediaSpec {
-        files: Vec<String> [wrap(Array16<String>)]
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct HaveMediaSpec {
+    #[wrap(Array8<u32>)]
+    pub tokens: Vec<u32>,
 }
 
-proto_struct! {
-    HaveMediaSpec {
-        tokens: Vec<u32> [wrap(Array8<u32>)]
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct ClientReadySpec {
+    pub major_ver: u8,
+    pub minor_ver: u8,
+    pub patch_ver: u8,
+    pub reserved: u8,
+    pub full_ver: String,
+    pub formspec_ver: Option<u16>,
 }
 
-proto_struct! {
-    ClientReadySpec {
-        major_ver: u8,
-        minor_ver: u8,
-        patch_ver: u8,
-        reserved: u8,
-        full_ver: String,
-        formspec_ver: Option<u16>
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct FirstSrpSpec {
+    #[wrap(BinaryData16)]
+    pub salt: Vec<u8>,
+    #[wrap(BinaryData16)]
+    pub verification_key: Vec<u8>,
+    pub is_empty: bool,
 }
 
-proto_struct! {
-    FirstSrpSpec {
-        salt: Vec<u8> [wrap(BinaryData16)],
-        verification_key: Vec<u8> [wrap(BinaryData16)],
-        is_empty: bool
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct SrpBytesASpec {
+    #[wrap(BinaryData16)]
+    pub bytes_a: Vec<u8>,
+    pub based_on: u8,
 }
 
-proto_struct! {
-    SrpBytesASpec {
-        bytes_a: Vec<u8> [wrap(BinaryData16)],
-        based_on: u8
-    }
-}
-
-proto_struct! {
-    SrpBytesMSpec {
-        bytes_m: Vec<u8> [wrap(BinaryData16)]
-    }
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct SrpBytesMSpec {
+    #[wrap(BinaryData16)]
+    pub bytes_m: Vec<u8>,
 }
