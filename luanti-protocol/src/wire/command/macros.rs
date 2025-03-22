@@ -88,8 +88,7 @@ macro_rules! define_protocol {
      $protocol_id: literal,
      $dir: ident,
      $command_ty: ident => {
-         $($name: ident, $id: literal, $channel: ident, $reliable: literal => $spec_ty: ident
-             { $($fname: ident : $ftype: ty $([$attr:meta])? ),* } ),*
+         $($name: ident, $id: literal, $channel: ident, $reliable: literal => $spec_ty: ident),*
     }) => {
         $crate::as_item! {
             #[derive(Debug, PartialEq, Clone)]
@@ -160,7 +159,7 @@ macro_rules! define_protocol {
             }
         }
 
-        $($crate::proto_struct!($spec_ty { $($fname: $ftype $([$attr])?),* });)*
+        // $($crate::proto_struct!($spec_ty { $($fname: $ftype $([$attr])?),* });)*
         $($crate::implicit_from!($command_ty, $name, $spec_ty);)*
 
     };

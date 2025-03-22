@@ -17,138 +17,250 @@ use std::ops::Deref;
 
 define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
     // CommandName, CommandType, Direction, Channel, Reliable
-    Hello, 0x02, Default, true => HelloSpec {
+    Hello, 0x02, Default, true => HelloSpec,
+    AuthAccept, 0x03, Default, true => AuthAcceptSpec,
+    AcceptSudoMode, 0x04, Default, true => AcceptSudoModeSpec,
+    DenySudoMode, 0x05, Default, true => DenySudoModeSpec,
+    AccessDenied, 0x0A, Default, true => AccessDeniedSpec,
+    Blockdata, 0x20, Response, true => BlockdataSpec,
+    Addnode, 0x21, Default, true => AddnodeSpec,
+    Removenode, 0x22, Default, true => RemovenodeSpec,
+    Inventory, 0x27, Default, true => InventorySpec,
+    TimeOfDay, 0x29, Default, true => TimeOfDaySpec,
+    CsmRestrictionFlags, 0x2A, Default, true => CsmRestrictionFlagsSpec,
+    PlayerSpeed, 0x2B, Default, true => PlayerSpeedSpec,
+    MediaPush, 0x2C, Default, true => MediaPushSpec,
+    TCChatMessage, 0x2F, Default, true => TCChatMessageSpec,
+    ActiveObjectRemoveAdd, 0x31, Default, true => ActiveObjectRemoveAddSpec,
+    ActiveObjectMessages, 0x32, Default, true => ActiveObjectMessagesSpec,
+    Hp, 0x33, Default, true => HpSpec,
+    MovePlayer, 0x34, Default, true => MovePlayerSpec,
+    AccessDeniedLegacy, 0x35, Default, true => AccessDeniedLegacySpec,
+    Fov, 0x36, Default, true => FovSpec,
+    Deathscreen, 0x37, Default, true => DeathscreenSpec,
+    Media, 0x38, Response, true => MediaSpec,
+    Nodedef, 0x3a, Default, true => NodedefSpec,
+    AnnounceMedia, 0x3c, Default, true => AnnounceMediaSpec,
+    Itemdef, 0x3d, Default, true => ItemdefSpec,
+    PlaySound, 0x3f, Default, true => PlaySoundSpec,
+    StopSound, 0x40, Default, true => StopSoundSpec,
+    Privileges, 0x41, Default, true => PrivilegesSpec,
+    InventoryFormspec, 0x42, Default, true => InventoryFormspecSpec,
+    DetachedInventory, 0x43, Default, true => DetachedInventorySpec,
+    ShowFormspec, 0x44, Default, true => ShowFormspecSpec,
+    Movement, 0x45, Default, true => MovementSpec,
+    SpawnParticle, 0x46, Default, true => SpawnParticleSpec,
+    AddParticlespawner, 0x47, Default, true => AddParticlespawnerSpec,
+    Hudadd, 0x49, Init, true => HudaddSpec,
+    Hudrm, 0x4a, Init, true => HudrmSpec,
+    Hudchange, 0x4b, Init, true => HudchangeSpec,
+    HudSetFlags, 0x4c, Init, true => HudSetFlagsSpec,
+    HudSetParam, 0x4d, Init, true => HudSetParamSpec,
+    Breath, 0x4e, Default, true => BreathSpec,
+    SetSky, 0x4f, Default, true => SetSkySpec,
+    OverrideDayNightRatio, 0x50, Default, true => OverrideDayNightRatioSpec,
+    LocalPlayerAnimations, 0x51, Default, true => LocalPlayerAnimationsSpec,
+    EyeOffset, 0x52, Default, true => EyeOffsetSpec,
+    DeleteParticlespawner, 0x53, Default, true => DeleteParticlespawnerSpec,
+    CloudParams, 0x54, Default, true => CloudParamsSpec,
+    FadeSound, 0x55, Default, true => FadeSoundSpec,
+    UpdatePlayerList, 0x56, Default, true => UpdatePlayerListSpec,
+    TCModchannelMsg, 0x57, Default, true => TCModchannelMsgSpec,
+    ModchannelSignal, 0x58, Default, true => ModchannelSignalSpec,
+    NodemetaChanged, 0x59, Default, true => NodemetaChangedSpec,
+    SetSun, 0x5a, Default, true => SetSunSpec,
+    SetMoon, 0x5b, Default, true => SetMoonSpec,
+    SetStars, 0x5c, Default, true => SetStarsSpec,
+    SrpBytesSB, 0x60, Default, true => SrpBytesSBSpec,
+    FormspecPrepend, 0x61, Default, true => FormspecPrependSpec,
+    MinimapModes, 0x62, Default, true => MinimapModesSpec,
+    SetLighting, 0x63, Default, true => SetLightingSpec
+});
+
+proto_struct! {
+    HelloSpec {
         serialization_ver: u8,
         compression_mode: u16,
         proto_ver: u16,
         auth_mechs: AuthMechsBitset,
         username_legacy: String
-    },
+    }
+}
 
-    AuthAccept, 0x03, Default, true => AuthAcceptSpec {
+proto_struct! {
+    AuthAcceptSpec {
         player_pos: v3f,
         map_seed: u64,
         recommended_send_interval: f32,
         sudo_auth_methods: u32
-    },
+    }
+}
 
-    AcceptSudoMode, 0x04, Default, true => AcceptSudoModeSpec {
+proto_struct! {
+    AcceptSudoModeSpec {
         // No fields
-    },
+    }
+}
 
-    DenySudoMode, 0x05, Default, true => DenySudoModeSpec {
+proto_struct! {
+    DenySudoModeSpec {
         // No fields
-    },
+    }
+}
 
-    AccessDenied, 0x0A, Default, true => AccessDeniedSpec {
+proto_struct! {
+    AccessDeniedSpec {
         code: AccessDeniedCode,
         reason: String,
         reconnect: bool
-    },
+    }
+}
 
-    Blockdata, 0x20, Response, true => BlockdataSpec {
+proto_struct! {
+    BlockdataSpec {
         pos: v3s16,
         block: MapBlock,
         network_specific_version: u8
-    },
-    Addnode, 0x21, Default, true => AddnodeSpec {
+    }
+}
+
+proto_struct! {
+    AddnodeSpec {
         pos: v3s16,
         node: MapNode,
         keep_metadata: bool
-    },
+    }
+}
 
-    Removenode, 0x22, Default, true => RemovenodeSpec {
+proto_struct! {
+    RemovenodeSpec {
         pos: v3s16
-    },
+    }
+}
 
-    Inventory, 0x27, Default, true => InventorySpec {
+proto_struct! {
+    InventorySpec {
         inventory: Inventory
-    },
+    }
+}
 
-    TimeOfDay, 0x29, Default, true => TimeOfDaySpec {
+proto_struct! {
+    TimeOfDaySpec {
         time_of_day: u16,
         time_speed: Option<f32>
-    },
+    }
+}
 
-    CsmRestrictionFlags, 0x2A, Default, true => CsmRestrictionFlagsSpec {
+proto_struct! {
+    CsmRestrictionFlagsSpec {
         csm_restriction_flags: u64,
         csm_restriction_noderange: u32
-    },
+    }
+}
 
-    PlayerSpeed, 0x2B, Default, true => PlayerSpeedSpec {
+proto_struct! {
+    PlayerSpeedSpec {
         added_vel: v3f
-    },
+    }
+}
 
-    MediaPush, 0x2C, Default, true => MediaPushSpec {
+proto_struct! {
+    MediaPushSpec {
         raw_hash: String,
         filename: String,
         cached: bool,
         token: u32
-    },
+    }
+}
 
-    TCChatMessage, 0x2F, Default, true => TCChatMessageSpec {
+proto_struct! {
+    TCChatMessageSpec {
         version: u8,
         message_type: u8,
         sender: String [wrap(WString)],
         message: String [wrap(WString)],
         timestamp: u64
-    },
+    }
+}
 
-    ActiveObjectRemoveAdd, 0x31, Default, true => ActiveObjectRemoveAddSpec {
+proto_struct! {
+    ActiveObjectRemoveAddSpec {
         removed_object_ids: Vec<u16> [wrap(Array16<u16>)],
         added_objects: Vec<AddedObject> [wrap(Array16<AddedObject>)]
-    },
+    }
+}
 
-    ActiveObjectMessages, 0x32, Default, true => ActiveObjectMessagesSpec {
+proto_struct! {
+    ActiveObjectMessagesSpec {
         objects: Vec<ActiveObjectMessage> [wrap(Array0<ActiveObjectMessage>)]
-    },
+    }
+}
 
-    Hp, 0x33, Default, true => HpSpec {
+proto_struct! {
+    HpSpec {
         hp: u16,
         damage_effect: Option<bool>
-    },
+    }
+}
 
-    MovePlayer, 0x34, Default, true => MovePlayerSpec {
+proto_struct! {
+    MovePlayerSpec {
         pos: v3f,
         pitch: f32,
         yaw: f32
-    },
+    }
+}
 
-    AccessDeniedLegacy, 0x35, Default, true => AccessDeniedLegacySpec {
+proto_struct! {
+    AccessDeniedLegacySpec {
         reason: String [wrap(WString)]
-    },
+    }
+}
 
-    Fov, 0x36, Default, true => FovSpec {
+proto_struct! {
+    FovSpec {
         fov: f32,
         is_multiplier: bool,
         transition_time: Option<f32>
-    },
+    }
+}
 
-    Deathscreen, 0x37, Default, true => DeathscreenSpec {
+proto_struct! {
+    DeathscreenSpec {
         set_camera_point_target: bool,
         camera_point_target: v3f
-    },
+    }
+}
 
-    Media, 0x38, Response, true => MediaSpec {
+proto_struct! {
+    MediaSpec {
         num_bunches: u16,
         bunch_index: u16,
         files: Vec<MediaFileData> [wrap(Array32<MediaFileData>)]
-    },
+    }
+}
 
-    Nodedef, 0x3a, Default, true => NodedefSpec {
+proto_struct! {
+    NodedefSpec {
         node_def: NodeDefManager [wrap(ZLibCompressed<NodeDefManager>)]
-    },
+    }
+}
 
-    AnnounceMedia, 0x3c, Default, true => AnnounceMediaSpec {
+proto_struct! {
+    AnnounceMediaSpec {
         files: Vec<MediaAnnouncement> [wrap(Array16<MediaAnnouncement>)],
         remote_servers: String
-    },
+    }
+}
 
-    Itemdef, 0x3d, Default, true => ItemdefSpec {
+proto_struct! {
+    ItemdefSpec {
         item_def: ItemdefList [wrap(ZLibCompressed<ItemdefList>)]
-    },
+    }
+}
 
-    PlaySound, 0x3f, Default, true => PlaySoundSpec {
+proto_struct! {
+    PlaySoundSpec {
         server_id: s32,
         spec_name: String,
         spec_gain: f32,
@@ -159,34 +271,46 @@ define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
         spec_fade: Option<f32>,
         spec_pitch: Option<f32>,
         ephemeral: Option<bool>
-    },
+    }
+}
 
-    StopSound, 0x40, Default, true => StopSoundSpec {
+proto_struct! {
+    StopSoundSpec {
         server_id: s32
-    },
+    }
+}
 
-    Privileges, 0x41, Default, true => PrivilegesSpec {
+proto_struct! {
+    PrivilegesSpec {
         privileges: Vec<String> [wrap(Array16<String>)]
-    },
+    }
+}
 
-    InventoryFormspec, 0x42, Default, true => InventoryFormspecSpec {
+proto_struct! {
+    InventoryFormspecSpec {
         formspec: String [wrap(LongString)]
-    },
+    }
+}
 
-    DetachedInventory, 0x43, Default, true => DetachedInventorySpec {
+proto_struct! {
+    DetachedInventorySpec {
         name: String,
         keep_inv: bool,
         // These are present if keep_inv is true.
         ignore: Option<u16>,
         contents: Option<Inventory>
-    },
+    }
+}
 
-    ShowFormspec, 0x44, Default, true => ShowFormspecSpec {
+proto_struct! {
+    ShowFormspecSpec {
         form_spec: String [wrap(LongString)],
         form_name: String
-    },
+    }
+}
 
-    Movement, 0x45, Default, true => MovementSpec {
+proto_struct! {
+    MovementSpec {
         acceleration_default: f32,
         acceleration_air: f32,
         acceleration_fast: f32,
@@ -199,17 +323,23 @@ define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
         liquid_fluidity_smooth: f32,
         liquid_sink: f32,
         gravity: f32
-    },
+    }
+}
 
-    SpawnParticle, 0x46, Default, true => SpawnParticleSpec {
+proto_struct! {
+    SpawnParticleSpec {
         data: ParticleParameters
-    },
+    }
+}
 
-    AddParticlespawner, 0x47, Default, true => AddParticlespawnerSpec {
+proto_struct! {
+    AddParticlespawnerSpec {
         legacy: AddParticleSpawnerLegacy
-    },
+    }
+}
 
-    Hudadd, 0x49, Init, true => HudaddSpec {
+proto_struct! {
+    HudaddSpec {
         server_id: u32,
         typ: u8,
         pos: v2f,
@@ -226,119 +356,165 @@ define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
         z_index: Option<s16>,
         text2: Option<String>,
         style: Option<u32>
-    },
+    }
+}
 
-    Hudrm, 0x4a, Init, true => HudrmSpec {
+proto_struct! {
+    HudrmSpec {
         server_id: u32
-    },
+    }
+}
 
-    Hudchange, 0x4b, Init, true => HudchangeSpec {
+proto_struct! {
+    HudchangeSpec {
         server_id: u32,
         stat: HudStat
-    },
+    }
+}
 
-    HudSetFlags, 0x4c, Init, true => HudSetFlagsSpec {
+proto_struct! {
+    HudSetFlagsSpec {
         flags: HudFlags, // flags added
         mask: HudFlags   // flags possibly removed
-    },
+    }
+}
 
-    HudSetParam, 0x4d, Init, true => HudSetParamSpec {
+proto_struct! {
+    HudSetParamSpec {
         value: HudSetParam
-    },
+    }
+}
 
-    Breath, 0x4e, Default, true => BreathSpec {
+proto_struct! {
+    BreathSpec {
         breath: u16
-    },
+    }
+}
 
-    SetSky, 0x4f, Default, true => SetSkySpec {
+proto_struct! {
+    SetSkySpec {
         params: SkyboxParams
-    },
+    }
+}
 
-    OverrideDayNightRatio, 0x50, Default, true => OverrideDayNightRatioSpec {
+proto_struct! {
+    OverrideDayNightRatioSpec {
         do_override: bool,
         day_night_ratio: u16
-    },
+    }
+}
 
-    LocalPlayerAnimations, 0x51, Default, true => LocalPlayerAnimationsSpec {
+proto_struct! {
+    LocalPlayerAnimationsSpec {
         idle: v2s32,
         walk: v2s32,
         dig: v2s32,
         walk_dig: v2s32,
         frame_speed: f32
-    },
+    }
+}
 
-    EyeOffset, 0x52, Default, true => EyeOffsetSpec {
+proto_struct! {
+    EyeOffsetSpec {
         eye_offset_first: v3f,
         eye_offset_third: v3f
-    },
+    }
+}
 
-    DeleteParticlespawner, 0x53, Default, true => DeleteParticlespawnerSpec {
+proto_struct! {
+    DeleteParticlespawnerSpec {
         server_id: u32
-    },
+    }
+}
 
-    CloudParams, 0x54, Default, true => CloudParamsSpec {
+proto_struct! {
+    CloudParamsSpec {
         density: f32,
         color_bright: SColor,
         color_ambient: SColor,
         height: f32,
         thickness: f32,
         speed: v2f
-    },
+    }
+}
 
-    FadeSound, 0x55, Default, true => FadeSoundSpec {
+proto_struct! {
+    FadeSoundSpec {
         sound_id: s32,
         step: f32,
         gain: f32
-    },
+    }
+}
 
-    UpdatePlayerList, 0x56, Default, true => UpdatePlayerListSpec {
+proto_struct! {
+    UpdatePlayerListSpec {
         typ: u8,
         players: Vec<String> [wrap(Array16<String>)]
-    },
+    }
+}
 
-    TCModchannelMsg, 0x57, Default, true => TCModchannelMsgSpec {
+proto_struct! {
+    TCModchannelMsgSpec {
         channel_name: String,
         sender: String,
         channel_msg: String
-    },
+    }
+}
 
-    ModchannelSignal, 0x58, Default, true => ModchannelSignalSpec {
+proto_struct! {
+    ModchannelSignalSpec {
         signal_tmp: u8,
         channel: String,
         // signal == MODCHANNEL_SIGNAL_SET_STATE
         state: Option<u8>
-    },
+    }
+}
 
-    NodemetaChanged, 0x59, Default, true => NodemetaChangedSpec {
+proto_struct! {
+    NodemetaChangedSpec {
         list: AbsNodeMetadataList [wrap(ZLibCompressed<AbsNodeMetadataList>)]
-    },
+    }
+}
 
-    SetSun, 0x5a, Default, true => SetSunSpec {
+proto_struct! {
+    SetSunSpec {
         sun: SunParams
-    },
+    }
+}
 
-    SetMoon, 0x5b, Default, true => SetMoonSpec {
+proto_struct! {
+    SetMoonSpec {
         moon: MoonParams
-    },
+    }
+}
 
-    SetStars, 0x5c, Default, true => SetStarsSpec {
+proto_struct! {
+    SetStarsSpec {
         stars: StarParams
-    },
+    }
+}
 
-    SrpBytesSB, 0x60, Default, true => SrpBytesSBSpec {
+proto_struct! {
+    SrpBytesSBSpec {
          s: Vec<u8> [wrap(BinaryData16)],
          b: Vec<u8> [wrap(BinaryData16)]
-    },
+    }
+}
 
-    FormspecPrepend, 0x61, Default, true => FormspecPrependSpec {
+proto_struct! {
+    FormspecPrependSpec {
         formspec_prepend: String
-    },
+    }
+}
 
-    MinimapModes, 0x62, Default, true => MinimapModesSpec {
+proto_struct! {
+    MinimapModesSpec {
         modes: MinimapModeList
-    },
+    }
+}
 
-    SetLighting, 0x63, Default, true => SetLightingSpec {
+proto_struct! {
+    SetLightingSpec {
         lighting: Lighting
     }
-});
+}
