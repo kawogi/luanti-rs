@@ -9,7 +9,7 @@ use crate::commands::client_to_server::ToServerCommand;
 use crate::commands::server_to_client::AccessDeniedSpec;
 use crate::commands::server_to_client::ToClientCommand;
 use crate::peer::Peer;
-use crate::wire::types::AccessDeniedCode;
+use crate::types::AccessDeniedCode;
 use anyhow::Result;
 use anyhow::bail;
 

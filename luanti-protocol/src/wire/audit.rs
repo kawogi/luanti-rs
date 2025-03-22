@@ -14,12 +14,12 @@ use anyhow::bail;
 use log::error;
 
 use super::ser::VecSerializer;
-use super::types::ProtocolContext;
 use super::util::decompress_zlib;
 use super::util::zstd_decompress;
 use crate::commands::CommandRef;
 use crate::commands::serialize_commandref;
 use crate::commands::server_to_client::ToClientCommand;
+use crate::types::ProtocolContext;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 

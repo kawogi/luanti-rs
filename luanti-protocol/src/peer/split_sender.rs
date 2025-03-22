@@ -1,4 +1,5 @@
 use crate::commands::Command;
+use crate::types::ProtocolContext;
 use crate::wire::packet::InnerBody;
 use crate::wire::packet::MAX_ORIGINAL_BODY_SIZE;
 use crate::wire::packet::MAX_SPLIT_BODY_SIZE;
@@ -7,7 +8,6 @@ use crate::wire::packet::SplitBody;
 use crate::wire::ser::MockSerializer;
 use crate::wire::ser::Serialize;
 use crate::wire::ser::VecSerializer;
-use crate::wire::types::ProtocolContext;
 
 use super::sequence_number::SequenceNumber;
 

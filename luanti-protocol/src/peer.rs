@@ -32,6 +32,7 @@ use tokio::sync::mpsc::unbounded_channel;
 use crate::commands::Command;
 use crate::commands::CommandProperties;
 use crate::commands::server_to_client::ToClientCommand;
+use crate::types::ProtocolContext;
 use crate::wire::channel_id::ChannelId;
 use crate::wire::deser::Deserialize;
 use crate::wire::deser::Deserializer;
@@ -44,7 +45,6 @@ use crate::wire::packet::SetPeerIdBody;
 use crate::wire::peer_id::PeerId;
 use crate::wire::ser::Serialize;
 use crate::wire::ser::VecSerializer;
-use crate::wire::types::ProtocolContext;
 
 use reliable_receiver::ReliableReceiver;
 use reliable_sender::ReliableSender;

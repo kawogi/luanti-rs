@@ -2,8 +2,8 @@ use anyhow::Result;
 use anyhow::bail;
 use std::num::TryFromIntError;
 
-use super::types::CommandDirection;
-use super::types::ProtocolContext;
+use crate::types::CommandDirection;
+use crate::types::ProtocolContext;
 
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum SerializeError {

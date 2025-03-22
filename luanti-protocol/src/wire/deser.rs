@@ -1,5 +1,5 @@
-use super::types::CommandDirection;
-use super::types::ProtocolContext;
+use crate::types::CommandDirection;
+use crate::types::ProtocolContext;
 use anyhow::bail;
 use std::fmt::Debug;
 use std::num::ParseIntError;

@@ -5,10 +5,10 @@ use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{
     commands::Command,
+    types::ProtocolContext,
     wire::{
         deser::{Deserialize, Deserializer},
         packet::{ControlBody, InnerBody, PacketBody, ReliableBody},
-        types::ProtocolContext,
     },
 };
 
