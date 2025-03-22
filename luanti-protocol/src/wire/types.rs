@@ -10,6 +10,17 @@
 //!
 //! TODO(paradust): Having an assert!-like macro that generates Serialize/Deserialize
 //! errors instead of aborts may be helpful for cleaning this up.
+
+#![expect(
+    clippy::pub_underscore_fields,
+    clippy::used_underscore_binding,
+    reason = "required for de-/serialization macros"
+)]
+#![expect(
+    clippy::min_ident_chars,
+    reason = "those identifiers are well-known and clear from the context"
+)]
+
 use anyhow::anyhow;
 use anyhow::bail;
 use log::trace;
@@ -540,10 +551,6 @@ impl v3s32 {
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-#[expect(
-    clippy::min_ident_chars,
-    reason = "those identifiers are well-known and clear from the context"
-)]
 pub struct SColor {
     pub r: u8,
     pub g: u8,
@@ -927,11 +934,6 @@ pub struct ObjectProperties {
     pub version: u8, // must be 4
     pub hp_max: u16,
     pub physical: bool,
-    #[expect(
-        clippy::pub_underscore_fields,
-        clippy::used_underscore_binding,
-        reason = "required for de-/serialization macros"
-    )]
     pub _unused: u32,
     pub collision_box: aabb3f,
     pub selection_box: aabb3f,
