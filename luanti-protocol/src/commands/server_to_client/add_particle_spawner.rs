@@ -1,6 +1,4 @@
-use crate::types::{
-    Array16, LongString, MapNode, RangedParameter, RangedParameterLegacy, TileAnimationParams, v2f,
-};
+use crate::types::{Array16, LongString, MapNode, RangedParameter, TileAnimationParams, v2f};
 use crate::{
     types::v3f,
     wire::{
@@ -36,32 +34,9 @@ pub struct AddParticlespawnerCommand {
     pub bounce: TweenedParameter<RangedParameter<f32>>,
 }
 
-#[derive(Debug, Clone, PartialEq, LuantiSerialize)]
-#[expect(clippy::struct_excessive_bools, reason = "this is mandated by the API")]
-pub struct CommonParticleParams {
-    collision_detection: bool,
-    collision_removal: bool,
-    object_collision: bool,
-    vertical: bool,
-    texture: ServerParticleTexture,
-    animation: TileAnimationParams,
-    glow: u8,
-    node: MapNode,
-    node_tile: u8,
-
-    /// this was originally not stored but sent as part of an event (sometimes just called `id`)
-    pub server_id: u32,
-    /// this was originally not stored but sent as part of an event
-    pub attached_id: u16,
-}
-
 impl Deserialize for AddParticlespawnerCommand {
     type Output = Self;
 
-    #[expect(
-        clippy::too_many_lines,
-        reason = "this structure has too many fields and special rules"
-    )]
     fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self::Output> {
         let amount = u16::deserialize(deserializer).context("amount")?;
         let time = f32::deserialize(deserializer).context("time")?;
@@ -69,100 +44,21 @@ impl Deserialize for AddParticlespawnerCommand {
             bail!("particle spawner time may not be negative");
         }
 
-        let mut pos: TweenedParameter<RangedParameter<_>>;
-        let mut vel: TweenedParameter<RangedParameter<_>>;
-        let mut acc: TweenedParameter<RangedParameter<_>>;
-        let mut exptime: TweenedParameter<RangedParameter<_>>;
-        let mut size: TweenedParameter<RangedParameter<_>>;
-        if deserializer.context.protocol_version >= 42 {
-            // All tweenable parameters
-            pos = TweenedParameter::deserialize(deserializer)?;
-            vel = TweenedParameter::deserialize(deserializer)?;
-            acc = TweenedParameter::deserialize(deserializer)?;
-            exptime = TweenedParameter::deserialize(deserializer)?;
-            size = TweenedParameter::deserialize(deserializer)?;
-        } else {
-            pos = TweenedParameter::default();
-            vel = TweenedParameter::default();
-            acc = TweenedParameter::default();
-            exptime = TweenedParameter::default();
-            size = TweenedParameter::default();
-            pos.start = RangedParameterLegacy::deserialize(deserializer)?.into();
-            vel.start = RangedParameterLegacy::deserialize(deserializer)?.into();
-            acc.start = RangedParameterLegacy::deserialize(deserializer)?.into();
-            exptime.start = RangedParameterLegacy::deserialize(deserializer)?.into();
-            size.start = RangedParameterLegacy::deserialize(deserializer)?.into();
-            pos.end = pos.start.clone();
-            vel.end = vel.start.clone();
-            acc.end = acc.start.clone();
-            exptime.end = exptime.start.clone();
-            size.end = size.start.clone();
-        }
+        // All tweenable parameters
+        let pos = TweenedParameter::deserialize(deserializer)?;
+        let vel = TweenedParameter::deserialize(deserializer)?;
+        let acc = TweenedParameter::deserialize(deserializer)?;
+        let exptime = TweenedParameter::deserialize(deserializer)?;
+        let size = TweenedParameter::deserialize(deserializer)?;
 
-        let collision_detection = bool::deserialize(deserializer)?;
-        let texture_string = LongString::deserialize(deserializer)?;
+        let base = CommonParticleParams::deserialize(deserializer)?;
 
-        let server_id = u32::deserialize(deserializer)?;
-
-        let vertical = bool::deserialize(deserializer)?;
-        let collision_removal = bool::deserialize(deserializer)?;
-
-        let attached_id = u16::deserialize(deserializer)?;
-
-        let animation = TileAnimationParams::deserialize(deserializer)?;
-        let glow = u8::deserialize(deserializer)?;
-        let object_collision = bool::deserialize(deserializer)?;
-
-        let attractor;
-        let node_tile;
-        let texpool;
-        let texture;
-        let drag;
-        let jitter;
-        let bounce;
-        let radius;
-        let node;
-
-        let param0 = u16::deserialize(deserializer)?;
-        // TODO(kawogi) I think this is always true nowadays
-        if deserializer.has_remaining() {
-            let param2 = u8::deserialize(deserializer)?;
-            node = MapNode {
-                param0,
-                param2,
-                ..MapNode::default()
-            };
-            node_tile = u8::deserialize(deserializer)?;
-
-            // properties for legacy texture field
-            texture = ServerParticleTexture::deserialize_special(
-                deserializer,
-                texture_string,
-                true,
-                false,
-            )?;
-
-            drag = TweenedParameter::deserialize(deserializer)?;
-            jitter = TweenedParameter::deserialize(deserializer)?;
-            bounce = TweenedParameter::deserialize(deserializer)?;
-            attractor = Attractor::deserialize(deserializer)?;
-            radius = TweenedParameter::deserialize(deserializer)?;
-            texpool = Array16::<ServerParticleTexture>::deserialize(deserializer)?;
-        } else {
-            node = MapNode::default();
-            node_tile = 0;
-            texture = ServerParticleTexture {
-                base: ParticleTexture::default(),
-                string: texture_string,
-            };
-
-            drag = TweenedParameter::default();
-            jitter = TweenedParameter::default();
-            bounce = TweenedParameter::default();
-            attractor = Attractor::None;
-            radius = TweenedParameter::default();
-            texpool = Vec::new();
-        }
+        let drag = TweenedParameter::deserialize(deserializer)?;
+        let jitter = TweenedParameter::deserialize(deserializer)?;
+        let bounce = TweenedParameter::deserialize(deserializer)?;
+        let attractor = Attractor::deserialize(deserializer)?;
+        let radius = TweenedParameter::deserialize(deserializer)?;
+        let texpool = Array16::<ServerParticleTexture>::deserialize(deserializer)?;
 
         // TODO(kawogi) this was part of the original deserialization code but it looks like it's just triggering a side-effect which should be the job of the caller
         // auto event = new ClientEvent();
@@ -171,21 +67,6 @@ impl Deserialize for AddParticlespawnerCommand {
         // event->add_particlespawner.attached_id = attached_id;
         // event->add_particlespawner.id          = server_id;
         // m_client_event_queue.push(event);
-
-        // TODO(kawogi) according the serializer this entire struct has been written contiguously so it should be possible to deserialize it en bloc as well
-        let base = CommonParticleParams {
-            collision_detection,
-            collision_removal,
-            object_collision,
-            vertical,
-            texture,
-            animation,
-            glow,
-            node,
-            node_tile,
-            server_id,
-            attached_id,
-        };
 
         Ok(Self {
             base,
@@ -260,20 +141,7 @@ impl Serialize for AddParticlespawnerCommand {
         TweenedParameter::serialize(&value.exptime, serializer)?;
         TweenedParameter::serialize(&value.size, serializer)?;
 
-        // TODO(kawogi) move this whole `base` stuff into its own de/serializer
-        bool::serialize(&value.base.collision_detection, serializer)?;
-        LongString::serialize(&value.base.texture.string, serializer)?;
-        u32::serialize(&value.base.server_id, serializer)?;
-        bool::serialize(&value.base.vertical, serializer)?;
-        bool::serialize(&value.base.collision_removal, serializer)?;
-        u16::serialize(&value.base.attached_id, serializer)?;
-        TileAnimationParams::serialize(&value.base.animation, serializer)?;
-        u8::serialize(&value.base.glow, serializer)?;
-        bool::serialize(&value.base.object_collision, serializer)?;
-        u16::serialize(&value.base.node.param0, serializer)?;
-        u8::serialize(&value.base.node.param2, serializer)?;
-        u8::serialize(&value.base.node_tile, serializer)?;
-        ServerParticleTexture::serialize(&value.base.texture, serializer)?; // properties for legacy texture field
+        CommonParticleParams::serialize(&value.base, serializer)?;
 
         // new properties
         TweenedParameter::serialize(&value.drag, serializer)?;
@@ -283,6 +151,86 @@ impl Serialize for AddParticlespawnerCommand {
         TweenedParameter::serialize(&value.radius, serializer)?;
         Array16::<ServerParticleTexture>::serialize(&value.texpool, serializer)?;
 
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[expect(clippy::struct_excessive_bools, reason = "this is mandated by the API")]
+pub struct CommonParticleParams {
+    collision_detection: bool,
+    /// this was originally not stored but sent as part of an event (sometimes just called `id`)
+    pub server_id: u32,
+    vertical: bool,
+    collision_removal: bool,
+    /// this was originally not stored but sent as part of an event
+    pub attached_id: u16,
+    animation: TileAnimationParams,
+    glow: u8,
+    object_collision: bool,
+    node: MapNode,
+    node_tile: u8,
+    texture: ServerParticleTexture,
+}
+
+impl Deserialize for CommonParticleParams {
+    type Output = Self;
+
+    fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self::Output> {
+        let collision_detection = bool::deserialize(deserializer)?;
+        let texture_string = LongString::deserialize(deserializer)?;
+        let server_id = u32::deserialize(deserializer)?;
+        let vertical = bool::deserialize(deserializer)?;
+        let collision_removal = bool::deserialize(deserializer)?;
+        let attached_id = u16::deserialize(deserializer)?;
+        let animation = TileAnimationParams::deserialize(deserializer)?;
+        let glow = u8::deserialize(deserializer)?;
+        let object_collision = bool::deserialize(deserializer)?;
+        let param0 = u16::deserialize(deserializer)?;
+        let param2 = u8::deserialize(deserializer)?;
+        let node = MapNode {
+            param0,
+            param2,
+            ..MapNode::default()
+        };
+        let node_tile = u8::deserialize(deserializer)?;
+        // properties for legacy texture field
+        let texture =
+            ServerParticleTexture::deserialize_special(deserializer, texture_string, true, false)?;
+
+        Ok(CommonParticleParams {
+            collision_detection,
+            server_id,
+            vertical,
+            collision_removal,
+            attached_id,
+            animation,
+            glow,
+            object_collision,
+            node,
+            node_tile,
+            texture,
+        })
+    }
+}
+
+impl Serialize for CommonParticleParams {
+    type Input = Self;
+
+    fn serialize<S: Serializer>(value: &Self::Input, serializer: &mut S) -> SerializeResult {
+        bool::serialize(&value.collision_detection, serializer)?;
+        LongString::serialize(&value.texture.string, serializer)?;
+        u32::serialize(&value.server_id, serializer)?;
+        bool::serialize(&value.vertical, serializer)?;
+        bool::serialize(&value.collision_removal, serializer)?;
+        u16::serialize(&value.attached_id, serializer)?;
+        TileAnimationParams::serialize(&value.animation, serializer)?;
+        u8::serialize(&value.glow, serializer)?;
+        bool::serialize(&value.object_collision, serializer)?;
+        u16::serialize(&value.node.param0, serializer)?;
+        u8::serialize(&value.node.param2, serializer)?;
+        u8::serialize(&value.node_tile, serializer)?;
+        ServerParticleTexture::serialize(&value.texture, serializer)?; // properties for legacy texture field
         Ok(())
     }
 }

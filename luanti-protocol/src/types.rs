@@ -1498,30 +1498,6 @@ where
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct RangedParameterLegacy<T: Serialize + Deserialize>
-where
-    T: Serialize<Input = T>,
-    T: Deserialize<Output = T>,
-{
-    pub min: T,
-    pub max: T,
-}
-
-impl<T: Serialize + Deserialize> From<RangedParameterLegacy<T>> for RangedParameter<T>
-where
-    T: Serialize<Input = T>,
-    T: Deserialize<Output = T>,
-{
-    fn from(value: RangedParameterLegacy<T>) -> Self {
-        Self {
-            min: value.min,
-            max: value.max,
-            bias: 0.0,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct Lighting {
     pub shadow_intensity: f32,
     pub saturation: f32,
