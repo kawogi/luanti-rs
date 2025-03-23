@@ -4,6 +4,7 @@ mod add_particle_spawner;
 mod hud_change;
 mod item_def;
 mod set_sky;
+mod spawn_particle;
 
 use super::CommandProperties;
 #[allow(clippy::wildcard_imports, reason = "greatly simplifies macros")]
@@ -26,6 +27,7 @@ use item_def::ItemdefCommand;
 use luanti_protocol_derive::LuantiDeserialize;
 use luanti_protocol_derive::LuantiSerialize;
 use set_sky::SetSkyCommand;
+use spawn_particle::SpawnParticleCommand;
 use std::ops::Deref;
 
 define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
@@ -62,7 +64,7 @@ define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
     DetachedInventory, 0x43, Default, true => DetachedInventorySpec,
     ShowFormspec, 0x44, Default, true => ShowFormspecSpec,
     Movement, 0x45, Default, true => MovementSpec,
-    SpawnParticle, 0x46, Default, true => SpawnParticleSpec,
+    SpawnParticle, 0x46, Default, true => SpawnParticleCommand,
     AddParticlespawner, 0x47, Default, true => AddParticlespawnerCommand,
     Hudadd, 0x49, Init, true => HudaddSpec,
     Hudrm, 0x4a, Init, true => HudrmSpec,
@@ -294,11 +296,6 @@ pub struct MovementSpec {
     pub liquid_fluidity_smooth: f32,
     pub liquid_sink: f32,
     pub gravity: f32,
-}
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct SpawnParticleSpec {
-    pub data: ParticleParameters,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]

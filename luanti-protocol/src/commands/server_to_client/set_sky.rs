@@ -1,6 +1,3 @@
-use anyhow::bail;
-use luanti_protocol_derive::{LuantiDeserialize, LuantiSerialize};
-
 use crate::{
     types::{Array16, SColor, SkyColor},
     wire::{
@@ -8,6 +5,8 @@ use crate::{
         ser::{Serialize, SerializeResult, Serializer},
     },
 };
+use anyhow::bail;
+use luanti_protocol_derive::{LuantiDeserialize, LuantiSerialize};
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct SetSkyCommand {

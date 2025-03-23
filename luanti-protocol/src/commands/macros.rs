@@ -138,6 +138,9 @@ macro_rules! define_protocol {
                         $( (CommandDirection::$dir, $id) => $command_ty::$name(Box::new(<$spec_ty as Deserialize>::deserialize(deserializer)?)) ),*,
                         _ => bail!(DeserializeError::BadPacketId(dir, command_id)),
                     };
+                    if deserializer.has_remaining() {
+                        log::warn!("left-over bytes after deserialization of {:#?}: {:?}", result, deserializer.peek_all());
+                    }
                     audit_command(deserializer.context(), orig_buffer, &result);
                     Ok(Some(result))
                 }

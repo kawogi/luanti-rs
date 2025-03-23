@@ -45,7 +45,8 @@ impl From<anyhow::Error> for DeserializeError {
 
 pub type DeserializeResult<R> = anyhow::Result<R>;
 
-pub struct Deserializer<'data> {
+pub struct 
+Deserializer<'data> {
     pub context: ProtocolContext,
     pub data: &'data [u8], // Remaining data
 }

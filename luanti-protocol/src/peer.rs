@@ -23,6 +23,7 @@ use anyhow::bail;
 use channel::Channel;
 use log::debug;
 use log::error;
+use log::info;
 use log::trace;
 use log::warn;
 use tokio::sync::mpsc::UnboundedReceiver;
@@ -433,6 +434,10 @@ impl PeerRunner {
 
     fn sniff_hello(&mut self, command: &Command) {
         if let Command::ToClient(ToClientCommand::Hello(spec)) = command {
+            info!(
+                "Server protocol version {} / serialization version {}",
+                spec.proto_ver, spec.serialization_ver
+            );
             self.update_context(spec.serialization_ver, spec.proto_ver);
         }
     }

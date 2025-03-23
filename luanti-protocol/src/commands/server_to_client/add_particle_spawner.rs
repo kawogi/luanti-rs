@@ -7,6 +7,7 @@ use crate::{
     },
 };
 use anyhow::{Context, bail};
+use log::info;
 use luanti_protocol_derive::{LuantiDeserialize, LuantiSerialize};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -32,6 +33,9 @@ pub struct AddParticlespawnerCommand {
     pub exptime: TweenedParameter<RangedParameter<f32>>,
     pub size: TweenedParameter<RangedParameter<f32>>,
     pub bounce: TweenedParameter<RangedParameter<f32>>,
+
+    server_id: u32,
+    attached_id: u16,
 }
 
 impl Deserialize for AddParticlespawnerCommand {
@@ -51,7 +55,30 @@ impl Deserialize for AddParticlespawnerCommand {
         let exptime = TweenedParameter::deserialize(deserializer)?;
         let size = TweenedParameter::deserialize(deserializer)?;
 
-        let base = CommonParticleParams::deserialize(deserializer)?;
+        let collision_detection = bool::deserialize(deserializer)?;
+        let texture_string = LongString::deserialize(deserializer)?;
+        let server_id = u32::deserialize(deserializer)?;
+        let vertical = bool::deserialize(deserializer)?;
+        let collision_removal = bool::deserialize(deserializer)?;
+        let attached_id = u16::deserialize(deserializer)?;
+        let animation = TileAnimationParams::deserialize(deserializer)?;
+        let glow = u8::deserialize(deserializer)?;
+        let object_collision = bool::deserialize(deserializer)?;
+        let param0 = u16::deserialize(deserializer)?;
+        let param2 = u8::deserialize(deserializer)?;
+        let node = MapNode {
+            param0,
+            param2,
+            ..MapNode::default()
+        };
+        let node_tile = u8::deserialize(deserializer)?;
+
+        let texture = ServerParticleTexture::deserialize_special(
+            deserializer,
+            texture_string.clone(),
+            true,
+            false,
+        )?;
 
         let drag = TweenedParameter::deserialize(deserializer)?;
         let jitter = TweenedParameter::deserialize(deserializer)?;
@@ -68,6 +95,18 @@ impl Deserialize for AddParticlespawnerCommand {
         // event->add_particlespawner.id          = server_id;
         // m_client_event_queue.push(event);
 
+        let base = CommonParticleParams {
+            collision_detection,
+            vertical,
+            collision_removal,
+            animation,
+            glow,
+            object_collision,
+            node,
+            node_tile,
+            texture,
+        };
+
         Ok(Self {
             base,
             amount,
@@ -83,6 +122,8 @@ impl Deserialize for AddParticlespawnerCommand {
             exptime,
             size,
             bounce,
+            server_id,
+            attached_id,
         })
     }
 }
@@ -141,7 +182,20 @@ impl Serialize for AddParticlespawnerCommand {
         TweenedParameter::serialize(&value.exptime, serializer)?;
         TweenedParameter::serialize(&value.size, serializer)?;
 
-        CommonParticleParams::serialize(&value.base, serializer)?;
+        bool::serialize(&value.base.collision_detection, serializer)?;
+        LongString::serialize(&value.base.texture.string, serializer)?;
+        u32::serialize(&value.server_id, serializer)?;
+        bool::serialize(&value.base.vertical, serializer)?;
+        bool::serialize(&value.base.collision_removal, serializer)?;
+        u16::serialize(&value.attached_id, serializer)?;
+        TileAnimationParams::serialize(&value.base.animation, serializer)?;
+        u8::serialize(&value.base.glow, serializer)?;
+        bool::serialize(&value.base.object_collision, serializer)?;
+        u16::serialize(&value.base.node.param0, serializer)?;
+        u8::serialize(&value.base.node.param2, serializer)?;
+        u8::serialize(&value.base.node_tile, serializer)?;
+
+        ServerParticleTexture::serialize_special(&value.base.texture, serializer, true, false)?;
 
         // new properties
         TweenedParameter::serialize(&value.drag, serializer)?;
@@ -158,82 +212,37 @@ impl Serialize for AddParticlespawnerCommand {
 #[derive(Debug, Clone, PartialEq)]
 #[expect(clippy::struct_excessive_bools, reason = "this is mandated by the API")]
 pub struct CommonParticleParams {
-    collision_detection: bool,
-    /// this was originally not stored but sent as part of an event (sometimes just called `id`)
-    pub server_id: u32,
-    vertical: bool,
-    collision_removal: bool,
-    /// this was originally not stored but sent as part of an event
-    pub attached_id: u16,
-    animation: TileAnimationParams,
-    glow: u8,
-    object_collision: bool,
-    node: MapNode,
-    node_tile: u8,
-    texture: ServerParticleTexture,
+    pub(crate) collision_detection: bool,
+    pub(crate) vertical: bool,
+    pub(crate) collision_removal: bool,
+    pub(crate) animation: TileAnimationParams,
+    pub(crate) glow: u8,
+    pub(crate) object_collision: bool,
+    pub(crate) node: MapNode,
+    pub(crate) node_tile: u8,
+    pub(crate) texture: ServerParticleTexture,
 }
 
-impl Deserialize for CommonParticleParams {
-    type Output = Self;
+// impl Serialize for CommonParticleParams {
+//     type Input = Self;
 
-    fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self::Output> {
-        let collision_detection = bool::deserialize(deserializer)?;
-        let texture_string = LongString::deserialize(deserializer)?;
-        let server_id = u32::deserialize(deserializer)?;
-        let vertical = bool::deserialize(deserializer)?;
-        let collision_removal = bool::deserialize(deserializer)?;
-        let attached_id = u16::deserialize(deserializer)?;
-        let animation = TileAnimationParams::deserialize(deserializer)?;
-        let glow = u8::deserialize(deserializer)?;
-        let object_collision = bool::deserialize(deserializer)?;
-        let param0 = u16::deserialize(deserializer)?;
-        let param2 = u8::deserialize(deserializer)?;
-        let node = MapNode {
-            param0,
-            param2,
-            ..MapNode::default()
-        };
-        let node_tile = u8::deserialize(deserializer)?;
-        // properties for legacy texture field
-        let texture =
-            ServerParticleTexture::deserialize_special(deserializer, texture_string, true, false)?;
-
-        Ok(CommonParticleParams {
-            collision_detection,
-            server_id,
-            vertical,
-            collision_removal,
-            attached_id,
-            animation,
-            glow,
-            object_collision,
-            node,
-            node_tile,
-            texture,
-        })
-    }
-}
-
-impl Serialize for CommonParticleParams {
-    type Input = Self;
-
-    fn serialize<S: Serializer>(value: &Self::Input, serializer: &mut S) -> SerializeResult {
-        bool::serialize(&value.collision_detection, serializer)?;
-        LongString::serialize(&value.texture.string, serializer)?;
-        u32::serialize(&value.server_id, serializer)?;
-        bool::serialize(&value.vertical, serializer)?;
-        bool::serialize(&value.collision_removal, serializer)?;
-        u16::serialize(&value.attached_id, serializer)?;
-        TileAnimationParams::serialize(&value.animation, serializer)?;
-        u8::serialize(&value.glow, serializer)?;
-        bool::serialize(&value.object_collision, serializer)?;
-        u16::serialize(&value.node.param0, serializer)?;
-        u8::serialize(&value.node.param2, serializer)?;
-        u8::serialize(&value.node_tile, serializer)?;
-        ServerParticleTexture::serialize(&value.texture, serializer)?; // properties for legacy texture field
-        Ok(())
-    }
-}
+//     fn serialize<S: Serializer>(value: &Self::Input, serializer: &mut S) -> SerializeResult {
+//         bool::serialize(&value.collision_detection, serializer)?;
+//         LongString::serialize(&value.texture_string, serializer)?;
+//         u32::serialize(&value.server_id, serializer)?;
+//         bool::serialize(&value.vertical, serializer)?;
+//         bool::serialize(&value.collision_removal, serializer)?;
+//         u16::serialize(&value.attached_id, serializer)?;
+//         TileAnimationParams::serialize(&value.animation, serializer)?;
+//         u8::serialize(&value.glow, serializer)?;
+//         bool::serialize(&value.object_collision, serializer)?;
+//         u16::serialize(&value.node.param0, serializer)?;
+//         u8::serialize(&value.node.param2, serializer)?;
+//         u8::serialize(&value.node_tile, serializer)?;
+//         // ServerParticleTexture::serialize(&value.texture, serializer)?; // properties for legacy texture field
+//         Ok(())
+//     }
+// }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Attractor {
@@ -347,7 +356,7 @@ impl Deserialize for ServerParticleTexture {
 }
 
 impl ServerParticleTexture {
-    fn serialize_special<S: Serializer>(
+    pub(crate) fn serialize_special<S: Serializer>(
         value: &Self,
         ser: &mut S,
         new_properties_only: bool,
@@ -370,13 +379,15 @@ impl ServerParticleTexture {
         Ok(())
     }
 
-    fn deserialize_special(
+    pub(crate) fn deserialize_special(
         deserializer: &mut Deserializer<'_>,
         string: String,
         new_properties_only: bool,
         skip_animation: bool,
     ) -> DeserializeResult<Self> {
-        let flags = ParticleTextureFlags::deserialize(deserializer)?;
+        let flags = ParticleTextureFlags::deserialize(deserializer)
+            .context("ServerParticleTexture::flags")?;
+        info!("flags {flags:?}");
         // new texture properties were missing in ParticleParameters::serialize before Minetest 5.9.0
         if !deserializer.has_remaining() {
             return Ok(Self {
@@ -386,19 +397,26 @@ impl ServerParticleTexture {
         }
 
         let animated = flags.animated();
+        info!("animated {animated:?}");
         let blend_mode = flags.blend_mode()?;
+        info!("blend_mode {blend_mode:?}");
 
-        let alpha = TweenedParameter::deserialize(deserializer)?;
-        let scale = TweenedParameter::deserialize(deserializer)?;
+        let alpha =
+            TweenedParameter::deserialize(deserializer).context("ServerParticleTexture::alpha")?;
+        info!("alpha {alpha:?}");
+        info!("remaining {:?}", deserializer.peek_all());
+        let scale =
+            TweenedParameter::deserialize(deserializer).context("ServerParticleTexture::scale")?;
         let string = if new_properties_only {
             string
         } else {
-            LongString::deserialize(deserializer)?
+            LongString::deserialize(deserializer).context("ServerParticleTexture::string")?
         };
 
         let animation = (animated && !skip_animation)
             .then(|| TileAnimationParams::deserialize(deserializer))
-            .transpose()?;
+            .transpose()
+            .context("ServerParticleTexture::animation")?;
 
         let base = ParticleTexture {
             blend_mode,
