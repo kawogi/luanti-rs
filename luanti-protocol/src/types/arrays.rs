@@ -29,7 +29,7 @@ impl<T: Deserialize> Deserialize for Array0<T> {
     type Output = Vec<T::Output>;
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self::Output> {
         let mut vec = Vec::new();
-        while deser.remaining() > 0 {
+        while deser.has_remaining() {
             vec.push(<T as Deserialize>::deserialize(deser)?);
         }
         Ok(vec)

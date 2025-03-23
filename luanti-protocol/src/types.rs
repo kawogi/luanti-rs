@@ -957,7 +957,7 @@ impl Deserialize for MapNodesBulk {
 
 /// The default serialization is used for single nodes.
 /// But for transferring entire blocks, `MapNodeBulk` is used instead.
-#[derive(Debug, Clone, Copy, PartialEq, LuantiSerialize, LuantiDeserialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct MapNode {
     pub param0: u16,
     pub param1: u8,
@@ -1165,7 +1165,7 @@ impl Deserialize for Inventory {
         let mut result = Self {
             entries: Vec::new(),
         };
-        while deser.remaining() > 0 {
+        while deser.has_remaining() {
             // Peek the line, but don't take it yet.
             let line = deser.peek_line()?;
             let words = split_by_whitespace(line);
@@ -1269,7 +1269,7 @@ impl Deserialize for InventoryList {
             width: 0,
             items: Vec::new(),
         };
-        while deser.remaining() > 0 {
+        while deser.has_remaining() {
             // Peek the line, but don't take it yet.
             let peeked_line = deser.peek_line()?;
             let peeked_words = split_by_whitespace(peeked_line);
@@ -1459,274 +1459,6 @@ impl Deserialize for ItemStackMetadata {
     }
 }
 
-/// This is the way `ADD_PARTICLESPAWNER` is serialized.
-/// It seems to be an older version of `ParticleParameters`
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-#[expect(clippy::struct_excessive_bools, reason = "this is mandated by the API")]
-pub struct AddParticleSpawnerLegacy {
-    pub amount: u16,
-    pub time: f32,
-
-    // start only
-    pub pos_start: RangedParameterLegacy<v3f>,
-    pub vel_start: RangedParameterLegacy<v3f>,
-    pub acc_start: RangedParameterLegacy<v3f>,
-    pub exptime_start: RangedParameterLegacy<f32>,
-    pub size_start: RangedParameterLegacy<f32>,
-
-    pub collision_detection: bool,
-    #[wrap(LongString)]
-    pub texture_string: String,
-    pub id: u32,
-    pub vertical: bool,
-    pub collision_removal: bool,
-    pub attached_id: u16,
-    pub animation: TileAnimationParams,
-    pub glow: u8,
-    pub object_collision: bool,
-    pub node_param0: u16,
-    pub node_param2: u8,
-    pub node_tile: u8,
-
-    // Only present in protocol_ver >= 40
-    pub extra: Option<AddParticleSpawnerExtra>,
-}
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct AddParticleSpawnerExtra {
-    pub pos_start_bias: f32,
-    pub vel_start_bias: f32,
-    pub acc_start_bias: f32,
-    pub exptime_start_bias: f32,
-    pub size_start_bias: f32,
-
-    pub pos_end: RangedParameter<v3f>,
-    pub vel_end: RangedParameter<v3f>,
-    pub acc_end: RangedParameter<v3f>,
-    pub exptime_end: RangedParameter<f32>,
-    pub size_end: RangedParameter<f32>,
-
-    pub texture: ServerParticleTextureNewPropsOnly,
-
-    pub drag: TweenedParameter<RangedParameter<v3f>>,
-    pub jitter: TweenedParameter<RangedParameter<v3f>>,
-    pub bounce: TweenedParameter<RangedParameter<f32>>,
-    pub attractor: Attractor, // attract_kind, followed by p.attract.serialize, p.attract_origin.ser, etc
-    pub radius: TweenedParameter<RangedParameter<v3f>>,
-    #[wrap(Array16<ServerParticleTexture>)]
-    pub texpool: Vec<ServerParticleTexture>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Attractor {
-    None,
-    Point(PointAttractor),
-    Line(LineAttractor),
-    Plane(PlaneAttractor),
-}
-
-impl Serialize for Attractor {
-    type Input = Self;
-    fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        let kind: u8 = match value {
-            Attractor::None => 0,
-            Attractor::Point(_) => 1,
-            Attractor::Line(_) => 2,
-            Attractor::Plane(_) => 3,
-        };
-        u8::serialize(&kind, ser)?;
-        match value {
-            Attractor::None => (),
-            Attractor::Point(value) => PointAttractor::serialize(value, ser)?,
-            Attractor::Line(value) => LineAttractor::serialize(value, ser)?,
-            Attractor::Plane(value) => PlaneAttractor::serialize(value, ser)?,
-        }
-        Ok(())
-    }
-}
-
-impl Deserialize for Attractor {
-    type Output = Self;
-    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-        let kind = u8::deserialize(deser)?;
-        Ok(match kind {
-            0 => Attractor::None,
-            1 => Attractor::Point(PointAttractor::deserialize(deser)?),
-            2 => Attractor::Line(LineAttractor::deserialize(deser)?),
-            3 => Attractor::Plane(PlaneAttractor::deserialize(deser)?),
-            _ => bail!("Invalid AttractorKind: {}", kind),
-        })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct PointAttractor {
-    pub attract: TweenedParameter<RangedParameter<f32>>,
-    pub origin: TweenedParameter<v3f>,
-    pub attachment: u16,
-    pub kill: u8,
-}
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct LineAttractor {
-    pub attract: TweenedParameter<RangedParameter<f32>>,
-    pub origin: TweenedParameter<v3f>,
-    pub attachment: u16,
-    pub kill: u8,
-    pub direction: TweenedParameter<v3f>,
-    pub direction_attachment: u16,
-}
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct PlaneAttractor {
-    pub attract: TweenedParameter<RangedParameter<f32>>,
-    pub origin: TweenedParameter<v3f>,
-    pub attachment: u16,
-    pub kill: u8,
-    pub direction: TweenedParameter<v3f>,
-    pub direction_attachment: u16,
-}
-
-/// This is serialized as part of a combined 'flags' field on
-/// `ServerParticleTexture`, so it doesn't implement the  methods
-/// on its own.
-#[derive(Debug, Clone, PartialEq)]
-pub enum BlendMode {
-    Alpha,
-    Add,
-    Sub,
-    Screen,
-}
-
-impl BlendMode {
-    fn to_u8(&self) -> u8 {
-        match self {
-            BlendMode::Alpha => 0,
-            BlendMode::Add => 1,
-            BlendMode::Sub => 2,
-            BlendMode::Screen => 3,
-        }
-    }
-
-    fn from_u8(value: u8) -> DeserializeResult<BlendMode> {
-        Ok(match value {
-            0 => BlendMode::Alpha,
-            1 => BlendMode::Add,
-            2 => BlendMode::Sub,
-            3 => BlendMode::Screen,
-            _ => bail!("Invalid BlendMode u8: {}", value),
-        })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ServerParticleTextureNewPropsOnly {
-    pub blend_mode: BlendMode,
-    pub alpha: TweenedParameter<f32>,
-    pub scale: TweenedParameter<v2f>,
-    pub animation: Option<TileAnimationParams>,
-}
-
-impl Serialize for ServerParticleTextureNewPropsOnly {
-    type Input = Self;
-    fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        let mut flags: u8 = value.blend_mode.to_u8() << 1;
-        if value.animation.is_some() {
-            flags |= 1;
-        }
-        u8::serialize(&flags, ser)?;
-        <TweenedParameter<f32>>::serialize(&value.alpha, ser)?;
-        <TweenedParameter<v2f>>::serialize(&value.scale, ser)?;
-        <Option<TileAnimationParams>>::serialize(&value.animation, ser)?;
-        Ok(())
-    }
-}
-
-impl Deserialize for ServerParticleTextureNewPropsOnly {
-    type Output = Self;
-    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-        let flags: u8 = u8::deserialize(deser)?;
-        let animated: bool = (flags & 1) != 0;
-        let blend_mode = BlendMode::from_u8(flags >> 1)?;
-        Ok(Self {
-            blend_mode,
-            alpha: <TweenedParameter<f32>>::deserialize(deser)?,
-            scale: <TweenedParameter<v2f>>::deserialize(deser)?,
-            animation: if animated {
-                <Option<TileAnimationParams>>::deserialize(deser)?
-            } else {
-                None
-            },
-        })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ServerParticleTexture {
-    pub blend_mode: BlendMode,
-    pub alpha: TweenedParameter<f32>,
-    pub scale: TweenedParameter<v2f>,
-    pub string: String, // LongString
-    pub animation: Option<TileAnimationParams>,
-}
-
-impl Serialize for ServerParticleTexture {
-    type Input = Self;
-    fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        let mut flags: u8 = value.blend_mode.to_u8() << 1;
-        if value.animation.is_some() {
-            flags |= 1;
-        }
-        u8::serialize(&flags, ser)?;
-        <TweenedParameter<f32>>::serialize(&value.alpha, ser)?;
-        <TweenedParameter<v2f>>::serialize(&value.scale, ser)?;
-        LongString::serialize(&value.string, ser)?;
-        <Option<TileAnimationParams>>::serialize(&value.animation, ser)?;
-        Ok(())
-    }
-}
-
-impl Deserialize for ServerParticleTexture {
-    type Output = Self;
-    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-        let flags: u8 = u8::deserialize(deser)?;
-        let animated: bool = (flags & 1) != 0;
-        let blend_mode = BlendMode::from_u8(flags >> 1)?;
-        Ok(Self {
-            blend_mode,
-            alpha: <TweenedParameter<f32>>::deserialize(deser)?,
-            scale: <TweenedParameter<v2f>>::deserialize(deser)?,
-            string: LongString::deserialize(deser)?,
-            animation: if animated {
-                <Option<TileAnimationParams>>::deserialize(deser)?
-            } else {
-                None
-            },
-        })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub enum TweenStyle {
-    Fwd,
-    Rev,
-    Pulse,
-    Flicker,
-}
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct TweenedParameter<T: Serialize + Deserialize>
-where
-    T: Serialize<Input = T>,
-    T: Deserialize<Output = T>,
-{
-    pub style: TweenStyle,
-    pub reps: u16,
-    pub beginning: f32,
-    pub start: T,
-    pub end: T,
-}
-
 /// This is the send format used by `SendSpawnParticle`
 /// See `ParticleParameters::serialize`
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
@@ -1754,7 +1486,7 @@ pub struct ParticleParameters {
     pub bounce: Option<RangedParameter<f32>>,
 }
 
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+#[derive(Debug, Default, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct RangedParameter<T: Serialize + Deserialize>
 where
     T: Serialize<Input = T>,
@@ -1773,6 +1505,20 @@ where
 {
     pub min: T,
     pub max: T,
+}
+
+impl<T: Serialize + Deserialize> From<RangedParameterLegacy<T>> for RangedParameter<T>
+where
+    T: Serialize<Input = T>,
+    T: Deserialize<Output = T>,
+{
+    fn from(value: RangedParameterLegacy<T>) -> Self {
+        Self {
+            min: value.min,
+            max: value.max,
+            bias: 0.0,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]

@@ -21,7 +21,7 @@ impl v2f {
 }
 
 #[allow(non_camel_case_types, reason = "aligns with the original C++ codebase")]
-#[derive(Debug, Clone, Copy, PartialEq, LuantiSerialize, LuantiDeserialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct v3f {
     pub x: f32,
     pub y: f32,

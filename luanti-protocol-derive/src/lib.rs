@@ -158,7 +158,9 @@ fn make_deserialize_body(input_name: &Ident, data: &Data) -> TokenStream {
                     let ty = get_wrapped_type(field);
                     quote_spanned! {field.span() =>
                         log::trace!(stringify!("deserializing field", #input_name, #name));
-                        let #name = <#ty as Deserialize>::deserialize(deser)?;
+                        #[allow(unused_qualifications)]
+                        let #name = anyhow::Context::context(<#ty as Deserialize>::deserialize(deser), stringify!("failed to deserialize field", #input_name, #name))?;
+
                         log::trace!("result: {:?} - {} bytes left", #name, deser.remaining());
                     }
                 });

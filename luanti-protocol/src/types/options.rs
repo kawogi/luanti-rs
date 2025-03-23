@@ -21,7 +21,7 @@ where
 impl<T: Deserialize> Deserialize for Option<T> {
     type Output = Option<T::Output>;
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self::Output> {
-        if deser.remaining() > 0 {
+        if deser.has_remaining() {
             Ok(Some(<T as Deserialize>::deserialize(deser)?))
         } else {
             Ok(None)

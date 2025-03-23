@@ -235,6 +235,10 @@ impl<'input> MiniReader<'input> {
         self.input.len() - self.pos
     }
 
+    pub(crate) fn has_remaining(&self) -> bool {
+        self.remaining() > 0
+    }
+
     pub(crate) fn take(&mut self, count: usize) -> Result<&'input [u8]> {
         if self.pos + count > self.input.len() {
             bail!("Luanti JSON string ended prematurely");
@@ -253,7 +257,7 @@ pub fn deserialize_json_string(input: &[u8]) -> Result<(Vec<u8>, usize), anyhow:
     let mut result: Vec<u8> = Vec::new();
     assert_eq!(input[0], b'"', "unexpected start of string");
     let mut reader = MiniReader::new(input, 1);
-    while reader.remaining() > 0 {
+    while reader.has_remaining() {
         let ch = reader.take1()?;
         if ch == b'"' {
             return Ok((result, reader.pos));

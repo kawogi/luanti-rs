@@ -1,5 +1,6 @@
 mod access_denied;
 mod active_object_messages;
+mod add_particle_spawner;
 mod hud_change;
 mod item_def;
 mod set_sky;
@@ -18,6 +19,7 @@ use crate::wire::ser::SerializeResult;
 use crate::wire::ser::Serializer;
 pub use access_denied::{AccessDeniedCode, AccessDeniedCommand};
 pub use active_object_messages::*;
+use add_particle_spawner::AddParticlespawnerCommand;
 use anyhow::bail;
 use hud_change::HudchangeSpec;
 use item_def::ItemdefCommand;
@@ -61,7 +63,7 @@ define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
     ShowFormspec, 0x44, Default, true => ShowFormspecSpec,
     Movement, 0x45, Default, true => MovementSpec,
     SpawnParticle, 0x46, Default, true => SpawnParticleSpec,
-    AddParticlespawner, 0x47, Default, true => AddParticlespawnerSpec,
+    AddParticlespawner, 0x47, Default, true => AddParticlespawnerCommand,
     Hudadd, 0x49, Init, true => HudaddSpec,
     Hudrm, 0x4a, Init, true => HudrmSpec,
     Hudchange, 0x4b, Init, true => HudchangeSpec,
@@ -297,11 +299,6 @@ pub struct MovementSpec {
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct SpawnParticleSpec {
     pub data: ParticleParameters,
-}
-
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct AddParticlespawnerSpec {
-    pub legacy: AddParticleSpawnerLegacy,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]

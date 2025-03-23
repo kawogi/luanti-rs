@@ -110,7 +110,10 @@ macro_rules! define_protocol {
                 type Input = Self;
                 fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
                     match value {
-                        $($command_ty::$name(spec) => { u16::serialize(&$id, ser)?; <$spec_ty as Serialize>::serialize(Deref::deref(spec), ser) }),*,
+                        $($command_ty::$name(spec) => {
+                            u16::serialize(&$id, ser)?;
+                            anyhow::Context::context(<$spec_ty as Serialize>::serialize(Deref::deref(spec), ser), stringify!($name))
+                        }),*,
                     }
                 }
             }
