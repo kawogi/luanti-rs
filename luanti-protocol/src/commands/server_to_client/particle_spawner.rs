@@ -7,7 +7,6 @@ use crate::{
     },
 };
 use anyhow::{Context, bail};
-use log::info;
 use luanti_protocol_derive::{LuantiDeserialize, LuantiSerialize};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -482,7 +481,6 @@ impl ServerParticleTexture {
     ) -> DeserializeResult<Self> {
         let flags = ParticleTextureFlags::deserialize(deserializer)
             .context("ServerParticleTexture::flags")?;
-        info!("flags {flags:?}");
         // new texture properties were missing in ParticleParameters::serialize before Minetest 5.9.0
         if !deserializer.has_remaining() {
             return Ok(Self {
@@ -492,14 +490,10 @@ impl ServerParticleTexture {
         }
 
         let animated = flags.animated();
-        info!("animated {animated:?}");
         let blend_mode = flags.blend_mode()?;
-        info!("blend_mode {blend_mode:?}");
 
         let alpha =
             TweenedParameter::deserialize(deserializer).context("ServerParticleTexture::alpha")?;
-        info!("alpha {alpha:?}");
-        info!("remaining {:?}", deserializer.peek_all());
         let scale =
             TweenedParameter::deserialize(deserializer).context("ServerParticleTexture::scale")?;
         let string = if new_properties_only {
