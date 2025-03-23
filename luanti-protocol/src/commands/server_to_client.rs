@@ -1,10 +1,9 @@
 mod access_denied;
 mod active_object_messages;
-mod add_particle_spawner;
 mod hud_change;
 mod item_def;
+mod particle_spawner;
 mod set_sky;
-mod spawn_particle;
 
 use super::CommandProperties;
 #[allow(clippy::wildcard_imports, reason = "greatly simplifies macros")]
@@ -20,14 +19,14 @@ use crate::wire::ser::SerializeResult;
 use crate::wire::ser::Serializer;
 pub use access_denied::{AccessDeniedCode, AccessDeniedCommand};
 pub use active_object_messages::*;
-use add_particle_spawner::AddParticlespawnerCommand;
 use anyhow::bail;
 use hud_change::HudchangeSpec;
 use item_def::ItemdefCommand;
 use luanti_protocol_derive::LuantiDeserialize;
 use luanti_protocol_derive::LuantiSerialize;
+use particle_spawner::AddParticlespawnerCommand;
+use particle_spawner::SpawnParticleCommand;
 use set_sky::SetSkyCommand;
-use spawn_particle::SpawnParticleCommand;
 use std::ops::Deref;
 
 define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
