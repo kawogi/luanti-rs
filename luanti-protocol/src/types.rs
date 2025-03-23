@@ -204,6 +204,10 @@ pub struct PlayerPos {
     pub keys_pressed: u32, // bitset
     pub fov: f32,          // serialized as u8, *80.0f
     pub wanted_range: u8,
+
+    pub camera_inverted: bool,
+    pub movement_speed: f32,
+    pub movement_direction: f32,
 }
 
 impl Serialize for PlayerPos {
@@ -213,7 +217,9 @@ impl Serialize for PlayerPos {
         let s_speed = (value.speed * 100_f32).as_v3s32();
         let s_pitch = (value.pitch * 100_f32).round() as s32;
         let s_yaw = (value.yaw * 100_f32).round() as s32;
+        // scaled by 80, so that pi can fit into a u8
         let s_fov = (value.fov * 80_f32).round() as u8;
+        let bits = u8::from(value.camera_inverted);
 
         v3s32::serialize(&s_position, ser)?;
         v3s32::serialize(&s_speed, ser)?;
@@ -222,20 +228,29 @@ impl Serialize for PlayerPos {
         u32::serialize(&value.keys_pressed, ser)?;
         u8::serialize(&s_fov, ser)?;
         u8::serialize(&value.wanted_range, ser)?;
+        u8::serialize(&bits, ser)?;
+        f32::serialize(&value.movement_speed, ser)?;
+        f32::serialize(&value.movement_direction, ser)?;
         Ok(())
     }
 }
 
 impl Deserialize for PlayerPos {
     type Output = Self;
-    fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-        let s_position = v3s32::deserialize(deser)?;
-        let s_speed = v3s32::deserialize(deser)?;
-        let s_pitch = s32::deserialize(deser)?;
-        let s_yaw = s32::deserialize(deser)?;
-        let keys_pressed = u32::deserialize(deser)?;
-        let s_fov = u8::deserialize(deser)?;
-        let wanted_range = u8::deserialize(deser)?;
+    fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self> {
+        let s_position = v3s32::deserialize(deserializer)?;
+        let s_speed = v3s32::deserialize(deserializer)?;
+        let s_pitch = s32::deserialize(deserializer)?;
+        let s_yaw = s32::deserialize(deserializer)?;
+        let keys_pressed = u32::deserialize(deserializer)?;
+        let s_fov = u8::deserialize(deserializer)?;
+        let wanted_range = u8::deserialize(deserializer)?;
+
+        let bits = u8::deserialize(deserializer)?;
+
+        let movement_speed = f32::deserialize(deserializer)?;
+        let movement_direction = f32::deserialize(deserializer)?;
+
         Ok(PlayerPos {
             position: s_position.as_v3f() / 100_f32,
             speed: s_speed.as_v3f() / 100_f32,
@@ -244,6 +259,9 @@ impl Deserialize for PlayerPos {
             keys_pressed,
             fov: f32::from(s_fov) / 80_f32,
             wanted_range,
+            camera_inverted: bits & 0b0000_0001 != 0,
+            movement_speed,
+            movement_direction,
         })
     }
 }

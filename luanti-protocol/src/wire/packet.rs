@@ -1,6 +1,5 @@
 use anyhow::bail;
 use log::trace;
-use log::warn;
 
 use super::channel_id::ChannelId;
 use super::deser::Deserialize;
@@ -444,15 +443,6 @@ impl Deserialize for Packet {
 
         trace!("deserializing packet: sender_peer_id={sender_peer_id}, channel: {channel}");
         let body = PacketBody::deserialize(deserializer)?;
-
-        // there might be more bytes to read if new fields have been added to the protocol
-        // those will be stripped off and might trip the receiver
-        if deserializer.has_remaining() {
-            warn!(
-                "left-over bytes after deserialization: {:?}",
-                deserializer.peek_all()
-            );
-        }
 
         let pkt = Packet {
             protocol_id,

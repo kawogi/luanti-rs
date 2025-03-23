@@ -138,6 +138,8 @@ macro_rules! define_protocol {
                         $( (CommandDirection::$dir, $id) => $command_ty::$name(Box::new(<$spec_ty as Deserialize>::deserialize(deserializer)?)) ),*,
                         _ => bail!(DeserializeError::BadPacketId(dir, command_id)),
                     };
+                    // there might be more bytes to read if new fields have been added to the protocol
+                    // those will be stripped off and might trip the receiver
                     if deserializer.has_remaining() {
                         log::warn!("left-over bytes after deserialization of {:#?}: {:?}", result, deserializer.peek_all());
                     }
