@@ -247,6 +247,7 @@ pub struct PlaySoundSpec {
     pub spec_fade: Option<f32>,
     pub spec_pitch: Option<f32>,
     pub ephemeral: Option<bool>,
+    pub start_type: f32,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
@@ -372,6 +373,7 @@ pub struct CloudParamsSpec {
     pub height: f32,
     pub thickness: f32,
     pub speed: v2f,
+    pub color_shadow: SColor,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]

@@ -1302,6 +1302,12 @@ pub struct Lighting {
     pub shadow_intensity: f32,
     pub saturation: f32,
     pub exposure: AutoExposure,
+
+    pub volumetric_light_strength: f32,
+    pub shadow_tint: SColor,
+    pub bloom_intensity: f32,
+    pub bloom_strength_factor: f32,
+    pub bloom_radius: f32,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]

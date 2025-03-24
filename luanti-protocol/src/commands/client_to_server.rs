@@ -51,6 +51,7 @@ pub struct UpdateClientInfoSpec {
     pub real_gui_scaling: f32,
     pub real_hud_scaling: f32,
     pub max_fs_size: v2f,
+    pub touch_controls: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
