@@ -16,31 +16,43 @@ pub struct SetSkyCommand {
 #[derive(Debug, Clone, PartialEq)]
 pub struct SkyboxParams {
     pub bgcolor: SColor,
+    pub r#type: String,
     pub clouds: bool,
     pub fog_sun_tint: SColor,
     pub fog_moon_tint: SColor,
     pub fog_tint_type: String,
     pub data: SkyboxData,
-    pub body_orbit_tilt: Option<f32>,
+    pub body_orbit_tilt: f32,
+    pub fog_distance: i16,
+    pub fog_start: f32,
+    pub fog_color: SColor,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum SkyboxData {
-    None,                  // If skybox_type == "plain"
-    Textures(Vec<String>), // If skybox_type == "skybox"
-    Color(SkyColor),       // If skybox_type == "regular"
+    /// If `skybox_type == "plain"`
+    None,
+    /// If `skybox_type == "skybox"`
+    Textures(Vec<String>),
+    /// If `skybox_type == "regular"`
+    Color(SkyColor),
+}
+
+impl SkyboxData {
+    fn as_str(&self) -> &'static str {
+        match self {
+            SkyboxData::None => "plain",
+            SkyboxData::Textures(..) => "skybox",
+            SkyboxData::Color(..) => "regular",
+        }
+    }
 }
 
 impl Serialize for SkyboxParams {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         SColor::serialize(&value.bgcolor, ser)?;
-        let skybox_type = match &value.data {
-            SkyboxData::None => "plain",
-            SkyboxData::Textures(..) => "skybox",
-            SkyboxData::Color(..) => "regular",
-        };
-        str::serialize(skybox_type, ser)?;
+        str::serialize(value.data.as_str(), ser)?;
         bool::serialize(&value.clouds, ser)?;
         SColor::serialize(&value.fog_sun_tint, ser)?;
         SColor::serialize(&value.fog_moon_tint, ser)?;
@@ -50,7 +62,12 @@ impl Serialize for SkyboxParams {
             SkyboxData::Textures(value) => <Array16<String> as Serialize>::serialize(value, ser)?,
             SkyboxData::Color(value) => SkyColor::serialize(value, ser)?,
         }
-        <Option<f32> as Serialize>::serialize(&value.body_orbit_tilt, ser)?;
+
+        f32::serialize(&value.body_orbit_tilt, ser)?;
+        i16::serialize(&value.fog_distance, ser)?;
+        f32::serialize(&value.fog_start, ser)?;
+        SColor::serialize(&value.fog_color, ser)?;
+
         Ok(())
     }
 }
@@ -60,24 +77,34 @@ impl Deserialize for SkyboxParams {
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         let bgcolor = SColor::deserialize(deser)?;
         let typ = String::deserialize(deser)?;
+        let clouds = bool::deserialize(deser)?;
+        let fog_sun_tint = SColor::deserialize(deser)?;
+        let fog_moon_tint = SColor::deserialize(deser)?;
+        let fog_tint_type = String::deserialize(deser)?;
+        let data = match typ.as_str() {
+            "skybox" => SkyboxData::Textures(<Array16<String> as Deserialize>::deserialize(deser)?),
+            "regular" => SkyboxData::Color(SkyColor::deserialize(deser)?),
+            "plain" => SkyboxData::None,
+            invalid => {
+                bail!("Invalid skybox type: {invalid}")
+            }
+        };
+        let body_orbit_tilt = f32::deserialize(deser)?;
+        let fog_distance = i16::deserialize(deser)?;
+        let fog_start = f32::deserialize(deser)?;
+        let fog_color = SColor::deserialize(deser)?;
         Ok(SkyboxParams {
             bgcolor,
-            clouds: bool::deserialize(deser)?,
-            fog_sun_tint: SColor::deserialize(deser)?,
-            fog_moon_tint: SColor::deserialize(deser)?,
-            fog_tint_type: String::deserialize(deser)?,
-            data: {
-                if typ == "skybox" {
-                    SkyboxData::Textures(<Array16<String> as Deserialize>::deserialize(deser)?)
-                } else if typ == "regular" {
-                    SkyboxData::Color(SkyColor::deserialize(deser)?)
-                } else if typ == "plain" {
-                    SkyboxData::None
-                } else {
-                    bail!("Invalid skybox type: {:?}", typ)
-                }
-            },
-            body_orbit_tilt: <Option<f32> as Deserialize>::deserialize(deser)?,
+            r#type: typ,
+            clouds,
+            fog_sun_tint,
+            fog_moon_tint,
+            fog_tint_type,
+            data,
+            body_orbit_tilt,
+            fog_distance,
+            fog_start,
+            fog_color,
         })
     }
 }
