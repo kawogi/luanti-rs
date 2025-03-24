@@ -5,9 +5,9 @@ members = ["luanti-protocol", "luanti-protocol-derive", "luanti-shark"]
 [workspace.package]
 version = "0.2.0"
 edition = "2024"
-authors = ["paradust"]
+authors = ["paradust", "kawogi"]
 rust-version = "1.85.0"
-license-file = "LICENSE"
+license = "MIT"
 readme = "README.md"
 repository = "https://github.com/kawogi/luanti-rs"
 
@@ -52,6 +52,8 @@ panic = 'abort'
 
 [workspace.lints.rust]
 # more lints can be found in [lints.clippy]
+
+cargo = "warn"
 
 ######################################################################################################################
 # Lints that are common to be globally overridden depending on the project's state or type
