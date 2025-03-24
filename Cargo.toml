@@ -41,19 +41,11 @@ opt-level = 0
 debug = true
 strip = "none"
 
-[profile.test]
-panic = 'abort'
-
-[profile.bench]
-panic = 'abort'
-
 [profile.release]
 panic = 'abort'
 
 [workspace.lints.rust]
 # more lints can be found in [lints.clippy]
-
-cargo = "warn"
 
 ######################################################################################################################
 # Lints that are common to be globally overridden depending on the project's state or type
