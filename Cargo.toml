@@ -1,3 +1,26 @@
+[package]
+name = "luanti"
+description = "Meta-package re-exporting all libraries of luanti-rs"
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+readme = "README.md"
+repository.workspace = true
+
+[lib]
+path = "luanti/src/lib.rs"
+
+[dependencies]
+luanti-protocol.workspace = true
+luanti-protocol-derive.workspace = true
+
+[lints]
+workspace = true
+
+############################## workspace-related ##############################
+
 [workspace]
 resolver = "2"
 members = ["luanti-protocol", "luanti-protocol-derive", "luanti-shark"]

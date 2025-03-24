@@ -290,6 +290,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "30bde2b3dc3671ae49d8e2e9f044c7c005836e7a023ee57cffa25ab82764bb9e"
 
 [[package]]
+name = "luanti"
+version = "0.2.0"
+dependencies = [
+ "luanti-protocol",
+ "luanti-protocol-derive",
+]
+
+[[package]]
 name = "luanti-protocol"
 version = "0.2.0"
 dependencies = [
