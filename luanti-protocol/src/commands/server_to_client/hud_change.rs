@@ -10,7 +10,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct HudchangeSpec {
+pub struct HudchangeCommand {
     pub server_id: u32,
     pub stat: HudStat,
 }

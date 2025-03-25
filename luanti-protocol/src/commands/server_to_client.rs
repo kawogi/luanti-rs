@@ -5,6 +5,13 @@ mod item_def;
 mod particle_spawner;
 mod set_sky;
 
+pub use access_denied::*;
+pub use active_object_messages::*;
+pub use hud_change::*;
+pub use item_def::*;
+pub use particle_spawner::*;
+pub use set_sky::*;
+
 use super::CommandProperties;
 #[allow(clippy::wildcard_imports, reason = "greatly simplifies macros")]
 use crate::types::*;
@@ -17,16 +24,9 @@ use crate::wire::deser::Deserializer;
 use crate::wire::ser::Serialize;
 use crate::wire::ser::SerializeResult;
 use crate::wire::ser::Serializer;
-pub use access_denied::{AccessDeniedCode, AccessDeniedCommand};
-pub use active_object_messages::*;
 use anyhow::bail;
-use hud_change::HudchangeSpec;
-use item_def::ItemdefCommand;
 use luanti_protocol_derive::LuantiDeserialize;
 use luanti_protocol_derive::LuantiSerialize;
-use particle_spawner::AddParticlespawnerCommand;
-use particle_spawner::SpawnParticleCommand;
-use set_sky::SetSkyCommand;
 use std::ops::Deref;
 
 define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
@@ -67,7 +67,7 @@ define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
     AddParticlespawner, 0x47, Default, true => AddParticlespawnerCommand,
     Hudadd, 0x49, Init, true => HudaddSpec,
     Hudrm, 0x4a, Init, true => HudrmSpec,
-    Hudchange, 0x4b, Init, true => HudchangeSpec,
+    Hudchange, 0x4b, Init, true => HudchangeCommand,
     HudSetFlags, 0x4c, Init, true => HudSetFlagsSpec,
     HudSetParam, 0x4d, Init, true => HudSetParamSpec,
     Breath, 0x4e, Default, true => BreathSpec,
