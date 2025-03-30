@@ -332,6 +332,16 @@ pub struct AuthMechsBitset {
     pub first_srp: bool,
 }
 
+impl Default for AuthMechsBitset {
+    fn default() -> Self {
+        Self {
+            legacy_password: false,
+            srp: true,
+            first_srp: false,
+        }
+    }
+}
+
 impl Serialize for AuthMechsBitset {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {

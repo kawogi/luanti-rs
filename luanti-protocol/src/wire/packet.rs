@@ -16,6 +16,7 @@ use crate::commands::Command;
 pub const PROTOCOL_ID: u32 = 0x4f45_7403;
 
 pub const LATEST_PROTOCOL_VERSION: u16 = 47;
+pub const SER_FMT_VER_HIGHEST_WRITE: u8 = 29;
 
 // Serialization format of map data
 pub const SER_FMT_HIGHEST_READ: u8 = 29;
