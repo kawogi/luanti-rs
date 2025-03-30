@@ -23,6 +23,9 @@ anyhow = { workspace = true, features = ["backtrace"] }
 clap = { workspace = true, features = ["derive"] }
 env_logger.workspace = true
 log.workspace = true
+rand.workspace = true
+sha2.workspace = true
+srp.workspace = true
 tokio = { workspace = true, features = ["full"] }
 
 [lints]

@@ -245,14 +245,16 @@ impl Deserialize for ReliableBody {
     type Output = Self;
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         let packet_type = u8::deserialize(deser)?;
-        trace!("ReliableBody::packet_type: {packet_type}");
+        // very noisy; re-enable if there are protocol errors to be debugged
+        // trace!("ReliableBody::packet_type: {packet_type}");
         if packet_type != 3 {
             bail!(DeserializeError::InvalidValue(
                 "Invalid packet_type for ReliableBody".into(),
             ))
         }
         let seqnum = WrappingSequenceNumber::deserialize(deser)?;
-        trace!("ReliableBody::seqnum: {seqnum}");
+        // very noisy; re-enable if there are protocol errors to be debugged
+        // trace!("ReliableBody::seqnum: {seqnum}");
         Ok(ReliableBody {
             seqnum,
             inner: InnerBody::deserialize(deser)?,
@@ -318,7 +320,8 @@ impl Deserialize for InnerBody {
 
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         let packet_type = u8::deserialize(deser)?;
-        trace!("InnerBody::type: {packet_type}");
+        // very noisy; re-enable if there are protocol errors to be debugged
+        // trace!("InnerBody::type: {packet_type}");
         match packet_type {
             0 => Ok(InnerBody::Control(ControlBody::deserialize(deser)?)),
             1 => Ok(InnerBody::Original(OriginalBody::deserialize(deser)?)),
@@ -432,7 +435,8 @@ impl Serialize for Packet {
 impl Deserialize for Packet {
     type Output = Self;
     fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-        trace!("deserializing packet");
+        // very noisy; re-enable if there are protocol errors to be debugged
+        // trace!("deserializing packet");
 
         let protocol_id = u32::deserialize(deserializer)?;
         if protocol_id != PROTOCOL_ID {
@@ -442,7 +446,8 @@ impl Deserialize for Packet {
         let sender_peer_id = PeerId::deserialize(deserializer)?;
         let channel = ChannelId::deserialize(deserializer)?;
 
-        trace!("deserializing packet: sender_peer_id={sender_peer_id}, channel: {channel}");
+        // very noisy; re-enable if there are protocol errors to be debugged
+        // trace!("deserializing packet: sender_peer_id={sender_peer_id}, channel: {channel}");
         let body = PacketBody::deserialize(deserializer)?;
 
         let pkt = Packet {
@@ -452,7 +457,8 @@ impl Deserialize for Packet {
             body,
         };
 
-        trace!("deserialized packet: {pkt:?}");
+        // very noisy; re-enable if there are protocol errors to be debugged
+        // trace!("deserialized packet: {pkt:?}");
 
         Ok(pkt)
     }

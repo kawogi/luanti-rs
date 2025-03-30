@@ -326,11 +326,12 @@ impl PeerRunner {
         };
         match msg {
             SocketToPeer::Received(buf) => {
-                trace!(
-                    "received {} bytes from socket: {:?}",
-                    buf.len(),
-                    &buf[0..buf.len().min(64)]
-                );
+                // very noisy; re-enable if there are protocol errors to be debugged
+                // trace!(
+                //     "received {} bytes from socket: {:?}",
+                //     buf.len(),
+                //     &buf[0..buf.len().min(64)]
+                // );
                 let mut deser = Deserializer::new(self.recv_context, &buf);
                 let pkt = Packet::deserialize(&mut deser)?;
                 self.last_received = self.now;

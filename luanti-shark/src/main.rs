@@ -48,7 +48,7 @@ async fn main() -> anyhow::Result<()> {
 async fn real_main() -> anyhow::Result<()> {
     // TODO make this configurable through command line arguments
     env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
+        .filter_level(log::LevelFilter::Trace)
         .init();
 
     let args = Args::parse();

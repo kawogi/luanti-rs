@@ -4,6 +4,7 @@
     reason = "//TODO remove before completion of the prototype"
 )]
 use anyhow::Result;
+use anyhow::anyhow;
 use anyhow::bail;
 
 use log::debug;
@@ -15,15 +16,34 @@ use luanti_protocol::CommandDirection;
 use luanti_protocol::CommandRef;
 use luanti_protocol::LuantiConnection;
 use luanti_protocol::LuantiServer;
+use luanti_protocol::commands::client_to_server::ClientReadySpec;
+use luanti_protocol::commands::client_to_server::Init2Spec;
 use luanti_protocol::commands::client_to_server::InitSpec;
+use luanti_protocol::commands::client_to_server::PlayerPosCommand;
 use luanti_protocol::commands::client_to_server::SrpBytesASpec;
+use luanti_protocol::commands::client_to_server::SrpBytesMSpec;
 use luanti_protocol::commands::client_to_server::ToServerCommand;
+use luanti_protocol::commands::client_to_server::UpdateClientInfoSpec;
+use luanti_protocol::commands::server_to_client::AnnounceMediaSpec;
+use luanti_protocol::commands::server_to_client::AuthAcceptSpec;
 use luanti_protocol::commands::server_to_client::HelloSpec;
+use luanti_protocol::commands::server_to_client::ItemdefCommand;
+use luanti_protocol::commands::server_to_client::ItemdefList;
+use luanti_protocol::commands::server_to_client::NodedefSpec;
+use luanti_protocol::commands::server_to_client::SrpBytesSBSpec;
 use luanti_protocol::commands::server_to_client::ToClientCommand;
 use luanti_protocol::peer::PeerError;
 use luanti_protocol::types::AuthMechsBitset;
+use luanti_protocol::types::NodeDefManager;
+use luanti_protocol::types::PlayerPos;
+use luanti_protocol::types::v3f;
 use luanti_protocol::wire::packet::LATEST_PROTOCOL_VERSION;
 use luanti_protocol::wire::packet::SER_FMT_VER_HIGHEST_WRITE;
+use rand::RngCore;
+use sha2::Sha256;
+use srp::groups::G_2048;
+use srp::server::SrpServer;
+use srp::server::SrpServerVerifier;
 use std::net::SocketAddr;
 use std::ops::RangeInclusive;
 
@@ -136,11 +156,13 @@ impl ProxyAdapterRunner {
     pub(crate) fn handle_client_command(&mut self, command: ToServerCommand) -> Result<()> {
         match command {
             ToServerCommand::Init(init_spec) => self.handle_init(*init_spec),
-            ToServerCommand::Init2(_init2_spec) => todo!(),
+            ToServerCommand::Init2(init2_spec) => self.handle_init2(*init2_spec),
             ToServerCommand::ModchannelJoin(_modchannel_join_spec) => todo!(),
             ToServerCommand::ModchannelLeave(_modchannel_leave_spec) => todo!(),
             ToServerCommand::TSModchannelMsg(_tsmodchannel_msg_spec) => todo!(),
-            ToServerCommand::Playerpos(_player_pos_command) => todo!(),
+            ToServerCommand::Playerpos(player_pos_command) => {
+                self.handle_player_pos(*player_pos_command)
+            }
             ToServerCommand::Gotblocks(_gotblocks_spec) => todo!(),
             ToServerCommand::Deletedblocks(_deletedblocks_spec) => todo!(),
             ToServerCommand::InventoryAction(_inventory_action_spec) => todo!(),
@@ -154,13 +176,19 @@ impl ProxyAdapterRunner {
             ToServerCommand::InventoryFields(_inventory_fields_spec) => todo!(),
             ToServerCommand::RequestMedia(_request_media_spec) => todo!(),
             ToServerCommand::HaveMedia(_have_media_spec) => todo!(),
-            ToServerCommand::ClientReady(_client_ready_spec) => todo!(),
+            ToServerCommand::ClientReady(client_ready_spec) => {
+                self.handle_client_ready(*client_ready_spec)
+            }
             ToServerCommand::FirstSrp(_first_srp_spec) => todo!(),
             ToServerCommand::SrpBytesA(srp_bytes_aspec) => {
                 self.handle_srp_bytes_a(*srp_bytes_aspec)
             }
-            ToServerCommand::SrpBytesM(_srp_bytes_mspec) => todo!(),
-            ToServerCommand::UpdateClientInfo(_update_client_info_spec) => todo!(),
+            ToServerCommand::SrpBytesM(srp_bytes_mspec) => {
+                self.handle_srp_bytes_mspec(*srp_bytes_mspec)
+            }
+            ToServerCommand::UpdateClientInfo(update_client_info_spec) => {
+                self.handle_update_client_info(*update_client_info_spec)
+            }
         }
     }
 
@@ -231,8 +259,252 @@ impl ProxyAdapterRunner {
         Ok(())
     }
 
-    fn handle_srp_bytes_a(&self, _srp_bytes_aspec: SrpBytesASpec) -> Result<()> {
-        todo!()
+    fn handle_srp_bytes_a(&mut self, srp_bytes_aspec: SrpBytesASpec) -> Result<()> {
+        let ClientConnectionState::Initialized { player_name } = &self.state else {
+            warn!("ignoring unexpected SrcBytesASpec-command");
+            return Ok(());
+        };
+
+        // the client sends `A` earlier than usual because the required `g` is well-known
+        // and doesn't need to be sent by the server
+        let SrpBytesASpec { bytes_a, based_on } = srp_bytes_aspec;
+
+        if based_on == 0 {
+            // TODO(kawogi) respond with a proper auth rejection to the client
+            // TODO(kawogi) maybe remove this specific test in favor of a general incompatibility if modern clients (based on their protocol version) prove to be unable to ever send this value
+            bail!("server doesn't support legacy authentication");
+        } else if based_on > 1 {
+            // TODO(kawogi) respond with a proper auth rejection to the client
+            bail!("server doesn't support `based_on={based_on}` for SRP authentication");
+        }
+
+        // authentication ignores casing
+        // TODO(kawogi) this will be used by the final implementation
+        // let auth_name = player_name.to_ascii_lowercase();
+
+        let srp_server = SrpServer::<Sha256>::new(&G_2048);
+        // let (username, a_pub) = get_client_request();
+
+        // let (salt, v) = get_user(&username);
+        // TODO(kawogi) look up salt and verifier for this user
+        let mut srp_user_salt = [0_u8; 64];
+        rand::rng().fill_bytes(&mut srp_user_salt);
+        let mut srp_user_verifier = [0_u8; 64];
+        rand::rng().fill_bytes(&mut srp_user_verifier);
+
+        let mut srp_private_b = [0_u8; 256];
+        rand::rng().fill_bytes(&mut srp_private_b);
+        let srp_b_pub = srp_server.compute_public_ephemeral(&srp_private_b, &srp_user_verifier);
+
+        let verifier = srp_server
+            .process_reply(&srp_private_b, &srp_user_verifier, &bytes_a)
+            .map_err(|error| anyhow!("{error}"))?;
+
+        self.state = ClientConnectionState::Initialized2 {
+            player_name: player_name.clone(),
+            verifier,
+        };
+
+        self.conn
+            .send(ToClientCommand::SrpBytesSB(Box::new(SrpBytesSBSpec {
+                s: srp_user_salt.to_vec(),
+                b: srp_b_pub,
+            })))?;
+
+        Ok(())
+    }
+
+    fn handle_srp_bytes_mspec(&mut self, srp_bytes_mspec: SrpBytesMSpec) -> Result<()> {
+        let ClientConnectionState::Initialized2 {
+            player_name,
+            verifier,
+        } = &self.state
+        else {
+            warn!("ignoring unexpected SrcBytesASpec-command");
+            return Ok(());
+        };
+
+        let SrpBytesMSpec { bytes_m } = srp_bytes_mspec;
+
+        match verifier.verify_client(&bytes_m) {
+            Ok(()) => {
+                info!("player '{player_name}' was sucessfully authenticated");
+            }
+            Err(error) => {
+                warn!("failed to authenticate player '{player_name}': {error}");
+                // FIXME(kawogi) remove this once there's a proper implementation in place
+                warn!("MOCK-AUTHENTICATOR GRANTS ACCESS NONETHELESS!");
+            }
+        }
+
+        self.state = ClientConnectionState::Authenticated;
+
+        self.conn
+            .send(ToClientCommand::AuthAccept(Box::new(AuthAcceptSpec {
+                player_pos: v3f {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                // TODO(kawogi) load from actual map?
+                map_seed: 0,
+                // TODO(kawogi) what is this value?
+                recommended_send_interval: 0.05,
+                // TODO(kawogi) what is this value?
+                sudo_auth_methods: 2,
+            })))?;
+
+        Ok(())
+    }
+
+    fn handle_init2(&self, init2_spec: Init2Spec) -> Result<()> {
+        let ClientConnectionState::Authenticated = &self.state else {
+            warn!("ignoring unexpected Init2Spec-command");
+            return Ok(());
+        };
+
+        let Init2Spec { lang } = init2_spec;
+        info!(
+            "Client language: '{lang}'",
+            lang = lang.unwrap_or("<none>".into())
+        );
+
+        let itemdef_list = ItemdefList {
+            itemdef_manager_version: 0,
+            defs: vec![],
+            aliases: vec![],
+        };
+
+        let node_def_manager = NodeDefManager {
+            content_features: vec![],
+        };
+
+        self.conn
+            .send(ToClientCommand::Itemdef(Box::new(ItemdefCommand {
+                item_def: itemdef_list,
+            })))?;
+
+        self.conn
+            .send(ToClientCommand::Nodedef(Box::new(NodedefSpec {
+                node_def: node_def_manager,
+            })))?;
+
+        self.conn.send(ToClientCommand::AnnounceMedia(Box::new(
+            AnnounceMediaSpec {
+                files: vec![],
+                remote_servers: String::new(),
+            },
+        )))?;
+
+        Ok(())
+    }
+
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "//TODO(kawogi) for symmetry with other handlers, but should be reviewed"
+    )]
+    fn handle_client_ready(
+        &self,
+        client_ready_spec: ClientReadySpec,
+    ) -> std::result::Result<(), anyhow::Error> {
+        let ClientConnectionState::Authenticated = &self.state else {
+            warn!("ignoring unexpected ClientReadySpec-command");
+            return Ok(());
+        };
+
+        let ClientReadySpec {
+            major_ver: _,
+            minor_ver: _,
+            patch_ver: _,
+            reserved: _,
+            full_ver,
+            formspec_ver,
+        } = client_ready_spec;
+
+        info!(
+            "Client ready: v{full_ver}, formspec v{}",
+            formspec_ver
+                .as_ref()
+                .map_or("<none>".into(), ToString::to_string)
+        );
+
+        Ok(())
+    }
+
+    #[expect(
+        clippy::unnecessary_wraps,
+        clippy::needless_pass_by_value,
+        reason = "//TODO(kawogi) for symmetry with other handlers, but should be reviewed"
+    )]
+    fn handle_player_pos(
+        &self,
+        player_pos_command: PlayerPosCommand,
+    ) -> std::result::Result<(), anyhow::Error> {
+        let ClientConnectionState::Authenticated = &self.state else {
+            warn!("ignoring unexpected PlayerPosCommand-command");
+            return Ok(());
+        };
+
+        let PlayerPosCommand {
+            player_pos:
+                PlayerPos {
+                    position,
+                    speed,
+                    pitch,
+                    yaw,
+                    keys_pressed,
+                    fov,
+                    wanted_range,
+
+                    camera_inverted,
+                    movement_speed,
+                    movement_direction,
+                },
+        } = player_pos_command;
+
+        debug!(
+            "player moved: pos:({px},{py},{pz}) speed:({sx},{sy},{sz}) pitch:{pitch} yaw:{yaw} keys:{keys_pressed} fov:{fov} range:{wanted_range} cam_inv:{camera_inverted} mov_speed:{movement_speed} mov_dir:{movement_direction} ",
+            px = position.x,
+            py = position.y,
+            pz = position.z,
+            sx = speed.x,
+            sy = speed.y,
+            sz = speed.z,
+        );
+
+        Ok(())
+    }
+
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "//TODO(kawogi) for symmetry with other handlers, but should be reviewed"
+    )]
+    fn handle_update_client_info(
+        &self,
+        update_client_info_spec: UpdateClientInfoSpec,
+    ) -> Result<()> {
+        let ClientConnectionState::Authenticated = &self.state else {
+            warn!("ignoring unexpected UpdateClientInfo-command");
+            return Ok(());
+        };
+
+        let UpdateClientInfoSpec {
+            render_target_size,
+            real_gui_scaling,
+            real_hud_scaling,
+            max_fs_size,
+            touch_controls,
+        } = update_client_info_spec;
+
+        debug!(
+            "updated client info: render size:({render_x},{render_y}) gui scaling:({real_gui_scaling}) hud scaling:{real_hud_scaling} fs size:({fs_x},{fs_y}) touch:{touch_controls}",
+            render_x = render_target_size.x,
+            render_y = render_target_size.y,
+            fs_x = max_fs_size.x,
+            fs_y = max_fs_size.y,
+        );
+
+        Ok(())
     }
 
     pub(crate) fn is_bulk_command<Cmd: CommandRef>(command: &Cmd) -> bool {
@@ -256,7 +528,7 @@ impl ProxyAdapterRunner {
         match verbosity {
             0 => (),
             1 => trace!("{} {}", prefix, command.command_name()),
-            2.. => trace!("{} {:#?}", prefix, command),
+            2.. => trace!("{prefix} {command:#?}"),
         }
     }
 }
@@ -271,4 +543,10 @@ enum ClientConnectionState {
         /// name of the player
         player_name: String,
     },
+    Initialized2 {
+        /// name of the player
+        player_name: String,
+        verifier: SrpServerVerifier<Sha256>,
+    },
+    Authenticated,
 }

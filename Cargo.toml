@@ -52,6 +52,8 @@ miniz_oxide = "0.8"
 proc-macro2 = "1"
 quote = "1"
 rand = "0.9"
+sha2 = "0.10"
+srp = "0.6"
 syn = { version = "2" }
 thiserror = "2"
 tokio = { version = "1" }

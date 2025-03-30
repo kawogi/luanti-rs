@@ -3,7 +3,6 @@ use crate::wire::{
     ser::{Serialize, SerializeResult, Serializer},
 };
 use anyhow::bail;
-use log::trace;
 use std::ops::DerefMut;
 use std::{marker::PhantomData, ops::Deref};
 
@@ -90,11 +89,12 @@ impl Deserialize for String {
     type Output = Self;
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         let num_bytes = u16::deserialize(deser)? as usize;
-        trace!(
-            "String with {} bytes - {} bytes remaining",
-            num_bytes,
-            deser.remaining()
-        );
+        // very noisy; re-enable if there are protocol errors to be debugged
+        // trace!(
+        //     "String with {} bytes - {} bytes remaining",
+        //     num_bytes,
+        //     deser.remaining()
+        // );
         match std::str::from_utf8(deser.take(num_bytes)?) {
             Ok(str) => Ok(str.into()),
             Err(error) => bail!(DeserializeError::InvalidValue(error.to_string())),
