@@ -152,7 +152,7 @@ impl ProxyAdapterRunner {
         match verbosity {
             0 => (),
             1 => trace!("{} {}", prefix, command.command_name()),
-            2.. => trace!("{} {:#?}", prefix, command),
+            2.. => trace!("{prefix} {command:#?}"),
         }
     }
 }

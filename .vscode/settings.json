@@ -107,5 +107,9 @@
         "wstring",
         "yawpitch",
         "zstd"
+    ],
+    "editor.rulers": [
+        100,
+        120
     ]
 }

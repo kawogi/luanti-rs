@@ -4,48 +4,41 @@
     reason = "//TODO remove before completion of the prototype"
 )]
 use anyhow::Result;
-use anyhow::anyhow;
 use anyhow::bail;
 
 use log::debug;
 use log::error;
 use log::info;
 use log::trace;
-use log::warn;
 use luanti_protocol::CommandDirection;
 use luanti_protocol::CommandRef;
 use luanti_protocol::LuantiConnection;
 use luanti_protocol::LuantiServer;
+use luanti_protocol::commands::CommandProperties;
 use luanti_protocol::commands::client_to_server::ClientReadySpec;
 use luanti_protocol::commands::client_to_server::Init2Spec;
 use luanti_protocol::commands::client_to_server::InitSpec;
 use luanti_protocol::commands::client_to_server::PlayerPosCommand;
-use luanti_protocol::commands::client_to_server::SrpBytesASpec;
-use luanti_protocol::commands::client_to_server::SrpBytesMSpec;
 use luanti_protocol::commands::client_to_server::ToServerCommand;
 use luanti_protocol::commands::client_to_server::UpdateClientInfoSpec;
 use luanti_protocol::commands::server_to_client::AnnounceMediaSpec;
-use luanti_protocol::commands::server_to_client::AuthAcceptSpec;
 use luanti_protocol::commands::server_to_client::HelloSpec;
 use luanti_protocol::commands::server_to_client::ItemdefCommand;
 use luanti_protocol::commands::server_to_client::ItemdefList;
 use luanti_protocol::commands::server_to_client::NodedefSpec;
-use luanti_protocol::commands::server_to_client::SrpBytesSBSpec;
 use luanti_protocol::commands::server_to_client::ToClientCommand;
 use luanti_protocol::peer::PeerError;
 use luanti_protocol::types::AuthMechsBitset;
 use luanti_protocol::types::NodeDefManager;
 use luanti_protocol::types::PlayerPos;
-use luanti_protocol::types::v3f;
 use luanti_protocol::wire::packet::LATEST_PROTOCOL_VERSION;
 use luanti_protocol::wire::packet::SER_FMT_VER_HIGHEST_WRITE;
-use rand::RngCore;
-use sha2::Sha256;
-use srp::groups::G_2048;
-use srp::server::SrpServer;
-use srp::server::SrpServerVerifier;
+use std::mem;
 use std::net::SocketAddr;
 use std::ops::RangeInclusive;
+
+use crate::auth::SrpAuthState;
+use crate::auth::SrpUserAuthData;
 
 const SUPPORTED_PROTOCOL_VERSIONS: RangeInclusive<u16> =
     LATEST_PROTOCOL_VERSION..=LATEST_PROTOCOL_VERSION;
@@ -144,61 +137,101 @@ impl ProxyAdapterRunner {
                     let command = command?;
                     self.maybe_show(&command);
                     self.handle_client_command(command)?;
-
-                    // TODO(kawogi) do actual stuff, like sending response, altering state …
-                    // self.maybe_show(&client_command);
-                    // self.conn.send(client_command)?;
                 },
             }
         }
     }
 
     pub(crate) fn handle_client_command(&mut self, command: ToServerCommand) -> Result<()> {
-        match command {
-            ToServerCommand::Init(init_spec) => self.handle_init(*init_spec),
-            ToServerCommand::Init2(init2_spec) => self.handle_init2(*init2_spec),
-            ToServerCommand::ModchannelJoin(_modchannel_join_spec) => todo!(),
-            ToServerCommand::ModchannelLeave(_modchannel_leave_spec) => todo!(),
-            ToServerCommand::TSModchannelMsg(_tsmodchannel_msg_spec) => todo!(),
-            ToServerCommand::Playerpos(player_pos_command) => {
-                self.handle_player_pos(*player_pos_command)
+        self.state = match mem::take(&mut self.state) {
+            ClientConnectionState::None => match command {
+                ToServerCommand::Init(init_spec) => self.handle_init(*init_spec)?,
+                unexpected => {
+                    bail!(
+                        "unexpected command for init state: {}",
+                        unexpected.command_name()
+                    );
+                }
+            },
+            ClientConnectionState::Authenticating(srp_auth_state) => {
+                match srp_auth_state.handle_client_message(command, &self.conn)? {
+                    SrpAuthState::Authenticated { display_name, name } => {
+                        ClientConnectionState::Authenticated { display_name, name }
+                    }
+                    authenticating => ClientConnectionState::Authenticating(authenticating),
+                }
             }
-            ToServerCommand::Gotblocks(_gotblocks_spec) => todo!(),
-            ToServerCommand::Deletedblocks(_deletedblocks_spec) => todo!(),
-            ToServerCommand::InventoryAction(_inventory_action_spec) => todo!(),
-            ToServerCommand::TSChatMessage(_tschat_message_spec) => todo!(),
-            ToServerCommand::Damage(_damage_spec) => todo!(),
-            ToServerCommand::Playeritem(_playeritem_spec) => todo!(),
-            ToServerCommand::Respawn(_respawn_spec) => todo!(),
-            ToServerCommand::Interact(_interact_spec) => todo!(),
-            ToServerCommand::RemovedSounds(_removed_sounds_spec) => todo!(),
-            ToServerCommand::NodemetaFields(_nodemeta_fields_spec) => todo!(),
-            ToServerCommand::InventoryFields(_inventory_fields_spec) => todo!(),
-            ToServerCommand::RequestMedia(_request_media_spec) => todo!(),
-            ToServerCommand::HaveMedia(_have_media_spec) => todo!(),
-            ToServerCommand::ClientReady(client_ready_spec) => {
-                self.handle_client_ready(*client_ready_spec)
+            ClientConnectionState::Authenticated { display_name, name } => match command {
+                ToServerCommand::Init2(init2_spec) => {
+                    Self::handle_init2(display_name, name, *init2_spec, &self.conn)?
+                }
+                unexpected => {
+                    bail!(
+                        "unexpected command for authenticated state: {}",
+                        unexpected.command_name()
+                    );
+                }
+            },
+            ClientConnectionState::Loading { display_name, name } => match command {
+                ToServerCommand::ClientReady(client_ready_spec) => {
+                    Self::handle_client_ready(display_name, name, *client_ready_spec)?
+                }
+                unexpected => {
+                    bail!(
+                        "unexpected command for authenticated state: {}",
+                        unexpected.command_name()
+                    );
+                }
+            },
+            ClientConnectionState::Running { display_name, name } => {
+                match command {
+                    ToServerCommand::Playerpos(player_pos_command) => {
+                        Self::handle_player_pos(*player_pos_command)?;
+                    }
+                    ToServerCommand::UpdateClientInfo(update_client_info_spec) => {
+                        Self::handle_update_client_info(*update_client_info_spec)?;
+                    }
+                    ToServerCommand::ModchannelJoin(_modchannel_join_spec) => todo!(),
+                    ToServerCommand::ModchannelLeave(_modchannel_leave_spec) => todo!(),
+                    ToServerCommand::TSModchannelMsg(_tsmodchannel_msg_spec) => todo!(),
+                    ToServerCommand::Gotblocks(_gotblocks_spec) => todo!(),
+                    ToServerCommand::Deletedblocks(_deletedblocks_spec) => {
+                        todo!()
+                    }
+                    ToServerCommand::InventoryAction(_inventory_action_spec) => todo!(),
+                    ToServerCommand::TSChatMessage(_tschat_message_spec) => {
+                        todo!()
+                    }
+                    ToServerCommand::Damage(_damage_spec) => todo!(),
+                    ToServerCommand::Playeritem(_playeritem_spec) => todo!(),
+                    ToServerCommand::Respawn(_respawn_spec) => todo!(),
+                    ToServerCommand::Interact(_interact_spec) => todo!(),
+                    ToServerCommand::RemovedSounds(_removed_sounds_spec) => {
+                        todo!()
+                    }
+                    ToServerCommand::NodemetaFields(_nodemeta_fields_spec) => todo!(),
+                    ToServerCommand::InventoryFields(_inventory_fields_spec) => todo!(),
+                    ToServerCommand::RequestMedia(_request_media_spec) => {
+                        todo!()
+                    }
+                    ToServerCommand::HaveMedia(_have_media_spec) => todo!(),
+                    ToServerCommand::FirstSrp(_first_srp_spec) => todo!(),
+                    unexpected => {
+                        bail!(
+                            "unexpected command for authenticated state: {}",
+                            unexpected.command_name()
+                        );
+                    }
+                }
+                ClientConnectionState::Running { display_name, name }
             }
-            ToServerCommand::FirstSrp(_first_srp_spec) => todo!(),
-            ToServerCommand::SrpBytesA(srp_bytes_aspec) => {
-                self.handle_srp_bytes_a(*srp_bytes_aspec)
-            }
-            ToServerCommand::SrpBytesM(srp_bytes_mspec) => {
-                self.handle_srp_bytes_mspec(*srp_bytes_mspec)
-            }
-            ToServerCommand::UpdateClientInfo(update_client_info_spec) => {
-                self.handle_update_client_info(*update_client_info_spec)
-            }
-        }
+        };
+
+        Ok(())
     }
 
     /// This is the first command a client sends after a connect
-    fn handle_init(&mut self, init_spec: InitSpec) -> Result<()> {
-        if !matches!(self.state, ClientConnectionState::None) {
-            warn!("ignoring unexpected Init-command");
-            return Ok(());
-        }
-
+    fn handle_init(&mut self, init_spec: InitSpec) -> Result<ClientConnectionState> {
         let InitSpec {
             serialization_ver_max,
             supp_compr_modes: _unused,
@@ -244,125 +277,28 @@ impl ProxyAdapterRunner {
         // TODO(kawogi) Verify that the technical protocol switch is transparently performed by the underlying connection implementation
 
         // TODO(kawogi) verify player name to be valid and registered
+        let user_data = SrpUserAuthData::new_fake(player_name);
 
-        self.state = ClientConnectionState::Initialized { player_name };
-
-        self.conn.send(ToClientCommand::Hello(Box::new(HelloSpec {
+        self.conn.send(HelloSpec {
             serialization_ver: serialization_version,
             compression_mode: 0, // unused field
             proto_ver: protocol_version,
             // TODO(kawogi) align those flags with the registered auth-providers (or transparently proxy them into a secure authentication or just don't implement all of them)
             auth_mechs: AuthMechsBitset::default(),
             username_legacy: String::new(), // always empty
-        })))?;
+        })?;
 
-        Ok(())
+        Ok(ClientConnectionState::Authenticating(SrpAuthState::new(
+            user_data,
+        )))
     }
 
-    fn handle_srp_bytes_a(&mut self, srp_bytes_aspec: SrpBytesASpec) -> Result<()> {
-        let ClientConnectionState::Initialized { player_name } = &self.state else {
-            warn!("ignoring unexpected SrcBytesASpec-command");
-            return Ok(());
-        };
-
-        // the client sends `A` earlier than usual because the required `g` is well-known
-        // and doesn't need to be sent by the server
-        let SrpBytesASpec { bytes_a, based_on } = srp_bytes_aspec;
-
-        if based_on == 0 {
-            // TODO(kawogi) respond with a proper auth rejection to the client
-            // TODO(kawogi) maybe remove this specific test in favor of a general incompatibility if modern clients (based on their protocol version) prove to be unable to ever send this value
-            bail!("server doesn't support legacy authentication");
-        } else if based_on > 1 {
-            // TODO(kawogi) respond with a proper auth rejection to the client
-            bail!("server doesn't support `based_on={based_on}` for SRP authentication");
-        }
-
-        // authentication ignores casing
-        // TODO(kawogi) this will be used by the final implementation
-        // let auth_name = player_name.to_ascii_lowercase();
-
-        let srp_server = SrpServer::<Sha256>::new(&G_2048);
-        // let (username, a_pub) = get_client_request();
-
-        // let (salt, v) = get_user(&username);
-        // TODO(kawogi) look up salt and verifier for this user
-        let mut srp_user_salt = [0_u8; 64];
-        rand::rng().fill_bytes(&mut srp_user_salt);
-        let mut srp_user_verifier = [0_u8; 64];
-        rand::rng().fill_bytes(&mut srp_user_verifier);
-
-        let mut srp_private_b = [0_u8; 256];
-        rand::rng().fill_bytes(&mut srp_private_b);
-        let srp_b_pub = srp_server.compute_public_ephemeral(&srp_private_b, &srp_user_verifier);
-
-        let verifier = srp_server
-            .process_reply(&srp_private_b, &srp_user_verifier, &bytes_a)
-            .map_err(|error| anyhow!("{error}"))?;
-
-        self.state = ClientConnectionState::Initialized2 {
-            player_name: player_name.clone(),
-            verifier,
-        };
-
-        self.conn
-            .send(ToClientCommand::SrpBytesSB(Box::new(SrpBytesSBSpec {
-                s: srp_user_salt.to_vec(),
-                b: srp_b_pub,
-            })))?;
-
-        Ok(())
-    }
-
-    fn handle_srp_bytes_mspec(&mut self, srp_bytes_mspec: SrpBytesMSpec) -> Result<()> {
-        let ClientConnectionState::Initialized2 {
-            player_name,
-            verifier,
-        } = &self.state
-        else {
-            warn!("ignoring unexpected SrcBytesASpec-command");
-            return Ok(());
-        };
-
-        let SrpBytesMSpec { bytes_m } = srp_bytes_mspec;
-
-        match verifier.verify_client(&bytes_m) {
-            Ok(()) => {
-                info!("player '{player_name}' was sucessfully authenticated");
-            }
-            Err(error) => {
-                warn!("failed to authenticate player '{player_name}': {error}");
-                // FIXME(kawogi) remove this once there's a proper implementation in place
-                warn!("MOCK-AUTHENTICATOR GRANTS ACCESS NONETHELESS!");
-            }
-        }
-
-        self.state = ClientConnectionState::Authenticated;
-
-        self.conn
-            .send(ToClientCommand::AuthAccept(Box::new(AuthAcceptSpec {
-                player_pos: v3f {
-                    x: 0.0,
-                    y: 0.0,
-                    z: 0.0,
-                },
-                // TODO(kawogi) load from actual map?
-                map_seed: 0,
-                // TODO(kawogi) what is this value?
-                recommended_send_interval: 0.05,
-                // TODO(kawogi) what is this value?
-                sudo_auth_methods: 2,
-            })))?;
-
-        Ok(())
-    }
-
-    fn handle_init2(&self, init2_spec: Init2Spec) -> Result<()> {
-        let ClientConnectionState::Authenticated = &self.state else {
-            warn!("ignoring unexpected Init2Spec-command");
-            return Ok(());
-        };
-
+    fn handle_init2(
+        display_name: String,
+        name: String,
+        init2_spec: Init2Spec,
+        conn: &LuantiConnection,
+    ) -> Result<ClientConnectionState> {
         let Init2Spec { lang } = init2_spec;
         info!(
             "Client language: '{lang}'",
@@ -379,24 +315,20 @@ impl ProxyAdapterRunner {
             content_features: vec![],
         };
 
-        self.conn
-            .send(ToClientCommand::Itemdef(Box::new(ItemdefCommand {
-                item_def: itemdef_list,
-            })))?;
+        conn.send(ItemdefCommand {
+            item_def: itemdef_list,
+        })?;
 
-        self.conn
-            .send(ToClientCommand::Nodedef(Box::new(NodedefSpec {
-                node_def: node_def_manager,
-            })))?;
+        conn.send(NodedefSpec {
+            node_def: node_def_manager,
+        })?;
 
-        self.conn.send(ToClientCommand::AnnounceMedia(Box::new(
-            AnnounceMediaSpec {
-                files: vec![],
-                remote_servers: String::new(),
-            },
-        )))?;
+        conn.send(AnnounceMediaSpec {
+            files: vec![],
+            remote_servers: String::new(),
+        })?;
 
-        Ok(())
+        Ok(ClientConnectionState::Loading { display_name, name })
     }
 
     #[expect(
@@ -404,14 +336,10 @@ impl ProxyAdapterRunner {
         reason = "//TODO(kawogi) for symmetry with other handlers, but should be reviewed"
     )]
     fn handle_client_ready(
-        &self,
+        display_name: String,
+        name: String,
         client_ready_spec: ClientReadySpec,
-    ) -> std::result::Result<(), anyhow::Error> {
-        let ClientConnectionState::Authenticated = &self.state else {
-            warn!("ignoring unexpected ClientReadySpec-command");
-            return Ok(());
-        };
-
+    ) -> Result<ClientConnectionState> {
         let ClientReadySpec {
             major_ver: _,
             minor_ver: _,
@@ -428,7 +356,7 @@ impl ProxyAdapterRunner {
                 .map_or("<none>".into(), ToString::to_string)
         );
 
-        Ok(())
+        Ok(ClientConnectionState::Running { display_name, name })
     }
 
     #[expect(
@@ -437,14 +365,8 @@ impl ProxyAdapterRunner {
         reason = "//TODO(kawogi) for symmetry with other handlers, but should be reviewed"
     )]
     fn handle_player_pos(
-        &self,
         player_pos_command: PlayerPosCommand,
     ) -> std::result::Result<(), anyhow::Error> {
-        let ClientConnectionState::Authenticated = &self.state else {
-            warn!("ignoring unexpected PlayerPosCommand-command");
-            return Ok(());
-        };
-
         let PlayerPosCommand {
             player_pos:
                 PlayerPos {
@@ -479,15 +401,7 @@ impl ProxyAdapterRunner {
         clippy::unnecessary_wraps,
         reason = "//TODO(kawogi) for symmetry with other handlers, but should be reviewed"
     )]
-    fn handle_update_client_info(
-        &self,
-        update_client_info_spec: UpdateClientInfoSpec,
-    ) -> Result<()> {
-        let ClientConnectionState::Authenticated = &self.state else {
-            warn!("ignoring unexpected UpdateClientInfo-command");
-            return Ok(());
-        };
-
+    fn handle_update_client_info(update_client_info_spec: UpdateClientInfoSpec) -> Result<()> {
         let UpdateClientInfoSpec {
             render_target_size,
             real_gui_scaling,
@@ -539,14 +453,29 @@ enum ClientConnectionState {
     /// We're waiting for an Init-command to arrive
     #[default]
     None,
-    Initialized {
-        /// name of the player
-        player_name: String,
+    Authenticating(SrpAuthState),
+    Authenticated {
+        /// The (non-technical) name that has been provided by the user. This might contain special
+        /// characters or have mixed casing. This may be used as display name.
+        display_name: String,
+        /// Technical name (key) of the user's record. This is usually a normalized version of the
+        /// `display_name`
+        name: String,
     },
-    Initialized2 {
-        /// name of the player
-        player_name: String,
-        verifier: SrpServerVerifier<Sha256>,
+    Loading {
+        /// The (non-technical) name that has been provided by the user. This might contain special
+        /// characters or have mixed casing. This may be used as display name.
+        display_name: String,
+        /// Technical name (key) of the user's record. This is usually a normalized version of the
+        /// `display_name`
+        name: String,
     },
-    Authenticated,
+    Running {
+        /// The (non-technical) name that has been provided by the user. This might contain special
+        /// characters or have mixed casing. This may be used as display name.
+        display_name: String,
+        /// Technical name (key) of the user's record. This is usually a normalized version of the
+        /// `display_name`
+        name: String,
+    },
 }

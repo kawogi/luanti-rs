@@ -1,6 +1,7 @@
 //! Luanti protocol implemented in Rust
 // #![expect(clippy::expect_used, reason = "//TODO improve error handling")]
 
+pub mod auth;
 mod server;
 
 use anyhow::bail;

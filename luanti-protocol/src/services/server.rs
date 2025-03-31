@@ -51,7 +51,7 @@ impl LuantiServerRunner {
             match LuantiSocket::new(self.server_address, true).await {
                 Ok(socket) => break socket,
                 Err(err) => {
-                    warn!("LuantiServer: bind failed: {}", err);
+                    warn!("LuantiServer: bind failed: {err}");
                     info!("Retrying in 5 seconds");
                     tokio::time::sleep(Duration::from_millis(5000)).await;
                 }

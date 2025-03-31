@@ -111,7 +111,7 @@ impl LuantiSocketRunner {
         match self.run_inner().await {
             Ok(()) => (),
             Err(err) => {
-                error!("LuantiSocket abnormal exit: {:?}", err);
+                error!("LuantiSocket abnormal exit: {err:?}");
             }
         }
     }

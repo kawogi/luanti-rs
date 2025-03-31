@@ -30,8 +30,8 @@ impl LuantiConnection {
     }
 
     /// Send a command to the client
-    pub fn send(&self, command: ToClientCommand) -> Result<()> {
-        self.peer.send(Command::ToClient(command))
+    pub fn send(&self, command: impl Into<ToClientCommand>) -> Result<()> {
+        self.peer.send(Command::ToClient(command.into()))
     }
 
     pub fn send_access_denied(
@@ -40,14 +40,11 @@ impl LuantiConnection {
         reason: String,
         reconnect: bool,
     ) -> Result<()> {
-        self.send(
-            AccessDeniedCommand {
-                code,
-                reason,
-                reconnect,
-            }
-            .into(),
-        )
+        self.send(AccessDeniedCommand {
+            code,
+            reason,
+            reconnect,
+        })
     }
 
     /// Await a command from the peer

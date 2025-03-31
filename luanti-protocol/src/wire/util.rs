@@ -417,11 +417,11 @@ mod tests {
             let (result, consumed) =
                 deserialize_json_string_if_needed(&serialized_plus_junk).unwrap();
             if input != result {
-                error!("input = {:?}", input);
-                error!("serialized = {:?}", serialized);
-                error!("serialized_plus_junk = {:?}", serialized_plus_junk);
-                error!("result = {:?}", result);
-                error!("consumed = {}", consumed);
+                error!("input = {input:?}");
+                error!("serialized = {serialized:?}");
+                error!("serialized_plus_junk = {serialized_plus_junk:?}");
+                error!("result = {result:?}");
+                error!("consumed = {consumed}");
                 panic!();
             }
             assert_eq!(input, result);

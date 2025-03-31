@@ -38,9 +38,9 @@ pub fn audit_command<Cmd: CommandRef>(context: ProtocolContext, orig: &[u8], com
         Ok(()) => (),
         Err(err) => {
             error!("AUDIT: Re-serialization failed");
-            error!("AUDIT: ORIGINAL = {:?}", orig);
-            error!("AUDIT: PARSED = {:?}", command);
-            error!("ERR = {:?}", err);
+            error!("AUDIT: ORIGINAL = {orig:?}");
+            error!("AUDIT: PARSED = {command:?}");
+            error!("ERR = {err:?}");
             #[expect(clippy::exit, reason = "this is only being used in tests")]
             std::process::exit(1);
         }
@@ -51,10 +51,10 @@ pub fn audit_command<Cmd: CommandRef>(context: ProtocolContext, orig: &[u8], com
         Ok(()) => (),
         Err(err) => {
             error!("AUDIT: Unknown error occurred auditing of command");
-            error!("AUDIT: PARSED = {:?}", command);
-            error!("AUDIT: ORIGINAL     = {:?}", orig);
-            error!("AUDIT: RESERIALIZED = {:?}", reserialized);
-            error!("ERR = {:?}", err);
+            error!("AUDIT: PARSED = {command:?}");
+            error!("AUDIT: ORIGINAL     = {orig:?}");
+            error!("AUDIT: RESERIALIZED = {reserialized:?}");
+            error!("ERR = {err:?}");
             #[expect(clippy::exit, reason = "this is only being used in tests")]
             std::process::exit(1);
         }
@@ -175,13 +175,10 @@ fn audit_command_inner<Cmd: CommandRef>(
 
 fn do_compare<Cmd: CommandRef>(what: &str, reserialized: &[u8], orig: &[u8], command: &Cmd) {
     if reserialized != orig {
-        error!(
-            "AUDIT: Mismatch between original and re-serialized ({})",
-            what
-        );
-        error!("AUDIT: ORIGINAL     = {:?}", orig);
-        error!("AUDIT: RESERIALIZED = {:?}", reserialized);
-        error!("AUDIT: PARSED = {:?}", command);
+        error!("AUDIT: Mismatch between original and re-serialized ({what})");
+        error!("AUDIT: ORIGINAL     = {orig:?}");
+        error!("AUDIT: RESERIALIZED = {reserialized:?}");
+        error!("AUDIT: PARSED = {command:?}");
         #[expect(clippy::exit, reason = "this is only being used in tests")]
         std::process::exit(1);
     }
