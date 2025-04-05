@@ -1,5 +1,7 @@
 //! Contains the implementation for authenticating a user.
 
+pub mod dummy;
+
 use anyhow::{Result, anyhow, bail};
 use log::{info, warn};
 use luanti_protocol::{
@@ -17,10 +19,11 @@ use srp::{
     groups::G_2048,
     server::{SrpServer, SrpServerVerifier},
 };
+use std::pin::Pin;
 
 /// An `Authenticator` provides the server with the information necessary to authenticate a single
 /// user.
-pub trait Authenticator: Sized {
+pub trait Authenticator: Send + Sync + Clone {
     /// Tries to create a new authenticator for a named user.
     ///
     /// An implementation shall try to look up this user and fetch the associated security tokens.
@@ -28,7 +31,10 @@ pub trait Authenticator: Sized {
     /// # Errors
     ///
     /// Returns an error if the user name wasn't found or was otherwise invalid.
-    fn load(user_name: String) -> Result<Self>;
+    fn load(
+        &self,
+        user_name: String,
+    ) -> Pin<Box<dyn Future<Output = Result<SrpUserAuthData>> + Send + '_>>;
 }
 
 /// Contains all information the SRC authentication mechanism needs to authenticate a user.
@@ -47,21 +53,7 @@ pub struct SrpUserAuthData {
     pub verifier: Vec<u8>,
 }
 
-impl SrpUserAuthData {
-    pub(crate) fn new_fake(name: String) -> Self {
-        let mut salt = [0_u8; 64];
-        rand::rng().fill_bytes(&mut salt);
-        let mut verifier = [0_u8; 64];
-        rand::rng().fill_bytes(&mut verifier);
-
-        Self {
-            name: name.to_ascii_lowercase(),
-            display_name: name,
-            salt: salt.to_vec(),
-            verifier: verifier.to_vec(),
-        }
-    }
-}
+impl SrpUserAuthData {}
 
 /// Remembers the current state of an SRP authentication handshake.
 #[derive(Default)]

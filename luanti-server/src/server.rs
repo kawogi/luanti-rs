@@ -3,9 +3,11 @@
     clippy::todo,
     reason = "//TODO remove before completion of the prototype"
 )]
+
+use crate::authentication::Authenticator;
+use crate::authentication::SrpAuthState;
 use anyhow::Result;
 use anyhow::bail;
-
 use log::debug;
 use log::error;
 use log::info;
@@ -36,9 +38,7 @@ use luanti_protocol::wire::packet::SER_FMT_VER_HIGHEST_WRITE;
 use std::mem;
 use std::net::SocketAddr;
 use std::ops::RangeInclusive;
-
-use crate::auth::SrpAuthState;
-use crate::auth::SrpUserAuthData;
+use tokio::task::JoinHandle;
 
 const SUPPORTED_PROTOCOL_VERSIONS: RangeInclusive<u16> =
     LATEST_PROTOCOL_VERSION..=LATEST_PROTOCOL_VERSION;
@@ -46,45 +46,60 @@ const SUPPORTED_SERIALIZATION_VERSIONS: RangeInclusive<u8> =
     SER_FMT_VER_HIGHEST_WRITE..=SER_FMT_VER_HIGHEST_WRITE;
 
 /// A server providing access to a single Luanti world
-pub(crate) struct LuantiWorldServer;
+pub(crate) struct LuantiWorldServer {
+    /// used to accept connection from clients
+    bind_addr: SocketAddr,
+    verbosity: u8,
+    runner: Option<JoinHandle<()>>,
+}
 
 impl LuantiWorldServer {
     pub(crate) fn new(bind_addr: SocketAddr, verbosity: u8) -> Self {
-        let runner = LuantiProxyRunner {
+        Self {
             bind_addr,
             verbosity,
+            runner: None,
+        }
+    }
+
+    pub(crate) fn start(&mut self, authenticator: impl Authenticator + 'static) {
+        assert!(self.runner.is_none(), "server is already running");
+
+        let runner = LuantiServerRunner {
+            bind_addr: self.bind_addr,
+            verbosity: self.verbosity,
         };
-        tokio::spawn(async move { runner.run().await });
-        LuantiWorldServer {}
+        let runner = tokio::spawn(async move { runner.run(authenticator).await });
+        self.runner.replace(runner);
     }
 }
 
-struct LuantiProxyRunner {
+struct LuantiServerRunner {
     /// used to accept connection from clients
     bind_addr: SocketAddr,
     verbosity: u8,
 }
 
-impl LuantiProxyRunner {
-    async fn run(self) {
+impl LuantiServerRunner {
+    async fn run<Auth: Authenticator + 'static>(self, authenticator: Auth) {
         let mut server = LuantiServer::new(self.bind_addr);
-        let mut next_id: u64 = 1;
+        let mut connection_id = 1;
         loop {
             tokio::select! {
-                conn = server.accept() => {
-                    let id = next_id;
-                    next_id += 1;
-                    info!("[P{}] New client connected from {:?}", id, conn.remote_addr());
-                    ProxyAdapterRunner::spawn(id, conn, self.verbosity);
+                connection = server.accept() => {
+                    let id = connection_id;
+                    connection_id += 1;
+                    info!("[P{}] New client connected from {:?}", id, connection.remote_addr());
+                    ClientConnection::spawn(id, connection, authenticator.clone(), self.verbosity);
                 },
             }
         }
     }
 }
 
-pub(crate) struct ProxyAdapterRunner {
+pub(crate) struct ClientConnection<Auth: Authenticator> {
     id: u64,
-    conn: LuantiConnection,
+    connection: LuantiConnection,
     verbosity: u8,
     // /// the accepted serialization version
     // serialization_version: u8,
@@ -93,18 +108,20 @@ pub(crate) struct ProxyAdapterRunner {
     // /// the accepted compression modes
     // supp_compr_modes: u16,
     state: ClientConnectionState,
+    authenticator: Auth,
 }
 
-impl ProxyAdapterRunner {
-    pub(crate) fn spawn(id: u64, conn: LuantiConnection, verbosity: u8) {
-        let runner = ProxyAdapterRunner {
+impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
+    pub(crate) fn spawn(id: u64, conn: LuantiConnection, authenticator: Auth, verbosity: u8) {
+        let runner = ClientConnection {
             id,
-            conn,
+            connection: conn,
             verbosity,
             // serialization_version: 0,
             // protocol_version: 0,
             // supp_compr_modes: 0,
             state: ClientConnectionState::default(),
+            authenticator,
         };
         tokio::spawn(async move { runner.run().await });
     }
@@ -132,20 +149,20 @@ impl ProxyAdapterRunner {
         loop {
             // TODO(kawogi) review whether this select remains useful after completion of the server's base implementation
             tokio::select! {
-                command = self.conn.recv() => {
+                command = self.connection.recv() => {
                     trace!("conn.recv: {command:?}");
                     let command = command?;
                     self.maybe_show(&command);
-                    self.handle_client_command(command)?;
+                    self.handle_client_command(command).await?;
                 },
             }
         }
     }
 
-    pub(crate) fn handle_client_command(&mut self, command: ToServerCommand) -> Result<()> {
+    pub(crate) async fn handle_client_command(&mut self, command: ToServerCommand) -> Result<()> {
         self.state = match mem::take(&mut self.state) {
             ClientConnectionState::None => match command {
-                ToServerCommand::Init(init_spec) => self.handle_init(*init_spec)?,
+                ToServerCommand::Init(init_spec) => self.handle_init(*init_spec).await?,
                 unexpected => {
                     bail!(
                         "unexpected command for init state: {}",
@@ -154,7 +171,7 @@ impl ProxyAdapterRunner {
                 }
             },
             ClientConnectionState::Authenticating(srp_auth_state) => {
-                match srp_auth_state.handle_client_message(command, &self.conn)? {
+                match srp_auth_state.handle_client_message(command, &self.connection)? {
                     SrpAuthState::Authenticated { display_name, name } => {
                         ClientConnectionState::Authenticated { display_name, name }
                     }
@@ -163,7 +180,7 @@ impl ProxyAdapterRunner {
             }
             ClientConnectionState::Authenticated { display_name, name } => match command {
                 ToServerCommand::Init2(init2_spec) => {
-                    Self::handle_init2(display_name, name, *init2_spec, &self.conn)?
+                    Self::handle_init2(display_name, name, *init2_spec, &self.connection)?
                 }
                 unexpected => {
                     bail!(
@@ -231,7 +248,7 @@ impl ProxyAdapterRunner {
     }
 
     /// This is the first command a client sends after a connect
-    fn handle_init(&mut self, init_spec: InitSpec) -> Result<ClientConnectionState> {
+    async fn handle_init(&mut self, init_spec: InitSpec) -> Result<ClientConnectionState> {
         let InitSpec {
             serialization_ver_max,
             supp_compr_modes: _unused,
@@ -277,9 +294,9 @@ impl ProxyAdapterRunner {
         // TODO(kawogi) Verify that the technical protocol switch is transparently performed by the underlying connection implementation
 
         // TODO(kawogi) verify player name to be valid and registered
-        let user_data = SrpUserAuthData::new_fake(player_name);
+        let user_data = self.authenticator.load(player_name).await?;
 
-        self.conn.send(HelloSpec {
+        self.connection.send(HelloSpec {
             serialization_ver: serialization_version,
             compression_mode: 0, // unused field
             proto_ver: protocol_version,

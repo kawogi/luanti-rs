@@ -1,10 +1,11 @@
 //! Luanti protocol implemented in Rust
 // #![expect(clippy::expect_used, reason = "//TODO improve error handling")]
 
-pub mod auth;
+pub mod authentication;
 mod server;
 
 use anyhow::bail;
+use authentication::dummy::DummyAuthenticator;
 use clap::ArgGroup;
 use clap::Parser;
 use server::LuantiWorldServer;
@@ -57,7 +58,8 @@ async fn real_main() -> anyhow::Result<()> {
         bail!("One of --listen or --bind must be specified");
     };
 
-    let _proxy = LuantiWorldServer::new(bind_addr, args.verbose);
+    let mut server = LuantiWorldServer::new(bind_addr, args.verbose);
+    server.start(DummyAuthenticator);
     #[expect(
         clippy::infinite_loop,
         reason = "// TODO implement a cancellation mechanism"
