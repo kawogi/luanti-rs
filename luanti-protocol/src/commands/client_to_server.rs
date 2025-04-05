@@ -60,7 +60,7 @@ pub struct InitSpec {
     pub supp_compr_modes: u16,
     pub min_net_proto_version: u16,
     pub max_net_proto_version: u16,
-    pub player_name: String,
+    pub user_name: String,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]

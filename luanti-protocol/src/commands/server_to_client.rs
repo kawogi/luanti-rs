@@ -93,9 +93,9 @@ define_protocol!(41, 0x4f457403, ToClient, ToClientCommand => {
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct HelloSpec {
-    pub serialization_ver: u8,
+    pub serialization_version: u8,
     pub compression_mode: u16,
-    pub proto_ver: u16,
+    pub protocol_version: u16,
     pub auth_mechs: AuthMechsBitset,
     pub username_legacy: String,
 }

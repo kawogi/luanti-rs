@@ -437,9 +437,9 @@ impl PeerRunner {
         if let Command::ToClient(ToClientCommand::Hello(spec)) = command {
             info!(
                 "Server protocol version {} / serialization version {}",
-                spec.proto_ver, spec.serialization_ver
+                spec.protocol_version, spec.serialization_version
             );
-            self.update_context(spec.serialization_ver, spec.proto_ver);
+            self.update_context(spec.serialization_version, spec.protocol_version);
         }
     }
 

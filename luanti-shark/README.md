@@ -52,7 +52,7 @@ LuantiServer accepted connection
         supp_compr_modes: 0,
         min_net_proto_version: 37,
         max_net_proto_version: 41,
-        player_name: "paradust",
+        user_name: "paradust",
     },
 )
 [1] S->C  Hello(
