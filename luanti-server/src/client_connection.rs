@@ -121,7 +121,7 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
                 }
             }
             State::Loading(_) => {
-                if LoadingState::handle_message(message) {
+                if LoadingState::handle_message(message, &self.connection)? {
                     debug!("loading successfully completed; switching to authenticated mode");
                     self.state = State::Running(LoadingState::next());
                 } else {

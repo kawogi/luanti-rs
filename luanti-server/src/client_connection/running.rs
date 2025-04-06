@@ -3,6 +3,7 @@ use anyhow::bail;
 use log::debug;
 use luanti_protocol::LuantiConnection;
 use luanti_protocol::commands::CommandProperties;
+use luanti_protocol::commands::client_to_server::GotBlocksSpec;
 use luanti_protocol::commands::client_to_server::InteractSpec;
 use luanti_protocol::commands::client_to_server::InventoryActionSpec;
 use luanti_protocol::commands::client_to_server::PlayerItemSpec;
@@ -45,8 +46,8 @@ impl RunningState {
             ToServerCommand::TSModchannelMsg(_tsmodchannel_msg_spec) => {
                 todo!();
             }
-            ToServerCommand::Gotblocks(_gotblocks_spec) => {
-                todo!();
+            ToServerCommand::GotBlocks(got_blocks_spec) => {
+                Self::handle_got_blocks(*got_blocks_spec)?;
             }
             ToServerCommand::Deletedblocks(_deletedblocks_spec) => {
                 todo!();
@@ -265,6 +266,18 @@ impl RunningState {
                 );
             }
         }
+
+        Ok(())
+    }
+
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "//TODO(kawogi) for symmetry with other handlers, but should be reviewed"
+    )]
+    fn handle_got_blocks(got_blocks_spec: GotBlocksSpec) -> Result<()> {
+        let GotBlocksSpec { blocks } = got_blocks_spec;
+
+        debug!("got blocks: {blocks:?}");
 
         Ok(())
     }

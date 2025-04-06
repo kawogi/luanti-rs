@@ -28,7 +28,7 @@ define_protocol!(41, 0x4f457403, ToServer, ToServerCommand => {
     ModchannelLeave, 0x18, Default, true => ModchannelLeaveSpec,
     TSModchannelMsg, 0x19, Default, true => TSModchannelMsgSpec,
     Playerpos, 0x23, Default, false => PlayerPosCommand,
-    Gotblocks, 0x24, Response, true => GotblocksSpec,
+    GotBlocks, 0x24, Response, true => GotBlocksSpec,
     Deletedblocks, 0x25, Response, true => DeletedblocksSpec,
     InventoryAction, 0x31, Default, true => InventoryActionSpec,
     TSChatMessage, 0x32, Default, true => TSChatMessageSpec,
@@ -93,7 +93,7 @@ pub struct PlayerPosCommand {
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct GotblocksSpec {
+pub struct GotBlocksSpec {
     #[wrap(Array8<I16Vec3>)]
     pub blocks: Vec<I16Vec3>,
 }

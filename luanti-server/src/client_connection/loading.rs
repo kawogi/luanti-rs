@@ -1,4 +1,7 @@
+use std::vec;
+
 use anyhow::Result;
+use glam::I16Vec3;
 use log::info;
 use log::warn;
 use luanti_protocol::LuantiConnection;
@@ -6,10 +9,15 @@ use luanti_protocol::commands::CommandProperties;
 use luanti_protocol::commands::client_to_server::ClientReadySpec;
 use luanti_protocol::commands::client_to_server::ToServerCommand;
 use luanti_protocol::commands::server_to_client::AnnounceMediaSpec;
+use luanti_protocol::commands::server_to_client::BlockdataSpec;
 use luanti_protocol::commands::server_to_client::ItemdefCommand;
 use luanti_protocol::commands::server_to_client::ItemdefList;
 use luanti_protocol::commands::server_to_client::NodedefSpec;
+use luanti_protocol::types::MapBlock;
+use luanti_protocol::types::MapNode;
+use luanti_protocol::types::MapNodesBulk;
 use luanti_protocol::types::NodeDefManager;
+use luanti_protocol::types::NodeMetadataList;
 
 use super::RunningState;
 
@@ -58,7 +66,10 @@ impl LoadingState {
         Ok(())
     }
 
-    pub(crate) fn handle_message(message: ToServerCommand) -> bool {
+    pub(crate) fn handle_message(
+        message: ToServerCommand,
+        connection: &LuantiConnection,
+    ) -> Result<bool> {
         let client_ready_spec = match message {
             ToServerCommand::ClientReady(client_ready_spec) => client_ready_spec,
             unexpected => {
@@ -66,7 +77,7 @@ impl LoadingState {
                     "ignoring received unexpected client message: {message_name}",
                     message_name = unexpected.command_name()
                 );
-                return false;
+                return Ok(false);
             }
         };
 
@@ -86,7 +97,30 @@ impl LoadingState {
                 .map_or("<none>".into(), ToString::to_string)
         );
 
-        true
+        let nodes = std::array::from_fn(|_index| MapNode {
+            param0: 10,
+            param1: 0,
+            param2: 0,
+        });
+
+        let block = MapBlock {
+            is_underground: true,
+            day_night_diff: true,
+            generated: true,
+            lighting_complete: Some(0),
+            nodes: MapNodesBulk { nodes },
+            node_metadata: NodeMetadataList { metadata: vec![] },
+        };
+
+        let blockdata = BlockdataSpec {
+            pos: I16Vec3::new(0, -1, 0),
+            block,
+            network_specific_version: 0,
+        };
+
+        connection.send(blockdata)?;
+
+        Ok(true)
     }
 
     pub(crate) fn next() -> RunningState {
