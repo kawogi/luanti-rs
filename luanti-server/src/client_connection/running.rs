@@ -4,10 +4,14 @@ use log::debug;
 use luanti_protocol::LuantiConnection;
 use luanti_protocol::commands::CommandProperties;
 use luanti_protocol::commands::client_to_server::InteractSpec;
+use luanti_protocol::commands::client_to_server::InventoryActionSpec;
 use luanti_protocol::commands::client_to_server::PlayerItemSpec;
 use luanti_protocol::commands::client_to_server::PlayerPosCommand;
+use luanti_protocol::commands::client_to_server::TSChatMessageSpec;
 use luanti_protocol::commands::client_to_server::ToServerCommand;
 use luanti_protocol::commands::client_to_server::UpdateClientInfoSpec;
+use luanti_protocol::types::InventoryAction;
+use luanti_protocol::types::InventoryLocation;
 use luanti_protocol::types::PlayerPos;
 use luanti_protocol::types::PointedThing;
 
@@ -47,11 +51,11 @@ impl RunningState {
             ToServerCommand::Deletedblocks(_deletedblocks_spec) => {
                 todo!();
             }
-            ToServerCommand::InventoryAction(_inventory_action_spec) => {
-                todo!();
+            ToServerCommand::InventoryAction(inventory_action_spec) => {
+                Self::handle_inventory_action(*inventory_action_spec)?;
             }
-            ToServerCommand::TSChatMessage(_tschat_message_spec) => {
-                todo!();
+            ToServerCommand::TSChatMessage(tschat_message_spec) => {
+                Self::handle_chat_message(*tschat_message_spec)?;
             }
             ToServerCommand::Damage(_damage_spec) => {
                 todo!();
@@ -189,6 +193,79 @@ impl RunningState {
         let PlayerItemSpec { item } = player_item_spec;
 
         debug!("player item #{item}");
+        Ok(())
+    }
+
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "//TODO(kawogi) for symmetry with other handlers, but should be reviewed"
+    )]
+    fn handle_chat_message(chat_message_spec: TSChatMessageSpec) -> Result<()> {
+        let TSChatMessageSpec { message } = chat_message_spec;
+
+        debug!("chat message: '{message}'");
+        Ok(())
+    }
+
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "//TODO(kawogi) for symmetry with other handlers, but should be reviewed"
+    )]
+    fn handle_inventory_action(inventory_action_spec: InventoryActionSpec) -> Result<()> {
+        let InventoryActionSpec { action } = inventory_action_spec;
+
+        let inventory_location = |location| -> String {
+            match location {
+                InventoryLocation::Undefined => "undefined".into(),
+                InventoryLocation::CurrentPlayer => "current_player".into(),
+                InventoryLocation::Player { name } => {
+                    format!("player:'{name}'")
+                }
+                InventoryLocation::NodeMeta { pos } => {
+                    format!("node_meta@{pos}")
+                }
+                InventoryLocation::Detached { name } => {
+                    format!("detached:'{name}'")
+                }
+            }
+        };
+
+        match action {
+            InventoryAction::Move {
+                count,
+                from_inv,
+                from_list,
+                from_i,
+                to_inv,
+                to_list,
+                to_i,
+            } => {
+                debug!(
+                    "inventory move: {count}× from {from_inv}/{from_list}[{from_i}] → {to_inv}/{to_list}[{to_i}]",
+                    from_inv = inventory_location(from_inv),
+                    to_inv = inventory_location(to_inv),
+                    to_i = to_i.as_ref().map_or("?".into(), ToString::to_string),
+                );
+            }
+            InventoryAction::Craft { count, craft_inv } => {
+                debug!(
+                    "inventory craft: {count}× in {}",
+                    inventory_location(craft_inv)
+                );
+            }
+            InventoryAction::Drop {
+                count,
+                from_inv,
+                from_list,
+                from_i,
+            } => {
+                debug!(
+                    "inventory drop: {count}× from {inv}/{from_list}[{from_i}]",
+                    inv = inventory_location(from_inv)
+                );
+            }
+        }
+
         Ok(())
     }
 }
