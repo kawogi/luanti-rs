@@ -57,6 +57,12 @@ impl MapBlockPos {
     pub fn for_node(node_pos: MapNodePos) -> Self {
         Self(node_pos.0 >> MapBlockPos::SIZE_BITS)
     }
+
+    /// Check whether the given map node is located within this map block
+    #[must_use]
+    pub fn contains(self, node_pos: MapNodePos) -> bool {
+        Self::for_node(node_pos) == self
+    }
 }
 
 impl From<MapBlockPos> for MapNodePos {
