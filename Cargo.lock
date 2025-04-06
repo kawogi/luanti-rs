@@ -359,6 +359,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "luanti-core"
+version = "0.2.0"
+dependencies = [
+ "glam",
+]
+
+[[package]]
 name = "luanti-protocol"
 version = "0.2.0"
 dependencies = [
