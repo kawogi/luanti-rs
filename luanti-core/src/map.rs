@@ -17,7 +17,19 @@ impl MapNodePos {
     /// Splits a map node position into its map block position and its index wherein.
     #[must_use]
     pub fn split_index(self) -> (MapBlockPos, MapNodeIndex) {
-        (MapBlockPos::for_node(self), MapNodeIndex::for_node(self))
+        (self.block_pos(), self.index())
+    }
+
+    /// Returns the position of the map block which contains this node.
+    #[must_use]
+    pub const fn block_pos(self) -> MapBlockPos {
+        MapBlockPos::for_node(self)
+    }
+
+    /// Returns the position of the map block which contains this node.
+    #[must_use]
+    pub fn index(self) -> MapNodeIndex {
+        MapNodeIndex::for_node(self)
     }
 }
 
@@ -40,9 +52,9 @@ impl MapBlockPos {
     /// Position of the map block at the world's center
     pub const ZERO: Self = Self(I16Vec3::ZERO);
     /// Position of the map block with the lowest possible coordinates.
-    pub const MIN: Self = Self(I16Vec3::MIN);
+    pub const MIN: Self = Self::for_node(MapNodePos::MIN);
     /// Position of the map block with the highest possible coordinates.
-    pub const MAX: Self = Self(I16Vec3::MAX);
+    pub const MAX: Self = Self::for_node(MapNodePos::MAX);
 
     /// Creates a new `MapBlockPos` as long as the resulting position would fit into the world.
     /// Returns `None` otherwise.
@@ -54,8 +66,12 @@ impl MapBlockPos {
 
     /// Converts a given node position into that of the containing map block.
     #[must_use]
-    pub fn for_node(node_pos: MapNodePos) -> Self {
-        Self(node_pos.0 >> MapBlockPos::SIZE_BITS)
+    pub const fn for_node(node_pos: MapNodePos) -> Self {
+        Self(I16Vec3 {
+            x: node_pos.0.x >> MapBlockPos::SIZE_BITS,
+            y: node_pos.0.y >> MapBlockPos::SIZE_BITS,
+            z: node_pos.0.z >> MapBlockPos::SIZE_BITS,
+        })
     }
 
     /// Check whether the given map node is located within this map block
