@@ -3,10 +3,12 @@ use anyhow::bail;
 use log::debug;
 use luanti_protocol::LuantiConnection;
 use luanti_protocol::commands::CommandProperties;
+use luanti_protocol::commands::client_to_server::InteractSpec;
 use luanti_protocol::commands::client_to_server::PlayerPosCommand;
 use luanti_protocol::commands::client_to_server::ToServerCommand;
 use luanti_protocol::commands::client_to_server::UpdateClientInfoSpec;
 use luanti_protocol::types::PlayerPos;
+use luanti_protocol::types::PointedThing;
 
 /// Everything has been set up. We're in-game now!
 pub(super) struct RunningState;
@@ -29,31 +31,57 @@ impl RunningState {
             ToServerCommand::UpdateClientInfo(update_client_info_spec) => {
                 Self::handle_update_client_info(&update_client_info_spec)?;
             }
-            ToServerCommand::ModchannelJoin(_modchannel_join_spec) => todo!(),
-            ToServerCommand::ModchannelLeave(_modchannel_leave_spec) => todo!(),
-            ToServerCommand::TSModchannelMsg(_tsmodchannel_msg_spec) => todo!(),
-            ToServerCommand::Gotblocks(_gotblocks_spec) => todo!(),
+            ToServerCommand::ModchannelJoin(_modchannel_join_spec) => {
+                todo!();
+            }
+            ToServerCommand::ModchannelLeave(_modchannel_leave_spec) => {
+                todo!();
+            }
+            ToServerCommand::TSModchannelMsg(_tsmodchannel_msg_spec) => {
+                todo!();
+            }
+            ToServerCommand::Gotblocks(_gotblocks_spec) => {
+                todo!();
+            }
             ToServerCommand::Deletedblocks(_deletedblocks_spec) => {
-                todo!()
+                todo!();
             }
-            ToServerCommand::InventoryAction(_inventory_action_spec) => todo!(),
+            ToServerCommand::InventoryAction(_inventory_action_spec) => {
+                todo!();
+            }
             ToServerCommand::TSChatMessage(_tschat_message_spec) => {
-                todo!()
+                todo!();
             }
-            ToServerCommand::Damage(_damage_spec) => todo!(),
-            ToServerCommand::Playeritem(_playeritem_spec) => todo!(),
-            ToServerCommand::Respawn(_respawn_spec) => todo!(),
-            ToServerCommand::Interact(_interact_spec) => todo!(),
+            ToServerCommand::Damage(_damage_spec) => {
+                todo!();
+            }
+            ToServerCommand::Playeritem(_playeritem_spec) => {
+                todo!();
+            }
+            ToServerCommand::Respawn(_respawn_spec) => {
+                todo!();
+            }
+            ToServerCommand::Interact(interact_spec) => {
+                Self::handle_interact(*interact_spec)?;
+            }
             ToServerCommand::RemovedSounds(_removed_sounds_spec) => {
-                todo!()
+                todo!();
             }
-            ToServerCommand::NodemetaFields(_nodemeta_fields_spec) => todo!(),
-            ToServerCommand::InventoryFields(_inventory_fields_spec) => todo!(),
+            ToServerCommand::NodemetaFields(_nodemeta_fields_spec) => {
+                todo!();
+            }
+            ToServerCommand::InventoryFields(_inventory_fields_spec) => {
+                todo!();
+            }
             ToServerCommand::RequestMedia(_request_media_spec) => {
-                todo!()
+                todo!();
             }
-            ToServerCommand::HaveMedia(_have_media_spec) => todo!(),
-            ToServerCommand::FirstSrp(_first_srp_spec) => todo!(),
+            ToServerCommand::HaveMedia(_have_media_spec) => {
+                todo!();
+            }
+            ToServerCommand::FirstSrp(_first_srp_spec) => {
+                todo!();
+            }
             unexpected => {
                 bail!(
                     "unexpected command for authenticated state: {}",
@@ -124,6 +152,31 @@ impl RunningState {
             fs_y = max_fs_size.y,
         );
 
+        Ok(())
+    }
+
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "//TODO(kawogi) for symmetry with other handlers, but should be reviewed"
+    )]
+    fn handle_interact(interact_spec: InteractSpec) -> Result<()> {
+        let InteractSpec {
+            action,
+            item_index,
+            pointed_thing,
+            player_pos: _,
+        } = interact_spec;
+
+        let pointed_thing = match pointed_thing {
+            PointedThing::Nothing => "nothing".into(),
+            PointedThing::Node {
+                under_surface,
+                above_surface,
+            } => format!("node {under_surface}:{above_surface}"),
+            PointedThing::Object { object_id } => format!("object #{object_id}"),
+        };
+
+        debug!("interaction: {action:?} item:#{item_index} pointed:{pointed_thing}",);
         Ok(())
     }
 }

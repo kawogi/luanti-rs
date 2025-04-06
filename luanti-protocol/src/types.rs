@@ -1474,10 +1474,7 @@ pub enum InteractAction {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-#[expect(
-    variant_size_differences,
-    reason = "// TODO review whether this is actually a problem"
-)]
+#[expect(variant_size_differences, reason = "all variants are small enough")]
 pub enum PointedThing {
     Nothing,
     Node {
