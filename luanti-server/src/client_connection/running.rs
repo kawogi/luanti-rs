@@ -4,6 +4,7 @@ use log::debug;
 use luanti_protocol::LuantiConnection;
 use luanti_protocol::commands::CommandProperties;
 use luanti_protocol::commands::client_to_server::InteractSpec;
+use luanti_protocol::commands::client_to_server::PlayerItemSpec;
 use luanti_protocol::commands::client_to_server::PlayerPosCommand;
 use luanti_protocol::commands::client_to_server::ToServerCommand;
 use luanti_protocol::commands::client_to_server::UpdateClientInfoSpec;
@@ -55,8 +56,8 @@ impl RunningState {
             ToServerCommand::Damage(_damage_spec) => {
                 todo!();
             }
-            ToServerCommand::Playeritem(_playeritem_spec) => {
-                todo!();
+            ToServerCommand::PlayerItem(player_item_spec) => {
+                Self::handle_player_item(&player_item_spec)?;
             }
             ToServerCommand::Respawn(_respawn_spec) => {
                 todo!();
@@ -177,6 +178,17 @@ impl RunningState {
         };
 
         debug!("interaction: {action:?} item:#{item_index} pointed:{pointed_thing}",);
+        Ok(())
+    }
+
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "//TODO(kawogi) for symmetry with other handlers, but should be reviewed"
+    )]
+    fn handle_player_item(player_item_spec: &PlayerItemSpec) -> Result<()> {
+        let PlayerItemSpec { item } = player_item_spec;
+
+        debug!("player item #{item}");
         Ok(())
     }
 }

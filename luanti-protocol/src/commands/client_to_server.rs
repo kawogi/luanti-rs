@@ -33,7 +33,7 @@ define_protocol!(41, 0x4f457403, ToServer, ToServerCommand => {
     InventoryAction, 0x31, Default, true => InventoryActionSpec,
     TSChatMessage, 0x32, Default, true => TSChatMessageSpec,
     Damage, 0x35, Default, true => DamageSpec,
-    Playeritem, 0x37, Default, true => PlayeritemSpec,
+    PlayerItem, 0x37, Default, true => PlayerItemSpec,
     Respawn, 0x38, Default, true => RespawnSpec,
     Interact, 0x39, Default, true => InteractSpec,
     RemovedSounds, 0x3a, Response, true => RemovedSoundsSpec,
@@ -121,7 +121,7 @@ pub struct DamageSpec {
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct PlayeritemSpec {
+pub struct PlayerItemSpec {
     pub item: u16,
 }
 
