@@ -241,7 +241,7 @@ pub struct AnnounceMediaSpec {
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct PlaySoundSpec {
-    pub server_id: s32,
+    pub server_id: i32,
     pub spec_name: String,
     pub spec_gain: f32,
     pub typ: u8,
@@ -256,7 +256,7 @@ pub struct PlaySoundSpec {
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct StopSoundSpec {
-    pub server_id: s32,
+    pub server_id: i32,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
@@ -317,7 +317,7 @@ pub struct HudaddSpec {
     pub offset: Vec2,
     pub world_pos: Option<Vec3>,
     pub size: Option<IVec2>,
-    pub z_index: Option<s16>,
+    pub z_index: Option<i16>,
     pub text2: Option<String>,
     pub style: Option<u32>,
 }
@@ -382,7 +382,7 @@ pub struct CloudParamsSpec {
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct FadeSoundSpec {
-    pub sound_id: s32,
+    pub sound_id: i32,
     pub step: f32,
     pub gain: f32,
 }

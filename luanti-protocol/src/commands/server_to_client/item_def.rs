@@ -1,5 +1,5 @@
 use crate::types::{
-    Array16, Array32, Option16, Pair, SColor, SimpleSoundSpec, Wrapped16, ZLibCompressed, s16,
+    Array16, Array32, Option16, Pair, SColor, SimpleSoundSpec, Wrapped16, ZLibCompressed,
 };
 use crate::wire::{
     deser::{Deserialize, DeserializeResult, Deserializer},
@@ -33,12 +33,12 @@ pub struct ItemDef {
     pub inventory_image: String,
     pub wield_image: String,
     pub wield_scale: Vec3,
-    pub stack_max: s16,
+    pub stack_max: i16,
     pub usable: bool,
     pub liquids_pointable: bool,
     pub tool_capabilities: Option16<ToolCapabilities>,
-    #[wrap(Array16<Pair<String, s16>>)]
-    pub groups: Vec<(String, s16)>,
+    #[wrap(Array16<Pair<String, i16>>)]
+    pub groups: Vec<(String, i16)>,
     pub node_placement_prediction: String,
     pub sound_place: SimpleSoundSpec,
     pub sound_place_failed: SimpleSoundSpec,
@@ -63,23 +63,23 @@ pub struct ItemAlias {
 pub struct ToolCapabilities {
     pub version: u8,
     pub full_punch_interval: f32,
-    pub max_drop_level: s16,
+    pub max_drop_level: i16,
     // (name, tool group cap)
     #[wrap(Array32<Pair<String, ToolGroupCap>>)]
     pub group_caps: Vec<(String, ToolGroupCap)>,
     // (name, rating)
-    #[wrap(Array32<Pair<String, s16>>)]
-    pub damage_groups: Vec<(String, s16)>,
+    #[wrap(Array32<Pair<String, i16>>)]
+    pub damage_groups: Vec<(String, i16)>,
     pub punch_attack_uses: Option<u16>,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct ToolGroupCap {
-    pub uses: s16,
-    pub maxlevel: s16,
+    pub uses: i16,
+    pub maxlevel: i16,
     // (level, time)
-    #[wrap(Array32<Pair<s16, f32>>)]
-    pub times: Vec<(s16, f32)>,
+    #[wrap(Array32<Pair<i16, f32>>)]
+    pub times: Vec<(i16, f32)>,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]

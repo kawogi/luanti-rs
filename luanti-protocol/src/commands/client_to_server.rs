@@ -139,8 +139,8 @@ pub struct InteractSpec {
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct RemovedSoundsSpec {
-    #[wrap(Array16<s32>)]
-    pub ids: Vec<s32>,
+    #[wrap(Array16<i32>)]
+    pub ids: Vec<i32>,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]

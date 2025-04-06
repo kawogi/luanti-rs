@@ -16,10 +16,6 @@
     clippy::used_underscore_binding,
     reason = "required for de-/serialization macros"
 )]
-#![expect(
-    clippy::min_ident_chars,
-    reason = "those identifiers are well-known and clear from the context"
-)]
 
 mod active_object;
 mod arrays;
@@ -67,11 +63,9 @@ use luanti_protocol_derive::LuantiDeserialize;
 use luanti_protocol_derive::LuantiSerialize;
 pub use node_box::*;
 pub use options::*;
-pub use primitives::*;
 use std::marker::PhantomData;
 pub use strings::*;
 pub use tile::*;
-pub use vectors::*;
 
 pub type CommandId = u8;
 
@@ -215,10 +209,10 @@ pub struct MinimapMode {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PlayerPos {
-    pub position: Vec3,    // serialized as v3s32, *100.0f
-    pub speed: Vec3,       // serialized as v3s32, *100.0f
-    pub pitch: f32,        // serialized as s32, *100.0f
-    pub yaw: f32,          // serialized as s32, *100.0f
+    pub position: Vec3,    // serialized as v3i32, *100.0f
+    pub speed: Vec3,       // serialized as v3i32, *100.0f
+    pub pitch: f32,        // serialized as i32, *100.0f
+    pub yaw: f32,          // serialized as i32, *100.0f
     pub keys_pressed: u32, // bitset
     pub fov: f32,          // serialized as u8, *80.0f
     pub wanted_range: u8,
@@ -233,8 +227,8 @@ impl Serialize for PlayerPos {
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         let s_position = (value.position * 100_f32).as_ivec3();
         let s_speed = (value.speed * 100_f32).as_ivec3();
-        let s_pitch = (value.pitch * 100_f32).round() as s32;
-        let s_yaw = (value.yaw * 100_f32).round() as s32;
+        let s_pitch = (value.pitch * 100_f32).round() as i32;
+        let s_yaw = (value.yaw * 100_f32).round() as i32;
         // scaled by 80, so that pi can fit into a u8
         let s_fov = (value.fov * 80_f32).round() as u8;
         let bits = u8::from(value.camera_inverted);
@@ -258,8 +252,8 @@ impl Deserialize for PlayerPos {
     fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         let s_position = IVec3::deserialize(deserializer)?;
         let s_speed = IVec3::deserialize(deserializer)?;
-        let s_pitch = s32::deserialize(deserializer)?;
-        let s_yaw = s32::deserialize(deserializer)?;
+        let s_pitch = i32::deserialize(deserializer)?;
+        let s_yaw = i32::deserialize(deserializer)?;
         let keys_pressed = u32::deserialize(deserializer)?;
         let s_fov = u8::deserialize(deserializer)?;
         let wanted_range = u8::deserialize(deserializer)?;
@@ -424,8 +418,8 @@ pub enum DrawType {
 pub struct ContentFeatures {
     pub version: u8,
     pub name: String,
-    #[wrap(Array16<Pair<String, s16>>)]
-    pub groups: Vec<(String, s16)>,
+    #[wrap(Array16<Pair<String, i16>>)]
+    pub groups: Vec<(String, i16)>,
     pub param_type: u8,
     pub param_type_2: u8,
     pub drawtype: DrawType,
@@ -913,8 +907,8 @@ pub struct BlockPos {
 
 impl BlockPos {
     #[must_use]
-    pub fn new(x: s16, y: s16, z: s16) -> Self {
-        let valid = 0..(MAP_BLOCKSIZE as s16);
+    pub fn new(x: i16, y: i16, z: i16) -> Self {
+        let valid = 0..(MAP_BLOCKSIZE as i16);
         assert!(
             valid.contains(&x) && valid.contains(&y) && valid.contains(&z),
             "//TODO add proper error message"
@@ -1350,7 +1344,7 @@ pub struct AutoExposure {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum HudSetParam {
-    SetHotBarItemCount(s32),
+    SetHotBarItemCount(i32),
     SetHotBarImage(String),
     SetHotBarSelectedImage(String),
 }
@@ -1370,7 +1364,7 @@ impl Serialize for HudSetParam {
             SetHotBarItemCount(value) => {
                 // The value is wrapped in a a String16
                 u16::serialize(&4, ser)?;
-                s32::serialize(value, ser)?;
+                i32::serialize(value, ser)?;
             }
             SetHotBarImage(value) => String::serialize(value, ser)?,
             SetHotBarSelectedImage(value) => String::serialize(value, ser)?,
@@ -1391,7 +1385,7 @@ impl Deserialize for HudSetParam {
                 if size != 4 {
                     bail!("Invalid size in SetHotBarItemCount: {}", size);
                 }
-                SetHotBarItemCount(s32::deserialize(deser)?)
+                SetHotBarItemCount(i32::deserialize(deser)?)
             }
             2 => SetHotBarImage(String::deserialize(deser)?),
             3 => SetHotBarSelectedImage(String::deserialize(deser)?),
@@ -1553,10 +1547,10 @@ pub enum InventoryAction {
         count: u16,
         from_inv: InventoryLocation,
         from_list: String,
-        from_i: s16,
+        from_i: i16,
         to_inv: InventoryLocation,
         to_list: String,
-        to_i: Option<s16>,
+        to_i: Option<i16>,
     },
     Craft {
         count: u16,
@@ -1566,7 +1560,7 @@ pub enum InventoryAction {
         count: u16,
         from_inv: InventoryLocation,
         from_list: String,
-        from_i: s16,
+        from_i: i16,
     },
 }
 

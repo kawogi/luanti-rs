@@ -75,7 +75,7 @@ fn audit_command_inner<Cmd: CommandRef>(
                 // Layout in format 29 and above:
                 //
                 //   command type: u16
-                //   pos: v3s16, (6 bytes)
+                //   pos: I16Vec3, (6 bytes)
                 //   datastring: ZStdCompressed<MapBlock>,
                 //   network_specific_version: u8
                 do_compare(
@@ -103,7 +103,7 @@ fn audit_command_inner<Cmd: CommandRef>(
                 // Layout in ver 28:
                 //
                 //   command type: u16         (2 bytes)
-                //   pos: v3s16                (6 bytes)
+                //   pos: I16Vec3              (6 bytes)
                 //   flags: u8                 (1 byte)
                 //   lighting_complete: u16    (2 bytes)
                 //   content_width: u8         (1 byte)

@@ -1,4 +1,4 @@
-use super::{Array8, Array16, Pair, SColor, Wrapped32, aabb3f, s8, s16};
+use super::{Array8, Array16, Pair, SColor, Wrapped32, aabb3f};
 use crate::wire::{
     deser::{Deserialize, DeserializeResult, Deserializer},
     ser::{Serialize, SerializeResult, Serializer},
@@ -182,7 +182,7 @@ pub struct ObjectProperties {
     pub automatic_face_movement_max_rotation_per_sec: f32,
     pub infotext: String,
     pub wield_item: String,
-    pub glow: s8,
+    pub glow: i8,
     pub breath_max: u16,
     pub eye_height: f32,
     pub zoom_fov: f32,
@@ -230,7 +230,7 @@ pub struct AOCSetPhysicsOverride {
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AOCSetAnimation {
-    pub range: Vec2, // this is always casted to v2s32 by Luanti for some reason
+    pub range: Vec2, // this is always casted to IVec2 by Luanti for some reason
     pub speed: f32,
     pub blend: f32,
     pub no_loop: bool,
@@ -250,7 +250,7 @@ pub struct AOCSetBonePosition {
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AOCAttachTo {
-    pub parent_id: s16,
+    pub parent_id: i16,
     pub bone: String,
     pub position: Vec3,
     pub rotation: Vec3,
@@ -265,8 +265,8 @@ pub struct AOCPunched {
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AOCUpdateArmorGroups {
     // name -> rating
-    #[wrap(Array16<Pair<String, s16>>)]
-    pub ratings: Vec<(String, s16)>,
+    #[wrap(Array16<Pair<String, i16>>)]
+    pub ratings: Vec<(String, i16)>,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]

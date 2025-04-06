@@ -5,18 +5,6 @@ use crate::wire::{
     ser::{Serialize, SerializeResult, Serializer},
 };
 
-#[allow(non_camel_case_types, reason = "aligns with the original C++ codebase")]
-#[deprecated]
-pub type s8 = i8;
-
-#[allow(non_camel_case_types, reason = "aligns with the original C++ codebase")]
-#[deprecated]
-pub type s16 = i16;
-
-#[allow(non_camel_case_types, reason = "aligns with the original C++ codebase")]
-#[deprecated]
-pub type s32 = i32;
-
 // Basic types
 impl Serialize for bool {
     type Input = Self;

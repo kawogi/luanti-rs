@@ -27,7 +27,7 @@ impl RunningState {
                 Self::handle_player_pos(*player_pos_command)?;
             }
             ToServerCommand::UpdateClientInfo(update_client_info_spec) => {
-                Self::handle_update_client_info(*update_client_info_spec)?;
+                Self::handle_update_client_info(&update_client_info_spec)?;
             }
             ToServerCommand::ModchannelJoin(_modchannel_join_spec) => todo!(),
             ToServerCommand::ModchannelLeave(_modchannel_leave_spec) => todo!(),
@@ -107,8 +107,8 @@ impl RunningState {
         clippy::unnecessary_wraps,
         reason = "//TODO(kawogi) for symmetry with other handlers, but should be reviewed"
     )]
-    fn handle_update_client_info(update_client_info_spec: UpdateClientInfoSpec) -> Result<()> {
-        let UpdateClientInfoSpec {
+    fn handle_update_client_info(update_client_info_spec: &UpdateClientInfoSpec) -> Result<()> {
+        let &UpdateClientInfoSpec {
             render_target_size,
             real_gui_scaling,
             real_hud_scaling,
