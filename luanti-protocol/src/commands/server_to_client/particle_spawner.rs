@@ -1,12 +1,10 @@
-use crate::types::{Array16, LongString, MapNode, RangedParameter, TileAnimationParams, v2f};
-use crate::{
-    types::v3f,
-    wire::{
-        deser::{Deserialize, DeserializeResult, Deserializer},
-        ser::{Serialize, SerializeResult, Serializer},
-    },
+use crate::types::{Array16, LongString, MapNode, RangedParameter, TileAnimationParams};
+use crate::wire::{
+    deser::{Deserialize, DeserializeResult, Deserializer},
+    ser::{Serialize, SerializeResult, Serializer},
 };
 use anyhow::{Context, bail};
+use glam::{Vec2, Vec3};
 use luanti_protocol_derive::{LuantiDeserialize, LuantiSerialize};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -21,12 +19,12 @@ pub struct AddParticlespawnerCommand {
 
     pub texpool: Vec<ServerParticleTexture>,
 
-    pub pos: TweenedParameter<RangedParameter<v3f>>,
-    pub vel: TweenedParameter<RangedParameter<v3f>>,
-    pub acc: TweenedParameter<RangedParameter<v3f>>,
-    pub drag: TweenedParameter<RangedParameter<v3f>>,
-    pub radius: TweenedParameter<RangedParameter<v3f>>,
-    pub jitter: TweenedParameter<RangedParameter<v3f>>,
+    pub pos: TweenedParameter<RangedParameter<Vec3>>,
+    pub vel: TweenedParameter<RangedParameter<Vec3>>,
+    pub acc: TweenedParameter<RangedParameter<Vec3>>,
+    pub drag: TweenedParameter<RangedParameter<Vec3>>,
+    pub radius: TweenedParameter<RangedParameter<Vec3>>,
+    pub jitter: TweenedParameter<RangedParameter<Vec3>>,
 
     pub attractor: Attractor,
     pub exptime: TweenedParameter<RangedParameter<f32>>,
@@ -217,14 +215,14 @@ pub struct SpawnParticleCommand {
 /// See `ParticleParameters::serialize`
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParticleParameters {
-    pub pos: v3f,
-    pub vel: v3f,
-    pub acc: v3f,
+    pub pos: Vec3,
+    pub vel: Vec3,
+    pub acc: Vec3,
     pub expiration_time: f32,
     pub size: f32,
     pub base: CommonParticleParams,
-    pub drag: v3f,
-    pub jitter: RangedParameter<v3f>,
+    pub drag: Vec3,
+    pub jitter: RangedParameter<Vec3>,
     pub bounce: RangedParameter<f32>,
 }
 
@@ -232,9 +230,9 @@ impl Serialize for ParticleParameters {
     type Input = Self;
 
     fn serialize<S: Serializer>(value: &Self::Input, serializer: &mut S) -> SerializeResult {
-        v3f::serialize(&value.pos, serializer)?;
-        v3f::serialize(&value.vel, serializer)?;
-        v3f::serialize(&value.acc, serializer)?;
+        Vec3::serialize(&value.pos, serializer)?;
+        Vec3::serialize(&value.vel, serializer)?;
+        Vec3::serialize(&value.acc, serializer)?;
         f32::serialize(&value.expiration_time, serializer)?;
         f32::serialize(&value.size, serializer)?;
 
@@ -249,7 +247,7 @@ impl Serialize for ParticleParameters {
         u8::serialize(&value.base.node.param2, serializer)?;
         u8::serialize(&value.base.node_tile, serializer)?;
 
-        v3f::serialize(&value.drag, serializer)?;
+        Vec3::serialize(&value.drag, serializer)?;
         RangedParameter::serialize(&value.jitter, serializer)?;
         RangedParameter::serialize(&value.bounce, serializer)?;
         ServerParticleTexture::serialize_special(&value.base.texture, serializer, true, true)?;
@@ -262,9 +260,9 @@ impl Deserialize for ParticleParameters {
     type Output = Self;
 
     fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self::Output> {
-        let pos = v3f::deserialize(deserializer).context("ParticleParameters::pos")?;
-        let vel = v3f::deserialize(deserializer).context("ParticleParameters::vel")?;
-        let acc = v3f::deserialize(deserializer).context("ParticleParameters::acc")?;
+        let pos = Vec3::deserialize(deserializer).context("ParticleParameters::pos")?;
+        let vel = Vec3::deserialize(deserializer).context("ParticleParameters::vel")?;
+        let acc = Vec3::deserialize(deserializer).context("ParticleParameters::acc")?;
         let expiration_time =
             f32::deserialize(deserializer).context("ParticleParameters::expiration_time")?;
         let size = f32::deserialize(deserializer).context("ParticleParameters::size")?;
@@ -285,7 +283,7 @@ impl Deserialize for ParticleParameters {
         };
         let node_tile = u8::deserialize(deserializer)?;
 
-        let drag = v3f::deserialize(deserializer).context("ParticleParameters::drag")?;
+        let drag = Vec3::deserialize(deserializer).context("ParticleParameters::drag")?;
         let jitter =
             RangedParameter::deserialize(deserializer).context("ParticleParameters::jitter")?;
         let bounce =
@@ -383,7 +381,7 @@ impl Deserialize for Attractor {
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct PointAttractor {
     pub attract: TweenedParameter<RangedParameter<f32>>,
-    pub origin: TweenedParameter<v3f>,
+    pub origin: TweenedParameter<Vec3>,
     pub attachment: u16,
     pub kill: u8,
 }
@@ -391,20 +389,20 @@ pub struct PointAttractor {
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct LineAttractor {
     pub attract: TweenedParameter<RangedParameter<f32>>,
-    pub origin: TweenedParameter<v3f>,
+    pub origin: TweenedParameter<Vec3>,
     pub attachment: u16,
     pub kill: u8,
-    pub direction: TweenedParameter<v3f>,
+    pub direction: TweenedParameter<Vec3>,
     pub direction_attachment: u16,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct PlaneAttractor {
     pub attract: TweenedParameter<RangedParameter<f32>>,
-    pub origin: TweenedParameter<v3f>,
+    pub origin: TweenedParameter<Vec3>,
     pub attachment: u16,
     pub kill: u8,
-    pub direction: TweenedParameter<v3f>,
+    pub direction: TweenedParameter<Vec3>,
     pub direction_attachment: u16,
 }
 
@@ -412,7 +410,7 @@ pub struct PlaneAttractor {
 pub struct ParticleTexture {
     pub blend_mode: BlendMode,
     pub alpha: TweenedParameter<f32>,
-    pub scale: TweenedParameter<v2f>,
+    pub scale: TweenedParameter<Vec2>,
     pub animation: Option<TileAnimationParams>,
 }
 
@@ -421,7 +419,7 @@ impl Default for ParticleTexture {
         Self {
             blend_mode: BlendMode::Alpha,
             alpha: TweenedParameter::new_simple(1.0),
-            scale: TweenedParameter::new_simple(v2f { x: 1.0, y: 1.0 }),
+            scale: TweenedParameter::new_simple(Vec2 { x: 1.0, y: 1.0 }),
             animation: None,
         }
     }
@@ -461,7 +459,7 @@ impl ServerParticleTexture {
         u8::serialize(&flags, ser)?;
 
         <TweenedParameter<f32>>::serialize(&value.base.alpha, ser)?;
-        <TweenedParameter<v2f>>::serialize(&value.base.scale, ser)?;
+        <TweenedParameter<Vec2>>::serialize(&value.base.scale, ser)?;
         if !new_properties_only {
             LongString::serialize(&value.string, ser)?;
         }

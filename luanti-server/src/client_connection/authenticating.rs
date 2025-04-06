@@ -2,17 +2,15 @@ use crate::authentication::SrpUserAuthData;
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
+use glam::Vec3;
 use log::info;
 use log::warn;
 use luanti_protocol::LuantiConnection;
 use luanti_protocol::commands::CommandProperties;
 use luanti_protocol::commands::client_to_server::ToServerCommand;
-use luanti_protocol::{
-    commands::{
-        client_to_server::{SrpBytesASpec, SrpBytesMSpec},
-        server_to_client::{AuthAcceptSpec, SrpBytesSBSpec},
-    },
-    types::v3f,
+use luanti_protocol::commands::{
+    client_to_server::{SrpBytesASpec, SrpBytesMSpec},
+    server_to_client::{AuthAcceptSpec, SrpBytesSBSpec},
 };
 use rand::RngCore;
 use sha2::Sha256;
@@ -152,7 +150,7 @@ impl AuthenticatingState {
 
         let auth_accept = AuthAcceptSpec {
             // TODO(kawogi) load from saved game or default spawn position
-            player_pos: v3f {
+            player_pos: Vec3 {
                 x: 0.0 * 10.0,
                 y: (0.0 + 0.5) * 10.0,
                 z: 0.0 * 10.0,

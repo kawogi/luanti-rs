@@ -1,12 +1,10 @@
 use anyhow::bail;
+use glam::{IVec2, Vec2, Vec3};
 use luanti_protocol_derive::{LuantiDeserialize, LuantiSerialize};
 
-use crate::{
-    types::{v2f, v2s32, v3f},
-    wire::{
-        deser::{Deserialize, DeserializeError, DeserializeResult, Deserializer},
-        ser::{Serialize, SerializeResult, Serializer},
-    },
+use crate::wire::{
+    deser::{Deserialize, DeserializeError, DeserializeResult, Deserializer},
+    ser::{Serialize, SerializeResult, Serializer},
 };
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
@@ -17,17 +15,17 @@ pub struct HudchangeCommand {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum HudStat {
-    Pos(v2f),
+    Pos(Vec2),
     Name(String),
-    Scale(v2f),
+    Scale(Vec2),
     Text(String),
     Number(u32),
     Item(u32),
     Dir(u32),
-    Align(v2f),
-    Offset(v2f),
-    WorldPos(v3f),
-    Size(v2s32),
+    Align(Vec2),
+    Offset(Vec2),
+    WorldPos(Vec3),
+    Size(IVec2),
     ZIndex(u32),
     Text2(String),
     Style(u32),
@@ -41,7 +39,7 @@ impl Serialize for HudStat {
         match value {
             Pos(value) => {
                 u8::serialize(&0, ser)?;
-                v2f::serialize(value, ser)?;
+                Vec2::serialize(value, ser)?;
             }
             Name(value) => {
                 u8::serialize(&1, ser)?;
@@ -49,7 +47,7 @@ impl Serialize for HudStat {
             }
             Scale(value) => {
                 u8::serialize(&2, ser)?;
-                v2f::serialize(value, ser)?;
+                Vec2::serialize(value, ser)?;
             }
             Text(value) => {
                 u8::serialize(&3, ser)?;
@@ -69,19 +67,19 @@ impl Serialize for HudStat {
             }
             Align(value) => {
                 u8::serialize(&7, ser)?;
-                v2f::serialize(value, ser)?;
+                Vec2::serialize(value, ser)?;
             }
             Offset(value) => {
                 u8::serialize(&8, ser)?;
-                v2f::serialize(value, ser)?;
+                Vec2::serialize(value, ser)?;
             }
             WorldPos(value) => {
                 u8::serialize(&9, ser)?;
-                v3f::serialize(value, ser)?;
+                Vec3::serialize(value, ser)?;
             }
             Size(value) => {
                 u8::serialize(&10, ser)?;
-                v2s32::serialize(value, ser)?;
+                IVec2::serialize(value, ser)?;
             }
             ZIndex(value) => {
                 u8::serialize(&11, ser)?;
@@ -107,17 +105,17 @@ impl Deserialize for HudStat {
         use HudStat::*;
         let stat = u8::deserialize(deser)?;
         match stat {
-            0 => Ok(Pos(v2f::deserialize(deser)?)),
+            0 => Ok(Pos(Vec2::deserialize(deser)?)),
             1 => Ok(Name(String::deserialize(deser)?)),
-            2 => Ok(Scale(v2f::deserialize(deser)?)),
+            2 => Ok(Scale(Vec2::deserialize(deser)?)),
             3 => Ok(Text(String::deserialize(deser)?)),
             4 => Ok(Number(u32::deserialize(deser)?)),
             5 => Ok(Item(u32::deserialize(deser)?)),
             6 => Ok(Dir(u32::deserialize(deser)?)),
-            7 => Ok(Align(v2f::deserialize(deser)?)),
-            8 => Ok(Offset(v2f::deserialize(deser)?)),
-            9 => Ok(WorldPos(v3f::deserialize(deser)?)),
-            10 => Ok(Size(v2s32::deserialize(deser)?)),
+            7 => Ok(Align(Vec2::deserialize(deser)?)),
+            8 => Ok(Offset(Vec2::deserialize(deser)?)),
+            9 => Ok(WorldPos(Vec3::deserialize(deser)?)),
+            10 => Ok(Size(IVec2::deserialize(deser)?)),
             11 => Ok(ZIndex(u32::deserialize(deser)?)),
             12 => Ok(Text2(String::deserialize(deser)?)),
             13 => Ok(Style(u32::deserialize(deser)?)),

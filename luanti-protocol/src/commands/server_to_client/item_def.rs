@@ -1,14 +1,12 @@
 use crate::types::{
     Array16, Array32, Option16, Pair, SColor, SimpleSoundSpec, Wrapped16, ZLibCompressed, s16,
 };
-use crate::{
-    types::v3f,
-    wire::{
-        deser::{Deserialize, DeserializeResult, Deserializer},
-        ser::{Serialize, SerializeResult, Serializer},
-    },
+use crate::wire::{
+    deser::{Deserialize, DeserializeResult, Deserializer},
+    ser::{Serialize, SerializeResult, Serializer},
 };
 use anyhow::bail;
+use glam::Vec3;
 use luanti_protocol_derive::{LuantiDeserialize, LuantiSerialize};
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
@@ -34,7 +32,7 @@ pub struct ItemDef {
     pub description: String,
     pub inventory_image: String,
     pub wield_image: String,
-    pub wield_scale: v3f,
+    pub wield_scale: Vec3,
     pub stack_max: s16,
     pub usable: bool,
     pub liquids_pointable: bool,

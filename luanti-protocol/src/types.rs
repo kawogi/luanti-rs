@@ -59,6 +59,10 @@ use anyhow::bail;
 pub use arrays::*;
 pub use binary::*;
 pub use compressed::*;
+use glam::I16Vec3;
+use glam::IVec3;
+use glam::U8Vec4;
+use glam::Vec3;
 use luanti_protocol_derive::LuantiDeserialize;
 use luanti_protocol_derive::LuantiSerialize;
 pub use node_box::*;
@@ -187,6 +191,20 @@ pub struct StarParams {
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub struct SColor(pub U8Vec4);
+
+impl SColor {
+    #[expect(
+        clippy::min_ident_chars,
+        reason = "those identifiers are well-known and clear from the context"
+    )]
+    #[must_use]
+    pub fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
+        Self((r, g, b, a).into())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct MinimapMode {
     pub typ: u16,
     pub label: String,
@@ -197,8 +215,8 @@ pub struct MinimapMode {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PlayerPos {
-    pub position: v3f,     // serialized as v3s32, *100.0f
-    pub speed: v3f,        // serialized as v3s32, *100.0f
+    pub position: Vec3,    // serialized as v3s32, *100.0f
+    pub speed: Vec3,       // serialized as v3s32, *100.0f
     pub pitch: f32,        // serialized as s32, *100.0f
     pub yaw: f32,          // serialized as s32, *100.0f
     pub keys_pressed: u32, // bitset
@@ -213,16 +231,16 @@ pub struct PlayerPos {
 impl Serialize for PlayerPos {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        let s_position = (value.position * 100_f32).as_v3s32();
-        let s_speed = (value.speed * 100_f32).as_v3s32();
+        let s_position = (value.position * 100_f32).as_ivec3();
+        let s_speed = (value.speed * 100_f32).as_ivec3();
         let s_pitch = (value.pitch * 100_f32).round() as s32;
         let s_yaw = (value.yaw * 100_f32).round() as s32;
         // scaled by 80, so that pi can fit into a u8
         let s_fov = (value.fov * 80_f32).round() as u8;
         let bits = u8::from(value.camera_inverted);
 
-        v3s32::serialize(&s_position, ser)?;
-        v3s32::serialize(&s_speed, ser)?;
+        IVec3::serialize(&s_position, ser)?;
+        IVec3::serialize(&s_speed, ser)?;
         i32::serialize(&s_pitch, ser)?;
         i32::serialize(&s_yaw, ser)?;
         u32::serialize(&value.keys_pressed, ser)?;
@@ -238,8 +256,8 @@ impl Serialize for PlayerPos {
 impl Deserialize for PlayerPos {
     type Output = Self;
     fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-        let s_position = v3s32::deserialize(deserializer)?;
-        let s_speed = v3s32::deserialize(deserializer)?;
+        let s_position = IVec3::deserialize(deserializer)?;
+        let s_speed = IVec3::deserialize(deserializer)?;
         let s_pitch = s32::deserialize(deserializer)?;
         let s_yaw = s32::deserialize(deserializer)?;
         let keys_pressed = u32::deserialize(deserializer)?;
@@ -252,8 +270,8 @@ impl Deserialize for PlayerPos {
         let movement_direction = f32::deserialize(deserializer)?;
 
         Ok(PlayerPos {
-            position: s_position.as_v3f() / 100_f32,
-            speed: s_speed.as_v3f() / 100_f32,
+            position: s_position.as_vec3() / 100_f32,
+            speed: s_speed.as_vec3() / 100_f32,
             pitch: (s_pitch as f32) / 100_f32,
             yaw: (s_yaw as f32) / 100_f32,
             keys_pressed,
@@ -883,7 +901,7 @@ impl Deserialize for AbsNodeMetadataList {
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AbsBlockPos {
-    pos: v3s16,
+    pos: I16Vec3,
 }
 
 /// `BlockPos` addresses a node within a block
@@ -910,16 +928,16 @@ impl BlockPos {
     }
 
     #[must_use]
-    pub fn from_xyz(pos: v3s16) -> Self {
+    pub fn from_xyz(pos: I16Vec3) -> Self {
         Self::new(pos.x, pos.y, pos.z)
     }
 
     #[must_use]
-    pub fn to_xyz(&self) -> v3s16 {
+    pub fn to_xyz(&self) -> I16Vec3 {
         let x = self.raw % 16;
         let y = (self.raw / 16) % 16;
         let z = (self.raw / 256) % 16;
-        v3s16::new(x as i16, y as i16, z as i16)
+        I16Vec3::new(x as i16, y as i16, z as i16)
     }
 }
 
@@ -1469,8 +1487,8 @@ pub enum InteractAction {
 pub enum PointedThing {
     Nothing,
     Node {
-        under_surface: v3s16,
-        above_surface: v3s16,
+        under_surface: I16Vec3,
+        above_surface: I16Vec3,
     },
     Object {
         object_id: u16,
@@ -1496,8 +1514,8 @@ impl Serialize for PointedThing {
                 under_surface,
                 above_surface,
             } => {
-                v3s16::serialize(under_surface, ser)?;
-                v3s16::serialize(above_surface, ser)?;
+                I16Vec3::serialize(under_surface, ser)?;
+                I16Vec3::serialize(above_surface, ser)?;
             }
             PointedThing::Object { object_id } => {
                 u16::serialize(object_id, ser)?;
@@ -1518,8 +1536,8 @@ impl Deserialize for PointedThing {
         Ok(match typ {
             0 => PointedThing::Nothing,
             1 => PointedThing::Node {
-                under_surface: v3s16::deserialize(deser)?,
-                above_surface: v3s16::deserialize(deser)?,
+                under_surface: I16Vec3::deserialize(deser)?,
+                above_surface: I16Vec3::deserialize(deser)?,
             },
             2 => PointedThing::Object {
                 object_id: u16::deserialize(deser)?,
@@ -1656,7 +1674,7 @@ pub enum InventoryLocation {
     Undefined,
     CurrentPlayer,
     Player { name: String },
-    NodeMeta { pos: v3s16 },
+    NodeMeta { pos: I16Vec3 },
     Detached { name: String },
 }
 
@@ -1704,7 +1722,7 @@ impl Deserialize for InventoryLocation {
             for (i, &n) in coords.iter().enumerate() {
                 xyz[i] = stoi(n)?;
             }
-            let pos = v3s16::new(xyz[0], xyz[1], xyz[2]);
+            let pos = I16Vec3::new(xyz[0], xyz[1], xyz[2]);
             Ok(InventoryLocation::NodeMeta { pos })
         } else if word.starts_with(b"detached:") {
             Ok(InventoryLocation::Detached {

@@ -271,6 +271,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "07e28edb80900c19c28f1072f2e8aeca7fa06b23cd4169cefe1af5aa3260783f"
 
 [[package]]
+name = "glam"
+version = "0.30.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf3aa70d918d2b234126ff4f850f628f172542bf0603ded26b8ee36e5e22d5f9"
+
+[[package]]
 name = "heck"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -357,6 +363,7 @@ name = "luanti-protocol"
 version = "0.2.0"
 dependencies = [
  "anyhow",
+ "glam",
  "log",
  "luanti-protocol-derive",
  "miniz_oxide",
@@ -382,6 +389,7 @@ dependencies = [
  "anyhow",
  "clap",
  "env_logger",
+ "glam",
  "log",
  "luanti-protocol",
  "rand",

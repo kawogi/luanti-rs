@@ -1,4 +1,5 @@
 use anyhow::bail;
+use glam::Vec3;
 use luanti_protocol_derive::{LuantiDeserialize, LuantiSerialize};
 
 use crate::wire::{
@@ -6,7 +7,7 @@ use crate::wire::{
     ser::{Serialize, SerializeResult, Serializer},
 };
 
-use super::{Array16, v3f};
+use super::Array16;
 
 #[derive(Debug, Clone, PartialEq)]
 #[expect(
@@ -71,8 +72,8 @@ impl Deserialize for NodeBox {
 #[allow(non_camel_case_types, reason = "aligns with the original C++ codebase")]
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct aabb3f {
-    pub min_edge: v3f,
-    pub max_edge: v3f,
+    pub min_edge: Vec3,
+    pub max_edge: Vec3,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]

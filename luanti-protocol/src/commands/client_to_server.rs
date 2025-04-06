@@ -11,6 +11,9 @@ use crate::wire::ser::Serialize;
 use crate::wire::ser::SerializeResult;
 use crate::wire::ser::Serializer;
 use anyhow::bail;
+use glam::I16Vec3;
+use glam::UVec2;
+use glam::Vec2;
 use luanti_protocol_derive::LuantiDeserialize;
 use luanti_protocol_derive::LuantiSerialize;
 use std::ops::Deref;
@@ -47,10 +50,10 @@ define_protocol!(41, 0x4f457403, ToServer, ToServerCommand => {
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct UpdateClientInfoSpec {
-    pub render_target_size: v2u32,
+    pub render_target_size: UVec2,
     pub real_gui_scaling: f32,
     pub real_hud_scaling: f32,
-    pub max_fs_size: v2f,
+    pub max_fs_size: Vec2,
     pub touch_controls: bool,
 }
 
@@ -91,14 +94,14 @@ pub struct PlayerPosCommand {
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct GotblocksSpec {
-    #[wrap(Array8<v3s16>)]
-    pub blocks: Vec<v3s16>,
+    #[wrap(Array8<I16Vec3>)]
+    pub blocks: Vec<I16Vec3>,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct DeletedblocksSpec {
-    #[wrap(Array8<v3s16>)]
-    pub blocks: Vec<v3s16>,
+    #[wrap(Array8<I16Vec3>)]
+    pub blocks: Vec<I16Vec3>,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
@@ -142,7 +145,7 @@ pub struct RemovedSoundsSpec {
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct NodemetaFieldsSpec {
-    pub p: v3s16,
+    pub p: I16Vec3,
     pub form_name: String,
     #[wrap(Array16<Pair<String,LongString>>)]
     pub fields: Vec<(String, String)>,

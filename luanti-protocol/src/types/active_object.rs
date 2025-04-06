@@ -1,9 +1,10 @@
-use super::{Array8, Array16, Pair, SColor, Wrapped32, aabb3f, s8, s16, v2f, v2s16, v3f};
+use super::{Array8, Array16, Pair, SColor, Wrapped32, aabb3f, s8, s16};
 use crate::wire::{
     deser::{Deserialize, DeserializeResult, Deserializer},
     ser::{Serialize, SerializeResult, Serializer},
 };
 use anyhow::bail;
+use glam::{I16Vec2, Vec2, Vec3};
 use luanti_protocol_derive::{LuantiDeserialize, LuantiSerialize};
 
 /// This corresponds to `GenericCAO::Initialize` in Luanti
@@ -13,8 +14,8 @@ pub struct GenericInitData {
     pub name: String,
     pub is_player: bool,
     pub id: u16,
-    pub position: v3f,
-    pub rotation: v3f,
+    pub position: Vec3,
+    pub rotation: Vec3,
     pub hp: u16,
     #[wrap(Array8<Wrapped32<ActiveObjectCommand>>)]
     pub messages: Vec<ActiveObjectCommand>,
@@ -160,11 +161,11 @@ pub struct ObjectProperties {
     pub selection_box: aabb3f,
     pub pointable: bool,
     pub visual: String,
-    pub visual_size: v3f,
+    pub visual_size: Vec3,
     #[wrap(Array16<String>)]
     pub textures: Vec<String>,
-    pub spritediv: v2s16,
-    pub initial_sprite_basepos: v2s16,
+    pub spritediv: I16Vec2,
+    pub initial_sprite_basepos: I16Vec2,
     pub is_visible: bool,
     pub makes_footstep_sound: bool,
     pub automatic_rotate: f32,
@@ -195,10 +196,10 @@ pub struct ObjectProperties {
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AOCUpdatePosition {
-    pub position: v3f,
-    pub velocity: v3f,
-    pub acceleration: v3f,
-    pub rotation: v3f,
+    pub position: Vec3,
+    pub velocity: Vec3,
+    pub acceleration: Vec3,
+    pub rotation: Vec3,
     pub do_interpolate: bool,
     pub is_end_position: bool,
     pub update_interval: f32,
@@ -211,7 +212,7 @@ pub struct AOCSetTextureMod {
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AOCSetSprite {
-    pub base_pos: v2s16,
+    pub base_pos: I16Vec2,
     pub anum_num_frames: u16,
     pub anim_frame_length: f32,
     pub select_horiz_by_yawpitch: bool,
@@ -229,7 +230,7 @@ pub struct AOCSetPhysicsOverride {
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AOCSetAnimation {
-    pub range: v2f, // this is always casted to v2s32 by Luanti for some reason
+    pub range: Vec2, // this is always casted to v2s32 by Luanti for some reason
     pub speed: f32,
     pub blend: f32,
     pub no_loop: bool,
@@ -243,16 +244,16 @@ pub struct AOCSetAnimationSpeed {
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AOCSetBonePosition {
     pub bone: String,
-    pub position: v3f,
-    pub rotation: v3f,
+    pub position: Vec3,
+    pub rotation: Vec3,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AOCAttachTo {
     pub parent_id: s16,
     pub bone: String,
-    pub position: v3f,
-    pub rotation: v3f,
+    pub position: Vec3,
+    pub rotation: Vec3,
     pub force_visible: bool,
 }
 

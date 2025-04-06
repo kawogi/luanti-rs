@@ -7,6 +7,10 @@ mod set_sky;
 
 pub use access_denied::*;
 pub use active_object_messages::*;
+use glam::I16Vec3;
+use glam::IVec2;
+use glam::Vec2;
+use glam::Vec3;
 pub use hud_change::*;
 pub use item_def::*;
 pub use particle_spawner::*;
@@ -102,7 +106,7 @@ pub struct HelloSpec {
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AuthAcceptSpec {
-    pub player_pos: v3f,
+    pub player_pos: Vec3,
     pub map_seed: u64,
     pub recommended_send_interval: f32,
     pub sudo_auth_methods: u32,
@@ -116,21 +120,21 @@ pub struct DenySudoModeSpec;
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct BlockdataSpec {
-    pub pos: v3s16,
+    pub pos: I16Vec3,
     pub block: MapBlock,
     pub network_specific_version: u8,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct AddnodeSpec {
-    pub pos: v3s16,
+    pub pos: I16Vec3,
     pub node: MapNode,
     pub keep_metadata: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct RemovenodeSpec {
-    pub pos: v3s16,
+    pub pos: I16Vec3,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
@@ -152,7 +156,7 @@ pub struct CsmRestrictionFlagsSpec {
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct PlayerSpeedSpec {
-    pub added_vel: v3f,
+    pub added_vel: Vec3,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
@@ -190,7 +194,7 @@ pub struct HpSpec {
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct MovePlayerSpec {
-    pub pos: v3f,
+    pub pos: Vec3,
     pub pitch: f32,
     pub yaw: f32,
 }
@@ -211,7 +215,7 @@ pub struct FovSpec {
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct DeathscreenSpec {
     pub set_camera_point_target: bool,
-    pub camera_point_target: v3f,
+    pub camera_point_target: Vec3,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
@@ -241,7 +245,7 @@ pub struct PlaySoundSpec {
     pub spec_name: String,
     pub spec_gain: f32,
     pub typ: u8,
-    pub pos: v3f,
+    pub pos: Vec3,
     pub object_id: u16,
     pub spec_loop: bool,
     pub spec_fade: Option<f32>,
@@ -302,17 +306,17 @@ pub struct MovementSpec {
 pub struct HudaddSpec {
     pub server_id: u32,
     pub typ: u8,
-    pub pos: v2f,
+    pub pos: Vec2,
     pub name: String,
-    pub scale: v2f,
+    pub scale: Vec2,
     pub text: String,
     pub number: u32,
     pub item: u32,
     pub dir: u32,
-    pub align: v2f,
-    pub offset: v2f,
-    pub world_pos: Option<v3f>,
-    pub size: Option<v2s32>,
+    pub align: Vec2,
+    pub offset: Vec2,
+    pub world_pos: Option<Vec3>,
+    pub size: Option<IVec2>,
     pub z_index: Option<s16>,
     pub text2: Option<String>,
     pub style: Option<u32>,
@@ -347,17 +351,17 @@ pub struct OverrideDayNightRatioSpec {
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct LocalPlayerAnimationsSpec {
-    pub idle: v2s32,
-    pub walk: v2s32,
-    pub dig: v2s32,
-    pub walk_dig: v2s32,
+    pub idle: IVec2,
+    pub walk: IVec2,
+    pub dig: IVec2,
+    pub walk_dig: IVec2,
     pub frame_speed: f32,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct EyeOffsetSpec {
-    pub eye_offset_first: v3f,
-    pub eye_offset_third: v3f,
+    pub eye_offset_first: Vec3,
+    pub eye_offset_third: Vec3,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
@@ -372,7 +376,7 @@ pub struct CloudParamsSpec {
     pub color_ambient: SColor,
     pub height: f32,
     pub thickness: f32,
-    pub speed: v2f,
+    pub speed: Vec2,
     pub color_shadow: SColor,
 }
 

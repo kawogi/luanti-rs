@@ -14,6 +14,7 @@ repository.workspace = true
 luanti-protocol-derive.workspace = true
 
 anyhow = { workspace = true, features = ["backtrace"] }
+glam.workspace = true
 log.workspace = true
 miniz_oxide.workspace = true
 rand.workspace = true

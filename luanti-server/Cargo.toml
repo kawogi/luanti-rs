@@ -21,6 +21,7 @@ luanti-protocol.workspace = true
 
 anyhow = { workspace = true, features = ["backtrace"] }
 clap = { workspace = true, features = ["derive"] }
+glam.workspace = true
 env_logger.workspace = true
 log.workspace = true
 rand.workspace = true
