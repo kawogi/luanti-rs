@@ -50,7 +50,7 @@ impl<Auth: Authenticator + 'static> UninitializedState<Auth> {
             ToServerCommand::Init(init_spec) => init_spec,
             unexpected => {
                 warn!(
-                    "ignoring received unexpected client message: {message_name}",
+                    "uninitialized: ignoring unexpected client message: {message_name}",
                     message_name = unexpected.command_name()
                 );
                 return Ok(false);

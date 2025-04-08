@@ -79,9 +79,6 @@ impl RunningState {
             ToServerCommand::InventoryFields(_inventory_fields_spec) => {
                 todo!();
             }
-            ToServerCommand::RequestMedia(_request_media_spec) => {
-                todo!();
-            }
             ToServerCommand::HaveMedia(_have_media_spec) => {
                 todo!();
             }

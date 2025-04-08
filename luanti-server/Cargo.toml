@@ -20,11 +20,13 @@ bench = false
 luanti-protocol.workspace = true
 
 anyhow = { workspace = true, features = ["backtrace"] }
+base64.workspace = true
 clap = { workspace = true, features = ["derive"] }
 glam.workspace = true
 env_logger.workspace = true
 log.workspace = true
 rand.workspace = true
+sha1.workspace = true
 sha2.workspace = true
 srp.workspace = true
 tokio = { workspace = true, features = ["full"] }

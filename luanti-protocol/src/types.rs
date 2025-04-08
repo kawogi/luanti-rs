@@ -57,8 +57,10 @@ pub use binary::*;
 pub use compressed::*;
 use glam::I16Vec3;
 use glam::IVec3;
+use glam::U8Vec3;
 use glam::U8Vec4;
 use glam::Vec3;
+use glam::Vec4Swizzles;
 use luanti_protocol_derive::LuantiDeserialize;
 use luanti_protocol_derive::LuantiSerialize;
 pub use node_box::*;
@@ -188,6 +190,15 @@ pub struct StarParams {
 pub struct SColor(pub U8Vec4);
 
 impl SColor {
+    pub const BLACK: Self = Self(U8Vec4::new(0, 0, 0, 255));
+    pub const RED: Self = Self(U8Vec4::new(255, 0, 0, 255));
+    pub const GREEN: Self = Self(U8Vec4::new(0, 255, 0, 255));
+    pub const YELLOW: Self = Self(U8Vec4::new(255, 255, 0, 255));
+    pub const BLUE: Self = Self(U8Vec4::new(0, 0, 0, 255));
+    pub const MAGENTA: Self = Self(U8Vec4::new(255, 0, 255, 255));
+    pub const CYAN: Self = Self(U8Vec4::new(0, 255, 255, 255));
+    pub const WHITE: Self = Self(U8Vec4::new(255, 255, 255, 255));
+
     #[expect(
         clippy::min_ident_chars,
         reason = "those identifiers are well-known and clear from the context"
@@ -195,6 +206,11 @@ impl SColor {
     #[must_use]
     pub fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self((r, g, b, a).into())
+    }
+
+    #[must_use]
+    pub fn rgb(self) -> U8Vec3 {
+        self.0.xyz()
     }
 }
 

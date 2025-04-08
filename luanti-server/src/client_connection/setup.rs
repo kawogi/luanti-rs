@@ -22,7 +22,7 @@ impl SetupState {
             ToServerCommand::Init2(init2_spec) => init2_spec,
             unexpected => {
                 warn!(
-                    "ignoring received unexpected client message: {message_name}",
+                    "setup: ignoring unexpected client message: {message_name}",
                     message_name = unexpected.command_name()
                 );
                 return false;
