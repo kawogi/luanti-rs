@@ -3,6 +3,7 @@ use anyhow::bail;
 use log::debug;
 use luanti_protocol::LuantiConnection;
 use luanti_protocol::commands::CommandProperties;
+use luanti_protocol::commands::client_to_server::DamageSpec;
 use luanti_protocol::commands::client_to_server::GotBlocksSpec;
 use luanti_protocol::commands::client_to_server::InteractSpec;
 use luanti_protocol::commands::client_to_server::InventoryActionSpec;
@@ -58,8 +59,8 @@ impl RunningState {
             ToServerCommand::TSChatMessage(tschat_message_spec) => {
                 Self::handle_chat_message(*tschat_message_spec)?;
             }
-            ToServerCommand::Damage(_damage_spec) => {
-                todo!();
+            ToServerCommand::Damage(damage_spec) => {
+                Self::handle_damage(&damage_spec)?;
             }
             ToServerCommand::PlayerItem(player_item_spec) => {
                 Self::handle_player_item(&player_item_spec)?;
@@ -275,6 +276,18 @@ impl RunningState {
         let GotBlocksSpec { blocks } = got_blocks_spec;
 
         debug!("got blocks: {blocks:?}");
+
+        Ok(())
+    }
+
+    #[expect(
+        clippy::unnecessary_wraps,
+        reason = "//TODO(kawogi) for symmetry with other handlers, but should be reviewed"
+    )]
+    fn handle_damage(damage_spec: &DamageSpec) -> Result<()> {
+        let DamageSpec { damage } = damage_spec;
+
+        debug!("damage: {damage}");
 
         Ok(())
     }

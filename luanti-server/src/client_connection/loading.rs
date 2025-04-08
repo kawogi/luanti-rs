@@ -18,6 +18,7 @@ use luanti_protocol::commands::server_to_client::ItemdefCommand;
 use luanti_protocol::commands::server_to_client::ItemdefList;
 use luanti_protocol::commands::server_to_client::MediaSpec;
 use luanti_protocol::commands::server_to_client::NodedefSpec;
+use luanti_protocol::commands::server_to_client::PrivilegesSpec;
 use luanti_protocol::types::AlignStyle;
 use luanti_protocol::types::ContentFeatures;
 use luanti_protocol::types::DrawType;
@@ -326,6 +327,16 @@ impl LoadingState {
                 }
             }
         }
+
+        connection.send(PrivilegesSpec {
+            privileges: vec![
+                "fly".into(),
+                "fast".into(),
+                "noclip".into(),
+                "rollback".into(),
+                "debug".into(),
+            ],
+        })?;
 
         Ok(true)
     }
