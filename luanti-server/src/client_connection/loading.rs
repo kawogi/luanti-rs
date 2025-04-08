@@ -70,7 +70,7 @@ impl LoadingState {
             backface_culling: true,
             tileable_horizontal: false,
             tileable_vertical: false,
-            color_rgb: Some(SColor::RED.rgb().into()),
+            color_rgb: None, // Some(SColor::RED.rgb().into()),
             scale: 0,
             align_style: AlignStyle::Node,
         };
@@ -153,9 +153,9 @@ impl LoadingState {
                 tiledef_special.clone(),
             ],
             alpha_for_legacy: 255,
-            red: 0,
+            red: 255,
             green: 255,
-            blue: 0,
+            blue: 255,
             palette_name: String::new(),
             waving: 0,
             connect_sides: 0,
@@ -274,28 +274,58 @@ impl LoadingState {
                 .map_or("<none>".into(), ToString::to_string)
         );
 
-        let nodes = std::array::from_fn(|_index| MapNode {
+        let rust_nodes = std::array::from_fn(|_index| MapNode {
             param0: 10,
-            param1: 0,
+            param1: 255,
             param2: 0,
         });
 
-        let block = MapBlock {
+        // core.CONTENT_AIR     = 126
+        // core.CONTENT_IGNORE  = 127
+
+        let air_nodes = std::array::from_fn(|_index| MapNode {
+            param0: 126,
+            param1: 255,
+            param2: 0,
+        });
+
+        let floor_block = MapBlock {
             is_underground: true,
-            day_night_diff: true,
+            day_night_diff: false,
             generated: true,
-            lighting_complete: Some(0),
-            nodes: MapNodesBulk { nodes },
+            lighting_complete: Some(0x0000),
+            nodes: MapNodesBulk { nodes: rust_nodes },
             node_metadata: NodeMetadataList { metadata: vec![] },
         };
 
-        let blockdata = BlockdataSpec {
-            pos: I16Vec3::new(0, -1, 0),
-            block,
-            network_specific_version: 0,
+        let air_block = MapBlock {
+            is_underground: true,
+            day_night_diff: false,
+            generated: true,
+            lighting_complete: Some(0x0000),
+            nodes: MapNodesBulk { nodes: air_nodes },
+            node_metadata: NodeMetadataList { metadata: vec![] },
         };
 
-        connection.send(blockdata)?;
+        for z in -4..=4 {
+            for y in -4..=4 {
+                for x in -4..=4 {
+                    let block = if y < 0 {
+                        floor_block.clone()
+                    } else {
+                        air_block.clone()
+                    };
+
+                    let blockdata = BlockdataSpec {
+                        pos: I16Vec3::new(x, y, z),
+                        block,
+                        network_specific_version: 2,
+                    };
+
+                    connection.send(blockdata)?;
+                }
+            }
+        }
 
         Ok(true)
     }

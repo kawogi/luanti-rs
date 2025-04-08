@@ -65,6 +65,7 @@ use luanti_protocol_derive::LuantiDeserialize;
 use luanti_protocol_derive::LuantiSerialize;
 pub use node_box::*;
 pub use options::*;
+use std::fmt;
 use std::marker::PhantomData;
 pub use strings::*;
 pub use tile::*;
@@ -752,9 +753,15 @@ impl Deserialize for MapBlock {
 
 /// This has a special serialization, presumably to make it compress better.
 /// Each param is stored in a separate array.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct MapNodesBulk {
     pub nodes: [MapNode; NODECOUNT as usize],
+}
+
+impl fmt::Debug for MapNodesBulk {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("MapNodesBulk[…]")
+    }
 }
 
 impl Serialize for MapNodesBulk {
