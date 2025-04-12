@@ -18,6 +18,7 @@ bench = false
 
 [dependencies]
 luanti-protocol.workspace = true
+luanti-core.workspace = true
 
 anyhow = { workspace = true, features = ["backtrace"] }
 base64.workspace = true

@@ -405,6 +405,7 @@ dependencies = [
  "env_logger",
  "glam",
  "log",
+ "luanti-core",
  "luanti-protocol",
  "rand",
  "sha1",

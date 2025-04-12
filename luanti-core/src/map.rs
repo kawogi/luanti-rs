@@ -48,6 +48,10 @@ impl MapBlockPos {
     /// Mask to be used to address the bits of a node coordinate that make up the the position
     /// within their block.
     pub const SIZE_MASK: u32 = Self::SIZE - 1;
+    /// number of map nodes within a single block
+    pub const NODE_COUNT: u32 = Self::SIZE * Self::SIZE * Self::SIZE;
+    /// mask to be used to make a number a valid node index by wrapping around
+    pub const NODE_COUNT_MASK: u32 = Self::NODE_COUNT - 1;
 
     /// Position of the map block at the world's center
     pub const ZERO: Self = Self(I16Vec3::ZERO);
@@ -67,6 +71,7 @@ impl MapBlockPos {
     /// Converts a given node position into that of the containing map block.
     #[must_use]
     pub const fn for_node(node_pos: MapNodePos) -> Self {
+        //TODO(kawogi) check whether is is accurate; maybe the origin is located in the center of a block
         Self(I16Vec3 {
             x: node_pos.0.x >> MapBlockPos::SIZE_BITS,
             y: node_pos.0.y >> MapBlockPos::SIZE_BITS,
@@ -78,6 +83,12 @@ impl MapBlockPos {
     #[must_use]
     pub fn contains(self, node_pos: MapNodePos) -> bool {
         Self::for_node(node_pos) == self
+    }
+
+    /// returns the map node position for a certain map node in this map block
+    #[must_use]
+    pub fn node_pos(self, index: MapNodeIndex) -> MapNodePos {
+        MapNodePos(MapNodePos::from(self).0 + UVec3::from(index).as_i16vec3())
     }
 }
 
@@ -106,6 +117,7 @@ impl MapNodeIndex {
     /// Converts a given node position into the index within its containing map block.
     #[must_use]
     pub fn for_node(node_pos: MapNodePos) -> Self {
+        //TODO(kawogi) check whether is is accurate; maybe the origin is located in the center of a block
         // only retain the lower-most bits of the coordinates and align them next to each other
         let vec = (node_pos.0.as_uvec3() & Self::MASK) << Self::SHIFT;
         Self(vec.x | vec.y | vec.z)
@@ -131,5 +143,27 @@ impl From<MapNodeIndex> for usize {
             .0
             .try_into()
             .unwrap_or_else(|_| unreachable!("16-bit platforms are unsupported"))
+    }
+}
+
+impl From<usize> for MapNodeIndex {
+    fn from(value: usize) -> Self {
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "truncation is the expected behavior"
+        )]
+        Self((value as u32) & MapBlockPos::NODE_COUNT_MASK)
+    }
+}
+
+impl From<u32> for MapNodeIndex {
+    fn from(value: u32) -> Self {
+        Self(value & MapBlockPos::NODE_COUNT_MASK)
+    }
+}
+
+impl From<u16> for MapNodeIndex {
+    fn from(value: u16) -> Self {
+        Self(u32::from(value) & MapBlockPos::NODE_COUNT_MASK)
     }
 }

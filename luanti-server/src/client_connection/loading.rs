@@ -292,7 +292,7 @@ impl LoadingState {
 
         let floor_block = MapBlock {
             is_underground: true,
-            day_night_diff: false,
+            day_night_differs: false,
             generated: true,
             lighting_complete: Some(0x0000),
             nodes: MapNodesBulk { nodes: rust_nodes },
@@ -301,7 +301,7 @@ impl LoadingState {
 
         let air_block = MapBlock {
             is_underground: true,
-            day_night_diff: false,
+            day_night_differs: false,
             generated: true,
             lighting_complete: Some(0x0000),
             nodes: MapNodesBulk { nodes: air_nodes },

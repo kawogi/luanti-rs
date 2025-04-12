@@ -38,6 +38,7 @@ repository = "https://github.com/kawogi/luanti-rs"
 
 # workspace-internal crates
 
+luanti-core = { version = "0.2", path = "luanti-core" }
 luanti-protocol = { version = "0.2", path = "luanti-protocol" }
 luanti-protocol-derive = { version = "0.2", path = "luanti-protocol-derive" }
 luanti-shark = { path = "luanti-shark" }

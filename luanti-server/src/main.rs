@@ -10,6 +10,7 @@
 pub mod authentication;
 mod client_connection;
 mod server;
+mod world;
 
 use anyhow::bail;
 use authentication::dummy::DummyAuthenticator;
@@ -18,6 +19,8 @@ use clap::Parser;
 use server::LuantiWorldServer;
 use std::net::SocketAddr;
 use std::time::Duration;
+use world::generation::flat::MapgenFlat;
+use world::storage::dummy::DummyStorage;
 
 /// luanti-shark - Luanti proxy that gives detailed inspection of protocol
 #[derive(Parser, Debug)]
@@ -64,6 +67,9 @@ async fn real_main() -> anyhow::Result<()> {
     } else {
         bail!("One of --listen or --bind must be specified");
     };
+
+    let world_generator = MapgenFlat;
+    let storage = DummyStorage;
 
     let mut server = LuantiWorldServer::new(bind_addr, args.verbose);
     server.start(DummyAuthenticator);
