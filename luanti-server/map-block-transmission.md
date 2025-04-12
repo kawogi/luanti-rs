@@ -1,4 +1,4 @@
-# Transmission of world content to the player
+# Transmission of map blocks to the player
 
 This document aims to lay out a mechanism for deciding which world elements (map blocks) shall be
 
@@ -14,6 +14,8 @@ The constraints are (partially contradicting):
 - minimize storage
 - minimize transmission to client to save bandwidth
 - minimize latency
+
+![diagram showing the component interaction for providing the player with map blocks](map-block-transmission.drawio)
 
 ## Player interest
 
@@ -236,5 +238,5 @@ the following reasons:
 - each block only shall be sent to each client once
 - whenever a block becomes unavailable to a client (unloading) it might be re-sent to the client at
   a later point.
-- whenever a block's content changes, the client that rae currently seeing this block shall receive
+- whenever a block's content changes, the client that are currently seeing this block shall receive
   an update
