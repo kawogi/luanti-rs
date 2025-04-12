@@ -15,7 +15,7 @@ The constraints are (partially contradicting):
 - minimize transmission to client to save bandwidth
 - minimize latency
 
-![diagram showing the component interaction for providing the player with map blocks](map-block-transmission.drawio)
+![diagram showing the component interaction for providing the player with map blocks](map-block-transmission.drawio.svg)
 
 ## Player interest
 
