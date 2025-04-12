@@ -71,7 +71,7 @@ A single map block may be seen by multiple players. Its internal representation 
 generated once and then send an exact copy to each player. Especially for crowded areas with lots of
 players, this saves resources for generation, loading and compression.
 
-For this to work well, the server has to combine the priorities of all players for all map blocks.
+For this to work well, the server has to combine the priorities of all players for each map block.
 There are some approaches one could try:
 
 1. increase the priority with each player
@@ -105,7 +105,7 @@ load.
 A map block provider's job it to listen to a stream of map block priorities and to make sure that
 the requested map blocks become available eventually.
 
-There are two sources for map blocks:
+There are three sources for map blocks:
 
 - local cache
 - loading from storage
@@ -119,15 +119,15 @@ initially empty and will be filled by the later stages.
 An optional enhancement would be to store or offload the cache to a persistent memory.
 This is separate from the usual _official_ storage and merely serves as a measure to reduce the
 number of CPU-intensive generations and to speed up the startup. It shall be possible to delete
-this cache any time.
+this persisted cache any time.
 
 ### Storage lookup
 
-Next the provider shall look for a stored one that can be loaded. Any loaded block will be added to
-the local cache.
+Next the provider shall look for a stored block that can be loaded. Any loaded block will be added
+to the local cache.
 
 Depending on the storage provider it might happen that blocks are being loaded in groups even though
-only a single one has been requested. Those additional blocks shall be moved to the cache as well.
+only a single one has been requested. Those additional blocks shall be added to the cache as well.
 All storage providers should be implemented in a way that grouped blocks are spatially close to each
 other, so that there's a high likelihood of those blocks being or becoming of interest as well.
 
@@ -146,6 +146,13 @@ API.
 
 These rules permit to get rid of map blocks from the cache any time, because they can simply be
 reconstructed on demand.
+
+The generation might benefit from it's own cache. Deleting this cache shall never have a visible
+side effect other than performance implications.
+
+Note: There could be extra storage for very expensive calculations that occur on the first startup
+(e.g. pre-computing biomes, rivers and other large structures).
+This should be a one-time operation and never shall be updated during normal gameplay.
 
 ### Modification
 
@@ -171,7 +178,7 @@ Variant 2 enables to create a _snapshot_ and rollbacks of the entire world using
 
 Variant 3 is similar to variant 2 but makes it easier to synchronize map block changes with other
 storage systems (e.g. player storage) as the global tick counter is available to all components of
-the engine, while the version from variant 2 needs to be transported from the world generation to
+the engine, while the version from variant 2 needs to be transferred from the world generation to
 other components in order to be useful. A downside compared to variant 2 would be that _snapshot_
 versions are not consecutive and that multiple modifications within a single tick could become more
 complicated.
@@ -183,25 +190,25 @@ ordered.
 
 Whenever a block has been modified it shall replace the old version in the cache. As a side effect
 this block needs to be transferred to all clients which had access to the old version. The usual
-priority rules need to be applied for scheduling and and raycasting algorithm needs to take these
+priority rules need to be applied for scheduling and the raycasting algorithm needs to take these
 changes into account.
 
 ### Persistence
 
 Each modification to the game's state will be tracked with a version (tick counter). After the
-completion of each tick the game is valid as a whole and could be persisted on a medium (files,
+completion of each tick the state is valid as a whole and could be persisted on a medium (files,
 database, …).
 
-There can be multiple storages for different content types (map data, chat, player, …) and all
+There can be multiple storages for different content types (map data, chat, player, …) and all of
 them need to be synchronized. For this to work the following approach shall be taken:
 
 - decide that a certain tick shall be persisted (this can be based on a fixed time interval, the
   amount of data collected in caches, the system being idle, … and shall generally be configurable)
-- after the end of each tick notify all storage providers to take a snap shot of the current state.
+- after the end of each tick, notify all storage providers to take a snapshot of the current state.
   This shall be performed in a non-blocking manner and depending on the amount of data this can
   mean to:
   - just write out the data right away if there's little risk of blocking the game
-  - create an in memory copy of the current state and write that asynchronously
+  - create an in-memory copy of the current state and write that asynchronously
   - use a generational data model (clone on write) - this is being used for map blocks
 - continue the game loop while the storage providers are busy
 - each storage provider reports back to the engine as soon as they ensured the requested state has
@@ -210,6 +217,7 @@ them need to be synchronized. For this to work the following approach shall be t
   completion of this transaction
 - on receiving the confirmation that the transaction has been completed, each storage provider may
   chose to remove older versions that have been superseded
+- the engine may decide to get rid of stale data from its caches
 
 This approach ensures that there's always at least one coherent game state which can be loaded.
 
@@ -222,7 +230,7 @@ There's a chance that the problem can be fixed and that persistence can be resum
 
 ## TODO
 
-Open question: someone needs to keep track of which blocks have been transferred to which client for
+Open question: something needs to keep track of which blocks have been transferred to which client for
 the following reasons:
 
 - each block only shall be sent to each client once
