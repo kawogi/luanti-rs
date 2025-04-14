@@ -1,8 +1,4 @@
-use luanti_core::{
-    content_id::ContentId,
-    map::{MapBlockPos, MapNodeIndex, MapNodePos},
-    node::MapNode,
-};
+use luanti_core::{ContentId, MapBlockPos, MapNode, MapNodeIndex, MapNodePos};
 use luanti_protocol::types::{MapNodesBulk, NodeMetadataList, TransferrableMapBlock};
 
 use super::WorldGenerator;

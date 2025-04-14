@@ -61,8 +61,8 @@ use glam::U8Vec3;
 use glam::U8Vec4;
 use glam::Vec3;
 use glam::Vec4Swizzles;
-use luanti_core::content_id::ContentId;
-use luanti_core::node::MapNode;
+use luanti_core::ContentId;
+use luanti_core::MapNode;
 use luanti_protocol_derive::LuantiDeserialize;
 use luanti_protocol_derive::LuantiSerialize;
 pub use node_box::*;
@@ -799,6 +799,7 @@ impl Deserialize for TransferrableMapBlock {
 /// Each param is stored in a separate array.
 #[derive(Clone, PartialEq)]
 pub struct MapNodesBulk {
+    // TODO(kawogi) replace with `MapBlockNodes`
     pub nodes: [MapNode; NODE_COUNT as usize],
 }
 

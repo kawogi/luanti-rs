@@ -7,15 +7,12 @@ use anyhow::Result;
 use flexstr::SharedStr;
 use glam::Vec3;
 use log::{debug, error, trace};
-use luanti_core::map::MapBlockPos;
+use luanti_core::MapBlockPos;
 use luanti_protocol::{
-    commands::client_to_server::{DeletedblocksSpec, GotBlocksSpec, PlayerPosCommand},
-    types::{BlockPos, PlayerPos, TransferrableMapBlock},
+    commands::client_to_server::{DeletedblocksSpec, GotBlocksSpec},
+    types::{PlayerPos, TransferrableMapBlock},
 };
-use tokio::{
-    spawn,
-    sync::mpsc::{Receiver, Sender},
-};
+use tokio::sync::mpsc::{Receiver, Sender};
 
 struct ViewTracker {
     player_key: SharedStr,

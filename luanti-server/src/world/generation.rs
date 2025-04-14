@@ -1,6 +1,6 @@
 pub(crate) mod flat;
 
-use luanti_core::map::MapBlockPos;
+use luanti_core::MapBlockPos;
 use luanti_protocol::types::TransferrableMapBlock;
 
 pub(crate) trait WorldGenerator {

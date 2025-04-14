@@ -10,8 +10,8 @@
 pub mod authentication;
 mod client_connection;
 mod server;
-mod world;
 mod view_tracker;
+mod world;
 
 use anyhow::bail;
 use authentication::dummy::DummyAuthenticator;

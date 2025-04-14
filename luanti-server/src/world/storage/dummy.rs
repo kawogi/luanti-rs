@@ -1,7 +1,7 @@
 use super::WorldStorage;
 use crate::world::WorldBlock;
 use anyhow::Result;
-use luanti_core::map::MapBlockPos;
+use luanti_core::MapBlockPos;
 
 /// A world storage provider which actually never stores or loads anything.
 /// This is useful for temporary throwaway worlds and for mapgen tests.

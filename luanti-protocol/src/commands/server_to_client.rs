@@ -13,7 +13,7 @@ use glam::Vec2;
 use glam::Vec3;
 pub use hud_change::*;
 pub use item_def::*;
-use luanti_core::node::MapNode;
+use luanti_core::MapNode;
 pub use particle_spawner::*;
 pub use set_sky::*;
 

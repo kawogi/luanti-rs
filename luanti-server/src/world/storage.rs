@@ -1,5 +1,5 @@
 use anyhow::Result;
-use luanti_core::map::MapBlockPos;
+use luanti_core::MapBlockPos;
 
 use super::WorldBlock;
 

@@ -5,8 +5,8 @@ use crate::wire::{
 };
 use anyhow::{Context, bail};
 use glam::{Vec2, Vec3};
-use luanti_core::content_id::ContentId;
-use luanti_core::node::MapNode;
+use luanti_core::ContentId;
+use luanti_core::MapNode;
 use luanti_protocol_derive::{LuantiDeserialize, LuantiSerialize};
 
 #[derive(Debug, Clone, PartialEq)]

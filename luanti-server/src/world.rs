@@ -1,10 +1,7 @@
 pub(crate) mod generation;
 pub(crate) mod storage;
 
-use luanti_core::{
-    map::{MapBlockPos, MapNodeIndex},
-    node::MapNode,
-};
+use luanti_core::{MapBlockNodes, MapBlockPos, MapNodeIndex};
 use luanti_protocol::types::NodeMetadata;
 use storage::WorldStorage;
 
@@ -57,7 +54,7 @@ pub(crate) struct WorldBlock {
     ///  `(1, 0, 0)` is also loaded.
     pub lighting_complete: u16,
 
-    pub nodes: [MapNode; MapBlockPos::NODE_COUNT as usize],
+    pub nodes: MapBlockNodes,
 
     pub metadata: Vec<(MapNodeIndex, NodeMetadata)>,
 }

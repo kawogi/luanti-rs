@@ -1,40 +1,26 @@
 use std::vec;
 
 use anyhow::Result;
-use base64::Engine;
-use base64::engine::general_purpose::STANDARD;
+use base64::{Engine, engine::general_purpose::STANDARD};
 use glam::I16Vec3;
-use log::debug;
-use log::info;
-use log::warn;
-use luanti_core::content_id::ContentId;
-use luanti_core::node::MapNode;
-use luanti_protocol::LuantiConnection;
-use luanti_protocol::commands::CommandProperties;
-use luanti_protocol::commands::client_to_server::ClientReadySpec;
-use luanti_protocol::commands::client_to_server::RequestMediaSpec;
-use luanti_protocol::commands::client_to_server::ToServerCommand;
-use luanti_protocol::commands::server_to_client::AnnounceMediaSpec;
-use luanti_protocol::commands::server_to_client::BlockdataSpec;
-use luanti_protocol::commands::server_to_client::ItemdefCommand;
-use luanti_protocol::commands::server_to_client::ItemdefList;
-use luanti_protocol::commands::server_to_client::MediaSpec;
-use luanti_protocol::commands::server_to_client::NodedefSpec;
-use luanti_protocol::commands::server_to_client::PrivilegesSpec;
-use luanti_protocol::types::AlignStyle;
-use luanti_protocol::types::ContentFeatures;
-use luanti_protocol::types::DrawType;
-use luanti_protocol::types::MapNodesBulk;
-use luanti_protocol::types::MediaAnnouncement;
-use luanti_protocol::types::MediaFileData;
-use luanti_protocol::types::NodeBox;
-use luanti_protocol::types::NodeDefManager;
-use luanti_protocol::types::NodeMetadataList;
-use luanti_protocol::types::SColor;
-use luanti_protocol::types::SimpleSoundSpec;
-use luanti_protocol::types::TileAnimationParams;
-use luanti_protocol::types::TileDef;
-use luanti_protocol::types::TransferrableMapBlock;
+use log::{debug, info, warn};
+use luanti_core::{ContentId, MapNode};
+use luanti_protocol::{
+    LuantiConnection,
+    commands::{
+        CommandProperties,
+        client_to_server::{ClientReadySpec, RequestMediaSpec, ToServerCommand},
+        server_to_client::{
+            AnnounceMediaSpec, BlockdataSpec, ItemdefCommand, ItemdefList, MediaSpec, NodedefSpec,
+            PrivilegesSpec,
+        },
+    },
+    types::{
+        AlignStyle, ContentFeatures, DrawType, MapNodesBulk, MediaAnnouncement, MediaFileData,
+        NodeBox, NodeDefManager, NodeMetadataList, SColor, SimpleSoundSpec, TileAnimationParams,
+        TileDef, TransferrableMapBlock,
+    },
+};
 use sha1::Digest;
 
 use super::RunningState;
