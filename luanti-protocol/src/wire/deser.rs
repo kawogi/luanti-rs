@@ -174,7 +174,7 @@ impl<'data> Deserializer<'data> {
             None => {
                 self.take_all();
             }
-        };
+        }
     }
 }
 

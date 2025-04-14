@@ -163,7 +163,7 @@ impl Serialize for TileAnimationParams {
                 u8::serialize(frames_h, ser)?;
                 f32::serialize(frame_length, ser)?;
             }
-        };
+        }
         Ok(())
     }
 }

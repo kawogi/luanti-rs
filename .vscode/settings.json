@@ -28,6 +28,7 @@
         "drawtype",
         "exptime",
         "facedir",
+        "flexstr",
         "floodable",
         "formspec",
         "Formspec",

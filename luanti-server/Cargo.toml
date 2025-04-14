@@ -23,6 +23,7 @@ luanti-core.workspace = true
 anyhow = { workspace = true, features = ["backtrace"] }
 base64.workspace = true
 clap = { workspace = true, features = ["derive"] }
+flexstr.workspace = true
 glam.workspace = true
 env_logger.workspace = true
 log.workspace = true

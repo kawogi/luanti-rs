@@ -169,7 +169,7 @@ fn audit_command_inner<Cmd: CommandRef>(
         _ => {
             do_compare("default", reserialized, orig, command);
         }
-    };
+    }
     Ok(())
 }
 

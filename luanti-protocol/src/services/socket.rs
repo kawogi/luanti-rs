@@ -156,7 +156,7 @@ impl LuantiSocketRunner {
                 }
                 Err(ref error) if error.kind() == std::io::ErrorKind::WouldBlock => (),
                 Err(error) => panic!("Unexpected socket error: {error:?}"),
-            };
+            }
         }
         if ready.is_writable() && !self.outgoing.is_empty() {
             let (addr, data) = self.outgoing.pop_back().unwrap();

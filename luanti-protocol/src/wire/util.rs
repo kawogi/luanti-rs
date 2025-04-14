@@ -125,7 +125,7 @@ where
                 }
             }
             Err(ec) => bail!("zstd_compress: {}", zstd_safe::get_error_name(ec)),
-        };
+        }
     }
     Ok(input_buffer.pos())
 }

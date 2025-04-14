@@ -55,7 +55,7 @@ impl LuantiServerRunner {
                     info!("Retrying in 5 seconds");
                     tokio::time::sleep(Duration::from_millis(5000)).await;
                 }
-            };
+            }
         };
         info!("LuantiServer started");
         #[expect(

@@ -61,12 +61,15 @@ use glam::U8Vec3;
 use glam::U8Vec4;
 use glam::Vec3;
 use glam::Vec4Swizzles;
+use luanti_core::content_id::ContentId;
+use luanti_core::node::MapNode;
 use luanti_protocol_derive::LuantiDeserialize;
 use luanti_protocol_derive::LuantiSerialize;
 pub use node_box::*;
 pub use options::*;
 use std::fmt;
 use std::marker::PhantomData;
+use std::ops::Range;
 pub use strings::*;
 pub use tile::*;
 
@@ -561,13 +564,14 @@ impl Deserialize for NodeDefManager {
 }
 
 // A "block" is 16x16x16 "nodes"
+// TODO this is redundant to MapBlockPos::SIZE
 const MAP_BLOCKSIZE: u16 = 16;
 
 // Number of nodes in a block
 const NODE_COUNT: u16 = MAP_BLOCKSIZE * MAP_BLOCKSIZE * MAP_BLOCKSIZE;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct MapBlock {
+pub struct TransferrableMapBlock {
     /// Should be set to `false` if there will be no light obstructions above the block.
     /// If/when sunlight of a block is updated and there is no block above it, this value is checked
     /// for determining whether sunlight comes from the top.
@@ -615,7 +619,7 @@ pub struct MapBlock {
     pub node_metadata: NodeMetadataList, // m_node_metadata.serialize(os, version, disk);
 }
 
-impl Serialize for MapBlock {
+impl Serialize for TransferrableMapBlock {
     /// `MapBlock` is a bit of a nightmare, because the compression algorithm
     /// and where the compression is applied (to the whole struct, or to
     /// parts of it) depends on the serialization format version.
@@ -635,6 +639,7 @@ impl Serialize for MapBlock {
             lighting_complete: value.lighting_complete,
         };
         MapBlockHeader::serialize(&header, ser)?;
+        // TODO(kawogi) remove support for old serialization
         if ver >= 29 {
             MapNodesBulk::serialize(&value.nodes, ser)?;
         } else {
@@ -735,7 +740,7 @@ impl Deserialize for MapBlockHeader {
     }
 }
 
-impl Deserialize for MapBlock {
+impl Deserialize for TransferrableMapBlock {
     type Output = Self;
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         let ver = deser.context().ser_fmt;
@@ -811,7 +816,7 @@ impl Serialize for MapNodesBulk {
         ser.write(2 * nodecount, |buf| {
             assert_eq!(buf.len(), 2 * nodecount, "size mismatch");
             for index in 0..nodecount {
-                let bytes = value.nodes[index].param0.to_be_bytes();
+                let bytes = value.nodes[index].content_id.0.to_be_bytes();
                 buf[2 * index] = bytes[0];
                 buf[2 * index + 1] = bytes[1];
             }
@@ -852,7 +857,9 @@ impl Deserialize for MapNodesBulk {
         let param2_offset = 3 * nodecount;
         for i in 0..nodecount {
             nodes.push(MapNode {
-                param0: u16::from_be_bytes(data[2 * i..2 * i + 2].try_into().unwrap()),
+                content_id: ContentId(u16::from_be_bytes(
+                    data[2 * i..2 * i + 2].try_into().unwrap(),
+                )),
                 param1: data[param1_offset + i],
                 param2: data[param2_offset + i],
             });
@@ -868,12 +875,45 @@ impl Deserialize for MapNodesBulk {
 
 /// The default serialization is used for single nodes.
 /// But for transferring entire blocks, `MapNodeBulk` is used instead.
-#[derive(Debug, Default, Clone, Copy, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct MapNode {
-    pub param0: u16,
-    pub param1: u8,
-    pub param2: u8,
+impl Deserialize for MapNode {
+    type Output = Self;
+
+    fn deserialize(deserializer: &mut Deserializer<'_>) -> DeserializeResult<Self::Output> {
+        Ok(MapNode {
+            content_id: ContentId(u16::deserialize(deserializer)?),
+            param1: u8::deserialize(deserializer)?,
+            param2: u8::deserialize(deserializer)?,
+        })
+    }
 }
+
+impl Serialize for MapNode {
+    type Input = Self;
+
+    fn serialize<S: Serializer>(value: &Self::Input, serializer: &mut S) -> SerializeResult {
+        u16::serialize(&value.content_id.0, serializer)?;
+        u8::serialize(&value.param1, serializer)?;
+        u8::serialize(&value.param2, serializer)?;
+        Ok(())
+    }
+}
+
+// #[derive(Debug, Clone, Copy, PartialEq, LuantiSerialize, LuantiDeserialize)]
+// pub struct MapNode {
+//     pub param0: u16,
+//     pub param1: u8,
+//     pub param2: u8,
+// }
+
+// impl Default for MapNode {
+//     fn default() -> Self {
+//         Self {
+//             param0: 127,
+//             param1: 0,
+//             param2: 0,
+//         }
+//     }
+// }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct NodeMetadataList {
@@ -956,6 +996,7 @@ impl Deserialize for AbsNodeMetadataList {
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+// TODO(kawogi) this looks like a duplicate of MapBlockPos, MapNodePos, or similar
 pub struct AbsBlockPos {
     pos: I16Vec3,
 }
@@ -971,17 +1012,21 @@ pub struct BlockPos {
 impl BlockPos {
     #[must_use]
     pub fn new(x: i16, y: i16, z: i16) -> Self {
-        let valid = 0..(MAP_BLOCKSIZE as i16);
-        assert!(
-            valid.contains(&x) && valid.contains(&y) && valid.contains(&z),
-            "//TODO add proper error message"
-        );
-        let x = x as u16;
-        let y = y as u16;
-        let z = z as u16;
-        Self {
-            raw: (MAP_BLOCKSIZE * z + y) * MAP_BLOCKSIZE + x,
-        }
+        Self::try_new(x, y, z)
+            .unwrap_or_else(|| panic!("({x}, {y}, {z}) is not a valid block position"))
+    }
+
+    #[must_use]
+    pub fn try_new(x: i16, y: i16, z: i16) -> Option<Self> {
+        const VALID: Range<i16> = 0..(MAP_BLOCKSIZE as i16);
+        (VALID.contains(&x) && VALID.contains(&y) && VALID.contains(&z)).then(|| {
+            let x = x as u16;
+            let y = y as u16;
+            let z = z as u16;
+            Self {
+                raw: (MAP_BLOCKSIZE * z + y) * MAP_BLOCKSIZE + x,
+            }
+        })
     }
 
     #[must_use]
@@ -1431,7 +1476,7 @@ impl Serialize for HudSetParam {
             }
             SetHotBarImage(value) => String::serialize(value, ser)?,
             SetHotBarSelectedImage(value) => String::serialize(value, ser)?,
-        };
+        }
         Ok(())
     }
 }

@@ -12,6 +12,7 @@ repository.workspace = true
 
 [dependencies]
 luanti-protocol-derive.workspace = true
+luanti-core.workspace = true
 
 anyhow = { workspace = true, features = ["backtrace"] }
 glam.workspace = true

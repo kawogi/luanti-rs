@@ -7,6 +7,8 @@ use glam::I16Vec3;
 use log::debug;
 use log::info;
 use log::warn;
+use luanti_core::content_id::ContentId;
+use luanti_core::node::MapNode;
 use luanti_protocol::LuantiConnection;
 use luanti_protocol::commands::CommandProperties;
 use luanti_protocol::commands::client_to_server::ClientReadySpec;
@@ -22,8 +24,6 @@ use luanti_protocol::commands::server_to_client::PrivilegesSpec;
 use luanti_protocol::types::AlignStyle;
 use luanti_protocol::types::ContentFeatures;
 use luanti_protocol::types::DrawType;
-use luanti_protocol::types::MapBlock;
-use luanti_protocol::types::MapNode;
 use luanti_protocol::types::MapNodesBulk;
 use luanti_protocol::types::MediaAnnouncement;
 use luanti_protocol::types::MediaFileData;
@@ -34,6 +34,7 @@ use luanti_protocol::types::SColor;
 use luanti_protocol::types::SimpleSoundSpec;
 use luanti_protocol::types::TileAnimationParams;
 use luanti_protocol::types::TileDef;
+use luanti_protocol::types::TransferrableMapBlock;
 use sha1::Digest;
 
 use super::RunningState;
@@ -276,21 +277,18 @@ impl LoadingState {
         );
 
         let rust_nodes = std::array::from_fn(|_index| MapNode {
-            param0: 10,
+            content_id: ContentId(10),
             param1: 255,
             param2: 0,
         });
-
-        // core.CONTENT_AIR     = 126
-        // core.CONTENT_IGNORE  = 127
 
         let air_nodes = std::array::from_fn(|_index| MapNode {
-            param0: 126,
+            content_id: ContentId::AIR,
             param1: 255,
             param2: 0,
         });
 
-        let floor_block = MapBlock {
+        let floor_block = TransferrableMapBlock {
             is_underground: true,
             day_night_differs: false,
             generated: true,
@@ -299,7 +297,7 @@ impl LoadingState {
             node_metadata: NodeMetadataList { metadata: vec![] },
         };
 
-        let air_block = MapBlock {
+        let air_block = TransferrableMapBlock {
             is_underground: true,
             day_night_differs: false,
             generated: true,

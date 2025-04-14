@@ -13,6 +13,7 @@ use glam::Vec2;
 use glam::Vec3;
 pub use hud_change::*;
 pub use item_def::*;
+use luanti_core::node::MapNode;
 pub use particle_spawner::*;
 pub use set_sky::*;
 
@@ -121,7 +122,7 @@ pub struct DenySudoModeSpec;
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub struct BlockdataSpec {
     pub pos: I16Vec3,
-    pub block: MapBlock,
+    pub block: TransferrableMapBlock,
     pub network_specific_version: u8,
 }
 

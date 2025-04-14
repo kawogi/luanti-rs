@@ -337,7 +337,7 @@ impl PeerRunner {
                 self.last_received = self.now;
                 self.process_packet(pkt)?;
             }
-        };
+        }
         Ok(())
     }
 

@@ -39,7 +39,7 @@ impl IncomingBuffer {
             .is_some()
         {
             warn!("received duplicate packet for chunk #{}", body.chunk_num);
-        };
+        }
         Ok(self.chunks.len() == self.chunk_count as usize)
     }
 

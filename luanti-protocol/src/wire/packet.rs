@@ -125,7 +125,7 @@ impl Serialize for ControlBody {
             ControlBody::Ack(body) => AckBody::serialize(body, ser)?,
             ControlBody::SetPeerId(body) => SetPeerIdBody::serialize(body, ser)?,
             ControlBody::Ping | ControlBody::Disconnect => (),
-        };
+        }
         Ok(())
     }
 }

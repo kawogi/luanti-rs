@@ -193,7 +193,7 @@ impl SrpAuthState {
         match self {
             SrpAuthState::Uninitialized => "uninitialized",
             SrpAuthState::Verification { .. } => "verification",
-            SrpAuthState::Authenticated { .. } => "authenticated",
+            SrpAuthState::Authenticated => "authenticated",
         }
     }
 }

@@ -249,6 +249,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "flexstr"
+version = "0.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d50aef14619d336a54fca5a592d952eb39037b1a1e7e6afd9f91c892ac7ef65"
+dependencies = [
+ "static_assertions",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -378,6 +387,7 @@ dependencies = [
  "anyhow",
  "glam",
  "log",
+ "luanti-core",
  "luanti-protocol-derive",
  "miniz_oxide",
  "rand",
@@ -403,6 +413,7 @@ dependencies = [
  "base64",
  "clap",
  "env_logger",
+ "flexstr",
  "glam",
  "log",
  "luanti-core",
@@ -743,6 +754,12 @@ dependencies = [
  "num-bigint",
  "subtle",
 ]
+
+[[package]]
+name = "static_assertions"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "strsim"

@@ -136,7 +136,7 @@ impl Channel {
     pub(crate) fn next_send(&mut self, now: Instant) -> Option<PacketBody> {
         if let Some(body) = self.unreliable_out.pop_front() {
             return Some(PacketBody::Inner(body));
-        };
+        }
         if let Some(body) = self.reliable_out.pop(now) {
             return Some(body);
         }

@@ -1,10 +1,12 @@
-use crate::types::{Array16, LongString, MapNode, RangedParameter, TileAnimationParams};
+use crate::types::{Array16, LongString, RangedParameter, TileAnimationParams};
 use crate::wire::{
     deser::{Deserialize, DeserializeResult, Deserializer},
     ser::{Serialize, SerializeResult, Serializer},
 };
 use anyhow::{Context, bail};
 use glam::{Vec2, Vec3};
+use luanti_core::content_id::ContentId;
+use luanti_core::node::MapNode;
 use luanti_protocol_derive::{LuantiDeserialize, LuantiSerialize};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -61,10 +63,10 @@ impl Deserialize for AddParticlespawnerCommand {
         let animation = TileAnimationParams::deserialize(deserializer)?;
         let glow = u8::deserialize(deserializer)?;
         let object_collision = bool::deserialize(deserializer)?;
-        let param0 = u16::deserialize(deserializer)?;
+        let content_id = ContentId(u16::deserialize(deserializer)?);
         let param2 = u8::deserialize(deserializer)?;
         let node = MapNode {
-            param0,
+            content_id,
             param2,
             ..MapNode::default()
         };
@@ -188,7 +190,7 @@ impl Serialize for AddParticlespawnerCommand {
         TileAnimationParams::serialize(&value.base.animation, serializer)?;
         u8::serialize(&value.base.glow, serializer)?;
         bool::serialize(&value.base.object_collision, serializer)?;
-        u16::serialize(&value.base.node.param0, serializer)?;
+        u16::serialize(&value.base.node.content_id.0, serializer)?;
         u8::serialize(&value.base.node.param2, serializer)?;
         u8::serialize(&value.base.node_tile, serializer)?;
 
@@ -243,7 +245,7 @@ impl Serialize for ParticleParameters {
         TileAnimationParams::serialize(&value.base.animation, serializer)?;
         u8::serialize(&value.base.glow, serializer)?;
         bool::serialize(&value.base.object_collision, serializer)?;
-        u16::serialize(&value.base.node.param0, serializer)?;
+        u16::serialize(&value.base.node.content_id.0, serializer)?;
         u8::serialize(&value.base.node.param2, serializer)?;
         u8::serialize(&value.base.node_tile, serializer)?;
 
@@ -274,10 +276,10 @@ impl Deserialize for ParticleParameters {
         let animation = TileAnimationParams::deserialize(deserializer)?;
         let glow = u8::deserialize(deserializer)?;
         let object_collision = bool::deserialize(deserializer)?;
-        let param0 = u16::deserialize(deserializer)?;
+        let content_id = ContentId(u16::deserialize(deserializer)?);
         let param2 = u8::deserialize(deserializer)?;
         let node = MapNode {
-            param0,
+            content_id,
             param2,
             ..MapNode::default()
         };
