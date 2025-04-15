@@ -12,7 +12,7 @@ impl Default for ContentId {
 }
 
 impl ContentId {
-    /// A solid walkable node with the texture  `unknown_node.png`.
+    /// A solid walkable node with the texture `unknown_node.png`.
     ///
     /// For example, used on the client to display unregistered node IDs
     /// (instead of expanding the vector of node definitions each time

@@ -1,6 +1,9 @@
 //! Contains all kinds of map position primitives and conversions between them.
 
-use std::ops::{Index, IndexMut};
+use std::{
+    fmt::{self, Display},
+    ops::{Index, IndexMut},
+};
 
 use glam::{I16Vec3, UVec3};
 
@@ -88,6 +91,13 @@ impl MapBlockPos {
     #[must_use]
     pub fn node_pos(self, index: MapNodeIndex) -> MapNodePos {
         MapNodePos(MapNodePos::from(self).0 + UVec3::from(index).as_i16vec3())
+    }
+}
+
+impl Display for MapBlockPos {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // use double square brackets to indicate that a map block is bigger than a single map node
+        write!(formatter, "[[{}, {}, {}]]", self.0.x, self.0.y, self.0.z)
     }
 }
 

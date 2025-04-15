@@ -20,16 +20,16 @@ pub(crate) struct WorldBlock {
     /// This can be used
     version: u64,
     /// Location within the world
-    pos: MapBlockPos,
+    pub(crate) pos: MapBlockPos,
 
     /// Should be set to `false` if there will be no light obstructions above the block.
     /// If/when sunlight of a block is updated and there is no block above it, this value is checked
     /// for determining whether sunlight comes from the top.
-    pub is_underground: bool,
+    pub(crate) is_underground: bool,
 
     /// Whether the lighting of the block is different on day and night.
     /// Only blocks that have this bit set are updated when day transforms to night.
-    pub day_night_differs: bool,
+    pub(crate) day_night_differs: bool,
 
     /// This contains 12 flags, each of them corresponds to a direction.
     ///
@@ -52,9 +52,18 @@ pub(crate) struct WorldBlock {
     /// Example: if the block at `(0, 0, 0)` has `lighting_complete = 0b1111111111111110`,
     ///  Luanti will correct lighting in the day light bank when the block at
     ///  `(1, 0, 0)` is also loaded.
-    pub lighting_complete: u16,
+    pub(crate) lighting_complete: u16,
 
-    pub nodes: MapBlockNodes,
+    pub(crate) nodes: MapBlockNodes,
 
-    pub metadata: Vec<(MapNodeIndex, NodeMetadata)>,
+    pub(crate) metadata: Vec<(MapNodeIndex, NodeMetadata)>,
+}
+
+/// A value of this type describes a change to the world.
+pub(crate) enum WorldUpdate {
+    /// A new map block was made available. This usually means that this block has just been
+    /// generated or loaded from storage.
+    ///
+    /// This may also be created for an existing map block that is _new_ to a certain player.
+    NewMapBlock(WorldBlock),
 }
