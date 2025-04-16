@@ -73,12 +73,38 @@ impl MapBlockPos {
     /// Converts a given node position into that of the containing map block.
     #[must_use]
     pub const fn for_node(node_pos: MapNodePos) -> Self {
-        //TODO(kawogi) check whether is is accurate; maybe the origin is located in the center of a block
+        Self::for_pos(node_pos.0)
+    }
+
+    /// Converts a given world position into that of the containing map block.
+    ///
+    /// `for_node` is preferred in most cases but sometimes we only have a raw vector and it would
+    /// be unnecessary to wrap that in a `MapNodePos`.
+    #[must_use]
+    pub const fn for_pos(pos: I16Vec3) -> Self {
         Self(I16Vec3 {
-            x: node_pos.0.x >> MapBlockPos::SIZE_BITS,
-            y: node_pos.0.y >> MapBlockPos::SIZE_BITS,
-            z: node_pos.0.z >> MapBlockPos::SIZE_BITS,
+            x: pos.x >> MapBlockPos::SIZE_BITS,
+            y: pos.y >> MapBlockPos::SIZE_BITS,
+            z: pos.z >> MapBlockPos::SIZE_BITS,
         })
+    }
+
+    /// returns the inner position vector of this block which is measured in block steps from the
+    /// origin
+    #[must_use]
+    pub fn vec(self) -> I16Vec3 {
+        self.0
+    }
+
+    /// Returns the map block position with a given displacement.
+    ///
+    /// e.g. `pos.checked_add(IVec3::new(0, 1, 0))` returns the block above (`Y + 1`) the current
+    /// one.
+    ///
+    /// Returns `None` if the resulting block would be located out of this map.
+    #[must_use]
+    pub fn checked_add(self, delta: I16Vec3) -> Option<Self> {
+        self.0.checked_add(delta).map(Self)
     }
 
     /// Check whether the given map node is located within this map block
@@ -109,6 +135,6 @@ impl From<MapBlockPos> for MapNodePos {
 
 impl From<MapBlockPos> for I16Vec3 {
     fn from(value: MapBlockPos) -> Self {
-        value.0
+        value.vec()
     }
 }

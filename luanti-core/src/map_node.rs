@@ -46,6 +46,12 @@ impl MapNodePos {
     }
 }
 
+impl From<MapNodePos> for I16Vec3 {
+    fn from(value: MapNodePos) -> Self {
+        value.0
+    }
+}
+
 /// The index of a map node within its map block.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct MapNodeIndex(u32);
