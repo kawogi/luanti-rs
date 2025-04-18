@@ -2,7 +2,6 @@ use crate::authentication::SrpUserAuthData;
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
-use flexstr::SharedStr;
 use glam::Vec3;
 use log::info;
 use log::warn;
@@ -37,6 +36,10 @@ impl AuthenticatingState {
             user_auth_data,
             state: SrpAuthState::Uninitialized,
         }
+    }
+
+    pub(super) fn player_key(&self) -> &str {
+        &self.user_auth_data.display_name
     }
 
     /// Changes the internal state of this authentication based on the received client message.
@@ -169,7 +172,7 @@ impl AuthenticatingState {
     }
 
     pub(crate) fn next(&self) -> SetupState {
-        SetupState::new(SharedStr::from(&self.user_auth_data.display_name))
+        SetupState::new()
     }
 }
 

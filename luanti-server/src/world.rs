@@ -21,7 +21,7 @@ struct World {
 pub(crate) struct WorldBlock {
     /// number of updates this `MapBlock` has received
     /// This can be used
-    version: u64,
+    pub(crate) version: u64,
     /// Location within the world
     pub(crate) pos: MapBlockPos,
 
@@ -69,4 +69,12 @@ pub(crate) enum WorldUpdate {
     ///
     /// This may also be created for an existing map block that is _new_ to a certain player.
     NewMapBlock(WorldBlock),
+}
+
+impl std::fmt::Debug for WorldUpdate {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NewMapBlock(world_block) => write!(formatter, "NewMapBlock: {}", world_block.pos),
+        }
+    }
 }

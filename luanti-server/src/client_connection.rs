@@ -7,9 +7,13 @@ mod setup;
 mod uninitialized;
 
 use crate::authentication::Authenticator;
+use crate::world::WorldBlock;
+use crate::world::WorldUpdate;
 use crate::world::map_block_router::ToRouterMessage;
+use crate::world::view_tracker::ViewTracker;
 use anyhow::Result;
 use authenticating::AuthenticatingState;
+use flexstr::SharedStr;
 use loading::LoadingState;
 use log::debug;
 use log::error;
@@ -19,8 +23,12 @@ use luanti_protocol::CommandDirection;
 use luanti_protocol::CommandRef;
 use luanti_protocol::LuantiConnection;
 use luanti_protocol::commands::client_to_server::ToServerCommand;
+use luanti_protocol::commands::server_to_client::BlockdataSpec;
 use luanti_protocol::commands::server_to_client::ToClientCommand;
 use luanti_protocol::peer::PeerError;
+use luanti_protocol::types::MapNodesBulk;
+use luanti_protocol::types::NodeMetadataList;
+use luanti_protocol::types::TransferrableMapBlock;
 use running::RunningState;
 use setup::SetupState;
 use tokio::sync::mpsc;
@@ -33,8 +41,10 @@ pub(crate) struct ClientConnection<Auth: Authenticator> {
     verbosity: u8,
     state: State<Auth>,
     language: Option<String>,
-
+    player_key: SharedStr,
     block_interest_sender: Option<mpsc::UnboundedSender<ToRouterMessage>>,
+    world_update_sender: Option<mpsc::UnboundedSender<WorldUpdate>>,
+    world_update_receiver: mpsc::UnboundedReceiver<WorldUpdate>,
 }
 
 impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
@@ -45,6 +55,8 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
         verbosity: u8,
         block_interest_sender: mpsc::UnboundedSender<ToRouterMessage>,
     ) -> JoinHandle<()> {
+        let (world_update_sender, world_update_receiver) = mpsc::unbounded_channel();
+
         let runner = ClientConnection {
             id,
             connection,
@@ -52,6 +64,9 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
             state: State::Uninitialized(UninitializedState::new(authenticator)),
             language: None,
             block_interest_sender: Some(block_interest_sender),
+            player_key: SharedStr::EMPTY,
+            world_update_sender: Some(world_update_sender),
+            world_update_receiver,
         };
         tokio::spawn(async move { runner.run().await })
     }
@@ -80,11 +95,18 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
             // TODO(kawogi) review whether this select remains useful after completion of the server's base implementation
             tokio::select! {
                 message = self.connection.recv() => {
-                    trace!("conn.recv: {message:?}");
+                    trace!("connection.recv: {message:?}");
                     let message = message?;
                     self.maybe_show(&message);
                     self.handle_client_message(message).await?;
                 },
+                message = self.world_update_receiver.recv() => {
+                    trace!("world_update_receiver.recv: {message:?}");
+                    let Some(message) = message else {
+                        anyhow::bail!("world update sender has been disconnected");
+                    };
+                    self.handle_world_update(message).await?;
+                }
             }
         }
     }
@@ -96,7 +118,9 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
                     debug!(
                         "initialization successfully completed; switching to authentication mode"
                     );
-                    self.state = State::Authenticating(state.next());
+                    let next_state = state.next();
+                    self.player_key = next_state.player_key().into();
+                    self.state = State::Authenticating(next_state);
                 } else {
                     debug!("initialization is still incomplete");
                 }
@@ -129,8 +153,14 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
             State::Loading(state) => {
                 if LoadingState::handle_message(message, &self.connection)? {
                     debug!("loading successfully completed; switching to authenticated mode");
-                    self.state =
-                        State::Running(state.next(self.block_interest_sender.take().unwrap()));
+
+                    let view_tracker = ViewTracker::new(
+                        self.player_key.clone(),
+                        self.block_interest_sender.take().unwrap(),
+                        self.world_update_sender.take().unwrap(),
+                    );
+
+                    self.state = State::Running(state.next(view_tracker));
                 } else {
                     debug!("loading is still incomplete");
                 }
@@ -163,6 +193,37 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
             0 => (),
             1 => trace!("{} {}", prefix, command.command_name()),
             2.. => trace!("{prefix} {command:#?}"),
+        }
+    }
+
+    async fn handle_world_update(&mut self, update: WorldUpdate) -> Result<()> {
+        match update {
+            WorldUpdate::NewMapBlock(world_block) => {
+                let WorldBlock {
+                    version,
+                    pos,
+                    is_underground,
+                    day_night_differs,
+                    lighting_complete,
+                    nodes,
+                    metadata,
+                } = world_block;
+
+                self.connection
+                    .send(ToClientCommand::Blockdata(Box::new(BlockdataSpec {
+                        pos: world_block.pos.vec(),
+                        block: TransferrableMapBlock {
+                            is_underground,
+                            day_night_differs,
+                            generated: true,
+                            lighting_complete: Some(lighting_complete),
+                            nodes: MapNodesBulk { nodes: nodes.0 },
+                            node_metadata: NodeMetadataList { metadata },
+                        },
+                        network_specific_version: 2,
+                    })))
+                //
+            }
         }
     }
 }

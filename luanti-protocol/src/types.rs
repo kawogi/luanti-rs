@@ -63,13 +63,13 @@ use glam::Vec3;
 use glam::Vec4Swizzles;
 use luanti_core::ContentId;
 use luanti_core::MapNode;
+use luanti_core::MapNodeIndex;
 use luanti_protocol_derive::LuantiDeserialize;
 use luanti_protocol_derive::LuantiSerialize;
 pub use node_box::*;
 pub use options::*;
 use std::fmt;
 use std::marker::PhantomData;
-use std::ops::Range;
 pub use strings::*;
 pub use tile::*;
 
@@ -918,7 +918,7 @@ impl Serialize for MapNode {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct NodeMetadataList {
-    pub metadata: Vec<(BlockPos, NodeMetadata)>,
+    pub metadata: Vec<(MapNodeIndex, NodeMetadata)>,
 }
 
 impl Serialize for NodeMetadataList {
@@ -929,7 +929,7 @@ impl Serialize for NodeMetadataList {
             return Ok(());
         }
         u8::serialize(&2, ser)?; // version == 2
-        <Array16<Pair<BlockPos, NodeMetadata>> as Serialize>::serialize(&value.metadata, ser)?;
+        <Array16<Pair<MapNodeIndex, NodeMetadata>> as Serialize>::serialize(&value.metadata, ser)?;
         Ok(())
     }
 }
@@ -944,7 +944,7 @@ impl Deserialize for NodeMetadataList {
             })
         } else if ver == 2 {
             Ok(Self {
-                metadata: <Array16<Pair<BlockPos, NodeMetadata>> as Deserialize>::deserialize(
+                metadata: <Array16<Pair<MapNodeIndex, NodeMetadata>> as Deserialize>::deserialize(
                     deser,
                 )?,
             })
@@ -1002,64 +1002,60 @@ pub struct AbsBlockPos {
     pos: I16Vec3,
 }
 
-/// `BlockPos` addresses a node within a block
-/// It is equivalent to (16*z + y)*16 + x, where x,y,z are from 0 to 15.
-#[derive(Debug, Clone, PartialEq)]
-// TODO(kawogi) this is a duplicate of `MapNodeIndex` and should be merged
-pub struct BlockPos {
-    pub raw: u16,
-}
+// /// `BlockPos` addresses a node within a block
+// /// It is equivalent to (16*z + y)*16 + x, where x,y,z are from 0 to 15.
+// #[derive(Debug, Clone, PartialEq)]
+// // TODO(kawogi) this is a duplicate of `MapNodeIndex` and should be merged
+// pub struct BlockPos {
+//     pub raw: u16,
+// }
 
-impl BlockPos {
-    #[must_use]
-    pub fn new(x: i16, y: i16, z: i16) -> Self {
-        Self::try_new(x, y, z)
-            .unwrap_or_else(|| panic!("({x}, {y}, {z}) is not a valid block position"))
-    }
+// impl BlockPos {
+//     #[must_use]
+//     pub fn new(x: i16, y: i16, z: i16) -> Self {
+//         Self::try_new(x, y, z)
+//             .unwrap_or_else(|| panic!("({x}, {y}, {z}) is not a valid block position"))
+//     }
 
-    #[must_use]
-    pub fn try_new(x: i16, y: i16, z: i16) -> Option<Self> {
-        const VALID: Range<i16> = 0..(MAP_BLOCKSIZE as i16);
-        (VALID.contains(&x) && VALID.contains(&y) && VALID.contains(&z)).then(|| {
-            let x = x as u16;
-            let y = y as u16;
-            let z = z as u16;
-            Self {
-                raw: (MAP_BLOCKSIZE * z + y) * MAP_BLOCKSIZE + x,
-            }
-        })
-    }
+//     #[must_use]
+//     pub fn try_new(x: i16, y: i16, z: i16) -> Option<Self> {
+//         const VALID: Range<i16> = 0..(MAP_BLOCKSIZE as i16);
+//         (VALID.contains(&x) && VALID.contains(&y) && VALID.contains(&z)).then(|| {
+//             let x = x as u16;
+//             let y = y as u16;
+//             let z = z as u16;
+//             Self {
+//                 raw: (MAP_BLOCKSIZE * z + y) * MAP_BLOCKSIZE + x,
+//             }
+//         })
+//     }
 
-    #[must_use]
-    pub fn from_xyz(pos: I16Vec3) -> Self {
-        Self::new(pos.x, pos.y, pos.z)
-    }
+//     #[must_use]
+//     pub fn from_xyz(pos: I16Vec3) -> Self {
+//         Self::new(pos.x, pos.y, pos.z)
+//     }
 
-    #[must_use]
-    pub fn to_xyz(&self) -> I16Vec3 {
-        let x = self.raw % 16;
-        let y = (self.raw / 16) % 16;
-        let z = (self.raw / 256) % 16;
-        I16Vec3::new(x as i16, y as i16, z as i16)
-    }
-}
+//     #[must_use]
+//     pub fn to_xyz(&self) -> I16Vec3 {
+//         let x = self.raw % 16;
+//         let y = (self.raw / 16) % 16;
+//         let z = (self.raw / 256) % 16;
+//         I16Vec3::new(x as i16, y as i16, z as i16)
+//     }
+// }
 
-impl Serialize for BlockPos {
+impl Serialize for MapNodeIndex {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
-        u16::serialize(&value.raw, ser)?;
+        u16::serialize(&u16::from(*value), ser)?;
         Ok(())
     }
 }
 
-impl Deserialize for BlockPos {
+impl Deserialize for MapNodeIndex {
     type Output = Self;
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
-        let raw = u16::deserialize(deser)?;
-        if raw >= 4096 {
-            bail!(DeserializeError::InvalidValue("Invalid BlockPos".into(),))
-        }
-        Ok(Self { raw })
+        Ok(u16::deserialize(deser)?.into())
     }
 }
 

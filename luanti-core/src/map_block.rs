@@ -46,14 +46,14 @@ impl MapBlockPos {
     /// coordinates.
     pub const SIZE_BITS: u32 = 4;
     /// Number of map nodes per map blocks in each dimension.
-    pub const SIZE: u32 = 1 << Self::SIZE_BITS;
+    pub const SIZE: u16 = 1 << Self::SIZE_BITS;
     /// Mask to be used to address the bits of a node coordinate that make up the the position
     /// within their block.
-    pub const SIZE_MASK: u32 = Self::SIZE - 1;
+    pub const SIZE_MASK: u16 = Self::SIZE - 1;
     /// number of map nodes within a single block
-    pub const NODE_COUNT: u32 = Self::SIZE * Self::SIZE * Self::SIZE;
+    pub const NODE_COUNT: u16 = Self::SIZE * Self::SIZE * Self::SIZE;
     /// mask to be used to make a number a valid node index by wrapping around
-    pub const NODE_COUNT_MASK: u32 = Self::NODE_COUNT - 1;
+    pub const NODE_COUNT_MASK: u16 = Self::NODE_COUNT - 1;
 
     /// Position of the map block at the world's center
     pub const ZERO: Self = Self(I16Vec3::ZERO);

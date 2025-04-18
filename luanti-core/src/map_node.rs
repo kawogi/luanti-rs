@@ -2,7 +2,7 @@
 //! world.
 
 use crate::{content_id::ContentId, map_block::MapBlockPos};
-use glam::{I16Vec3, U8Vec3, UVec3};
+use glam::{I16Vec3, U8Vec3, U16Vec3, UVec3};
 
 /// A single map node with its parameters.
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
@@ -53,44 +53,52 @@ impl From<MapNodePos> for I16Vec3 {
 }
 
 /// The index of a map node within its map block.
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub struct MapNodeIndex(u32);
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct MapNodeIndex(u16);
 
 impl MapNodeIndex {
     /// Bit indices of the individual coordinates within the index.
     const SHIFT: UVec3 = UVec3::new(0, MapBlockPos::SIZE_BITS, 2 * MapBlockPos::SIZE_BITS);
     /// Bit masks of the individual coordinates when they've been aligned towards the least significant bit.
-    const MASK: UVec3 = UVec3::splat(MapBlockPos::SIZE_MASK);
+    const MASK: U16Vec3 = U16Vec3::splat(MapBlockPos::SIZE_MASK);
 
     /// Converts a given node position into the index within its containing map block.
     #[must_use]
     pub fn for_node(node_pos: MapNodePos) -> Self {
-        //TODO(kawogi) check whether is is accurate; maybe the origin is located in the center of a block
         // only retain the lower-most bits of the coordinates and align them next to each other
-        let vec = (node_pos.0.as_uvec3() & Self::MASK) << Self::SHIFT;
+        let vec = (node_pos.0.as_u16vec3() & Self::MASK) << Self::SHIFT;
         Self(vec.x | vec.y | vec.z)
     }
 }
 
-impl From<MapNodeIndex> for UVec3 {
+impl From<MapNodeIndex> for U16Vec3 {
     fn from(value: MapNodeIndex) -> Self {
         // right-align the bits of all three coordinates and mask off excessive high-bits
-        (UVec3::splat(value.0) >> MapNodeIndex::SHIFT) & MapNodeIndex::MASK
+        (U16Vec3::splat(value.0) >> MapNodeIndex::SHIFT) & MapNodeIndex::MASK
     }
 }
 
 impl From<MapNodeIndex> for U8Vec3 {
     fn from(value: MapNodeIndex) -> Self {
-        UVec3::from(value).as_u8vec3()
+        U16Vec3::from(value).as_u8vec3()
+    }
+}
+
+impl From<MapNodeIndex> for UVec3 {
+    fn from(value: MapNodeIndex) -> Self {
+        U16Vec3::from(value).as_uvec3()
+    }
+}
+
+impl From<MapNodeIndex> for u16 {
+    fn from(value: MapNodeIndex) -> Self {
+        value.0
     }
 }
 
 impl From<MapNodeIndex> for usize {
     fn from(value: MapNodeIndex) -> Self {
-        value
-            .0
-            .try_into()
-            .unwrap_or_else(|_| unreachable!("16-bit platforms are unsupported"))
+        value.0.into()
     }
 }
 
@@ -100,18 +108,12 @@ impl From<usize> for MapNodeIndex {
             clippy::cast_possible_truncation,
             reason = "truncation is the expected behavior"
         )]
-        Self((value as u32) & MapBlockPos::NODE_COUNT_MASK)
-    }
-}
-
-impl From<u32> for MapNodeIndex {
-    fn from(value: u32) -> Self {
-        Self(value & MapBlockPos::NODE_COUNT_MASK)
+        Self((value as u16) & MapBlockPos::NODE_COUNT_MASK)
     }
 }
 
 impl From<u16> for MapNodeIndex {
     fn from(value: u16) -> Self {
-        Self(u32::from(value) & MapBlockPos::NODE_COUNT_MASK)
+        Self(value & MapBlockPos::NODE_COUNT_MASK)
     }
 }

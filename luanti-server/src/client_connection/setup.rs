@@ -1,4 +1,3 @@
-use flexstr::SharedStr;
 use log::info;
 use log::warn;
 use luanti_protocol::commands::CommandProperties;
@@ -9,15 +8,15 @@ use super::LoadingState;
 
 /// The state after a successful authentication.
 pub(super) struct SetupState {
-    player_key: SharedStr,
+    // player_key: SharedStr,
     language: Option<String>,
 }
 
 impl SetupState {
     #[must_use]
-    pub(super) fn new(player_key: SharedStr) -> Self {
+    pub(super) fn new() -> Self {
         Self {
-            player_key,
+            // player_key,
             language: None,
         }
     }
@@ -47,6 +46,6 @@ impl SetupState {
     }
 
     pub(crate) fn next(&self) -> LoadingState {
-        LoadingState::new(self.player_key.clone(), self.language.clone())
+        LoadingState::new(self.language.clone())
     }
 }

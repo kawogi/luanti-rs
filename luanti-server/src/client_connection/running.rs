@@ -17,12 +17,7 @@ use luanti_protocol::types::InventoryAction;
 use luanti_protocol::types::InventoryLocation;
 use luanti_protocol::types::PlayerPos;
 use luanti_protocol::types::PointedThing;
-use tokio::sync::mpsc;
-use tokio::sync::mpsc::UnboundedReceiver;
-use tokio::sync::mpsc::UnboundedSender;
 
-use crate::world::WorldUpdate;
-use crate::world::map_block_router::ToRouterMessage;
 use crate::world::view_tracker::PlayerViewEvent;
 use crate::world::view_tracker::ViewTracker;
 
@@ -31,25 +26,19 @@ pub(super) struct RunningState {
     /// Keeps track of the player's movements and informs us about what parts of the world were
     /// updated or emerged through a channel
     view_tracker: ViewTracker,
-    /// Our channel endpoint informing this connection endpoint about changes in the world that
-    /// shall be forwarded to the client.
-    world_update_receiver: UnboundedReceiver<WorldUpdate>,
+    // /// Our channel endpoint informing this connection endpoint about changes in the world that
+    // /// shall be forwarded to the client.
+    // world_update_receiver: UnboundedReceiver<WorldUpdate>,
 }
 
 impl RunningState {
     #[must_use]
     pub(super) fn new(
-        player_key: SharedStr,
-        block_interest_sender: UnboundedSender<ToRouterMessage>,
+        // player_key: SharedStr,
+        // block_interest_sender: UnboundedSender<ToRouterMessage>,
+        view_tracker: ViewTracker,
     ) -> Self {
-        let (world_update_sender, world_update_receiver) = mpsc::unbounded_channel();
-
-        let view_tracker = ViewTracker::new(player_key, block_interest_sender, world_update_sender);
-
-        Self {
-            view_tracker,
-            world_update_receiver,
-        }
+        Self { view_tracker }
     }
 
     pub(crate) fn handle_message(
