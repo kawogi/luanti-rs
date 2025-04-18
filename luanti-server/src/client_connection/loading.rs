@@ -2,6 +2,7 @@ use std::vec;
 
 use anyhow::Result;
 use base64::{Engine, engine::general_purpose::STANDARD};
+use flexstr::SharedStr;
 use glam::I16Vec3;
 use log::{debug, info, warn};
 use luanti_core::{ContentId, MapNode};
@@ -22,6 +23,9 @@ use luanti_protocol::{
     },
 };
 use sha1::Digest;
+use tokio::sync::mpsc;
+
+use crate::world::map_block_router::ToRouterMessage;
 
 use super::RunningState;
 
@@ -31,12 +35,16 @@ const CONTENT_FEATURES_VERSION: u8 = 13;
 /// In this state all map data, media, etc. will be submitted
 pub(super) struct LoadingState {
     language: Option<String>,
+    pub(crate) player_key: SharedStr,
 }
 
 impl LoadingState {
     #[must_use]
-    pub(super) fn new(language: Option<String>) -> Self {
-        Self { language }
+    pub(super) fn new(player_key: SharedStr, language: Option<String>) -> Self {
+        Self {
+            language,
+            player_key,
+        }
     }
 
     #[expect(
@@ -350,8 +358,11 @@ impl LoadingState {
         Ok(false)
     }
 
-    pub(crate) fn next() -> RunningState {
-        RunningState::new()
+    pub(crate) fn next(
+        &self,
+        block_interest_sender: mpsc::UnboundedSender<ToRouterMessage>,
+    ) -> RunningState {
+        RunningState::new(self.player_key.clone(), block_interest_sender)
     }
 
     pub(crate) fn language(&self) -> Option<&String> {

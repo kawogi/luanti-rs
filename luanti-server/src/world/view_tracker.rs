@@ -1,7 +1,6 @@
 //! Contains a task which tracks a players movement and keeps track of the blocks the shall be
 //! sent to them.
 
-use core::f32;
 use std::{
     collections::{HashMap, hash_map::Entry},
     thread::{self, JoinHandle},
@@ -10,72 +9,82 @@ use std::{
 
 use anyhow::Result;
 use flexstr::SharedStr;
-use glam::{I16Vec3, Vec3};
+use glam::I16Vec3;
 use log::{debug, error, trace, warn};
-use luanti_core::{MapBlockPos, MapNodePos};
+use luanti_core::MapBlockPos;
 use luanti_protocol::{
     commands::client_to_server::{DeletedblocksSpec, GotBlocksSpec},
     types::PlayerPos,
 };
-use tokio::sync::mpsc::{Receiver, Sender, error::TryRecvError};
+use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender, error::TryRecvError};
 
 use crate::world::WorldUpdate;
 
+use super::{map_block_router::ToRouterMessage, priority::Priority};
+
 /// Keeps track of the map blocks a single player is and shall be aware of.
-struct ViewTracker {
+pub(crate) struct ViewTracker {
     player_key: SharedStr,
-    /// informs this tracker about player movements
-    player_view_receiver: Receiver<PlayerViewEvent>,
-    /// reports which map blocks this player is interested in
-    block_interest_sender: Sender<BlockInterest>,
-    /// informs this tracker about world updates (new blocks, changed nodes, etc.)
-    world_update_receiver: Receiver<WorldUpdate>,
-    /// used to forward changes of the world to the player
-    world_update_sender: Sender<WorldUpdate>,
-    /// state of all map blocks the player is interested in
-    map_block_states: HashMap<MapBlockPos, MapBlockState>,
+    runner: JoinHandle<Result<()>>,
+    player_view_sender: UnboundedSender<PlayerViewEvent>,
 }
 
 impl ViewTracker {
     pub(crate) fn new(
         player_key: SharedStr,
-        player_view_receiver: Receiver<PlayerViewEvent>,
-        block_interest_sender: Sender<BlockInterest>,
-        world_update_receiver: Receiver<WorldUpdate>,
-        world_update_sender: Sender<WorldUpdate>,
+        block_interest_sender: UnboundedSender<ToRouterMessage>,
+        world_update_sender: UnboundedSender<WorldUpdate>,
     ) -> Self {
+        let (player_view_sender, player_view_receiver) = mpsc::unbounded_channel();
+        let (external_world_update_sender, world_update_receiver) = mpsc::unbounded_channel();
+
+        block_interest_sender.send(ToRouterMessage::Register {
+            player_key: player_key.clone(),
+            sender: external_world_update_sender,
+        });
+
+        // the implementation is expected to be compute intensive, so a dedicated thread should be
+        // more appropriate than an async task
+        let player_key_clone = player_key.clone();
+        let runner = thread::spawn(move || {
+            Self::run_inner(
+                player_key_clone.clone(),
+                player_view_receiver,
+                block_interest_sender,
+                world_update_receiver,
+                world_update_sender,
+            )
+            .inspect_err(|error| {
+                error!("view tracker for player '{player_key_clone}' exited with error: {error}");
+            })
+        });
+
         Self {
             player_key,
-            player_view_receiver,
-            block_interest_sender,
-            world_update_receiver,
-            world_update_sender,
-            map_block_states: HashMap::with_capacity(1024),
+            runner,
+            player_view_sender,
         }
     }
 
-    pub(crate) fn run(self) -> JoinHandle<Result<()>> {
-        let player_key = self.player_key.clone();
-        // the implementation is expected to be compute intensive, so a dedicated thread should be
-        // more appropriate than an async task
-        thread::spawn(move || {
-            self.run_inner().inspect_err(|error| {
-                error!("view tracker for player '{player_key}' exited with error: {error}");
-            })
-        })
+    pub(crate) fn update_view(&self, player_view_event: PlayerViewEvent) -> Result<()> {
+        self.player_view_sender.send(player_view_event)?;
+        Ok(())
     }
 
+    /// - `player_view_receiver`: informs this tracker about player movements
+    /// - `block_interest_sender`: reports which map blocks this player is interested in
+    /// - `world_update_receiver`: informs this tracker about world updates (new blocks, changed nodes, etc.)
+    /// - `world_update_sender`: used to forward changes of the world to the player
+    /// - `map_block_states`: state of all map blocks the player is interested in
     #[allow(dead_code, clippy::too_many_lines)]
-    fn run_inner(self) -> Result<()> {
-        let Self {
-            player_key,
-            mut player_view_receiver,
-            block_interest_sender,
-            mut world_update_receiver,
-            world_update_sender,
-            mut map_block_states,
-        } = self;
-
+    fn run_inner(
+        player_key: SharedStr,
+        mut player_view_receiver: UnboundedReceiver<PlayerViewEvent>,
+        block_interest_sender: UnboundedSender<ToRouterMessage>,
+        mut world_update_receiver: UnboundedReceiver<WorldUpdate>,
+        world_update_sender: UnboundedSender<WorldUpdate>,
+    ) -> Result<()> {
+        let mut map_block_states = HashMap::with_capacity(1024);
         let mut recent_player_block_pos = None;
 
         'thread_loop: loop {
@@ -150,7 +159,8 @@ impl ViewTracker {
                                     priority,
                                 );
 
-                                block_interest_sender.blocking_send(interest)?;
+                                block_interest_sender
+                                    .send(ToRouterMessage::BlockInterest(interest))?;
                             }
                         }
                     }
@@ -205,7 +215,7 @@ impl ViewTracker {
                             "forwarding map block {pos} to player '{player_key}'",
                             pos = world_block.pos
                         );
-                        world_update_sender.blocking_send(WorldUpdate::NewMapBlock(world_block))?;
+                        world_update_sender.send(WorldUpdate::NewMapBlock(world_block))?;
                     }
                 }
             }
@@ -263,7 +273,7 @@ impl ViewTracker {
         player_key: &SharedStr,
         map_block_states: &mut HashMap<MapBlockPos, MapBlockState>,
         mut blocks: Vec<I16Vec3>,
-        block_interest_sender: &Sender<BlockInterest>,
+        block_interest_sender: &UnboundedSender<ToRouterMessage>,
     ) -> Result<(), anyhow::Error> {
         for block_pos in blocks.drain(..).filter_map(MapBlockPos::new) {
             match map_block_states.entry(block_pos) {
@@ -295,8 +305,9 @@ impl ViewTracker {
             }
 
             // report, that we're no longer interested in updates for this map block
-            block_interest_sender
-                .blocking_send(BlockInterest::unsubscribe(player_key.clone(), block_pos))?;
+            block_interest_sender.send(ToRouterMessage::BlockInterest(
+                BlockInterest::unsubscribe(player_key.clone(), block_pos),
+            ))?;
         }
         Ok(())
     }
@@ -312,11 +323,11 @@ pub(crate) enum PlayerViewEvent {
 }
 
 pub(crate) struct BlockInterest {
-    player_key: SharedStr,
+    pub(crate) player_key: SharedStr,
     /// position of the block
-    pos: MapBlockPos,
+    pub(crate) pos: MapBlockPos,
     /// a value of _how much_ the player wants to see this block
-    priority: Priority,
+    pub(crate) priority: Priority,
 }
 
 impl BlockInterest {
@@ -337,106 +348,12 @@ impl BlockInterest {
     }
 }
 
-/// Represents a value describing how important something (e.g. a map block) is to the player.
-///
-/// This value may be used as key for a priority queue, where smaller values mean higher priority.
-///
-/// Priorities are coarse-grained and a conversion from float values is supported.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-#[repr(transparent)]
-struct Priority(u16);
-
-impl Priority {
-    /// This is the maximum achievable priority
-    pub(crate) const MAX: Self = Self(u16::MIN);
-
-    /// This is the maximum achievable priority (before being `NONE`)
-    pub(crate) const MIN: Self = Self(Self::NONE.0 - 1);
-
-    /// This value means that the associated object shall no longer being considered at all.
-    ///
-    /// The meaning is equivalent to `Option::<Priority>::None`, but without requiring an extra byte
-    /// and it automatically causes `Ord` to be implemented correctly.
-    pub(crate) const NONE: Self = Self(u16::MAX);
-
-    pub(crate) fn is_none(self) -> bool {
-        self == Self::NONE
-    }
-
-    pub(crate) fn is_some(self) -> bool {
-        !self.is_none()
-    }
-
-    /// Uses the euclidean distance between two positions as priority.
-    /// Distances exceeding `max_distance` will be mapped to `Priority::NONE`. Set the limit to
-    /// `u32::MAX` to disable this.
-    /// Distances exceeding the limit of `u16` will be clamped to a priority of `Priority::MIN`.
-    pub(crate) fn from_vec_distance(pos_a: I16Vec3, pos_b: I16Vec3, max_distance: u32) -> Self {
-        // TODO(kawogi) find a more performant solution; a very coarse approximation would be sufficient
-        // note: do not use `distance_squared` because the decimation for lower distances will cause
-        // all low distances to be mapped to `Priority::MAX`
-        let distance = Vec3::distance(pos_a.as_vec3(), pos_b.as_vec3());
-        #[expect(
-            clippy::cast_precision_loss,
-            reason = "the expected range is precise enough"
-        )]
-        if distance < max_distance as f32 {
-            #[expect(clippy::cast_possible_truncation, reason = "truncation is on purpose")]
-            #[expect(clippy::cast_sign_loss, reason = "distance is always positive")]
-            Priority((distance as u16).max(Self::MIN.0))
-        } else {
-            Priority::NONE
-        }
-    }
-
-    pub(crate) fn from_node_distance(
-        pos_a: MapNodePos,
-        pos_b: MapNodePos,
-        max_distance: u32,
-    ) -> Self {
-        Self::from_vec_distance(pos_a.into(), pos_b.into(), max_distance)
-    }
-
-    pub(crate) fn from_block_distance(
-        pos_a: MapBlockPos,
-        pos_b: MapBlockPos,
-        max_distance: u32,
-    ) -> Self {
-        Self::from_node_distance(pos_a.into(), pos_b.into(), max_distance)
-    }
-}
-
-/// Converts float values in the range of `0.0..=1.0` to priorities `MAX..=MIN`.
-///
-/// Smaller numbers are being interpreted as higher priority, with 0.0 being the highest.
-/// Negative values are being clamped to 0.0.
-/// `NAN` is mapped to `Self::NONE`.
-impl From<f32> for Priority {
-    fn from(value: f32) -> Self {
-        if value.is_nan() {
-            Self::NONE
-        } else {
-            Self((value.clamp(0.0, 1.0) * f32::from(Self::MIN.0)) as _)
-        }
-    }
-}
-
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 struct MapBlockState {
     /// How important it is that the player sees this map block
-    priority: f32,
+    priority: Priority,
     /// whether this block has been sent to the client
     sent_to_client: bool,
     /// whether the client confirmed to have a copy of this map block
     cached_by_client: bool,
-}
-
-impl Default for MapBlockState {
-    fn default() -> Self {
-        Self {
-            priority: f32::INFINITY,
-            sent_to_client: false,
-            cached_by_client: false,
-        }
-    }
 }

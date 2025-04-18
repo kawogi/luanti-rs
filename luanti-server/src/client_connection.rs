@@ -7,6 +7,7 @@ mod setup;
 mod uninitialized;
 
 use crate::authentication::Authenticator;
+use crate::world::map_block_router::ToRouterMessage;
 use anyhow::Result;
 use authenticating::AuthenticatingState;
 use loading::LoadingState;
@@ -22,6 +23,7 @@ use luanti_protocol::commands::server_to_client::ToClientCommand;
 use luanti_protocol::peer::PeerError;
 use running::RunningState;
 use setup::SetupState;
+use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 use uninitialized::UninitializedState;
 
@@ -31,6 +33,8 @@ pub(crate) struct ClientConnection<Auth: Authenticator> {
     verbosity: u8,
     state: State<Auth>,
     language: Option<String>,
+
+    block_interest_sender: Option<mpsc::UnboundedSender<ToRouterMessage>>,
 }
 
 impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
@@ -39,6 +43,7 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
         connection: LuantiConnection,
         authenticator: Auth,
         verbosity: u8,
+        block_interest_sender: mpsc::UnboundedSender<ToRouterMessage>,
     ) -> JoinHandle<()> {
         let runner = ClientConnection {
             id,
@@ -46,6 +51,7 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
             verbosity,
             state: State::Uninitialized(UninitializedState::new(authenticator)),
             language: None,
+            block_interest_sender: Some(block_interest_sender),
         };
         tokio::spawn(async move { runner.run().await })
     }
@@ -98,7 +104,7 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
             State::Authenticating(state) => {
                 if state.handle_message(message, &self.connection)? {
                     debug!("authentication successfully completed; switching to setup mode");
-                    self.state = State::Setup(AuthenticatingState::next());
+                    self.state = State::Setup(state.next());
                 } else {
                     debug!("authentication is still incomplete");
                 }
@@ -111,7 +117,7 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
                     self.state = State::Loading(next_state);
 
                     let State::Loading(loading_state) = &mut self.state else {
-                        // this constructions ensures that  `self.state` is up to date _before_
+                        // this construction ensures that `self.state` is up to date _before_
                         // sending out all media to the client
                         unreachable!();
                     };
@@ -120,10 +126,11 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
                     debug!("setup is still incomplete");
                 }
             }
-            State::Loading(_) => {
+            State::Loading(state) => {
                 if LoadingState::handle_message(message, &self.connection)? {
                     debug!("loading successfully completed; switching to authenticated mode");
-                    self.state = State::Running(LoadingState::next());
+                    self.state =
+                        State::Running(state.next(self.block_interest_sender.take().unwrap()));
                 } else {
                     debug!("loading is still incomplete");
                 }

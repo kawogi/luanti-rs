@@ -2,9 +2,11 @@
 
 use crate::authentication::Authenticator;
 use crate::client_connection::ClientConnection;
+use crate::world::map_block_router::ToRouterMessage;
 use log::info;
 use luanti_protocol::LuantiServer;
 use std::net::SocketAddr;
+use tokio::sync::mpsc::UnboundedSender;
 use tokio::task::JoinHandle;
 
 /// A server providing access to a single Luanti world
@@ -24,13 +26,23 @@ impl LuantiWorldServer {
         }
     }
 
-    pub(crate) fn start(&mut self, authenticator: impl Authenticator + 'static) {
+    pub(crate) fn start(
+        &mut self,
+        authenticator: impl Authenticator + 'static,
+        block_interest_sender: UnboundedSender<ToRouterMessage>,
+    ) {
         assert!(self.runner.is_none(), "server is already running");
 
         let bind_addr = self.bind_addr;
         let verbosity = self.verbosity;
         let runner = tokio::spawn(async move {
-            Self::accept_connections(bind_addr, authenticator, verbosity).await;
+            Self::accept_connections(
+                bind_addr,
+                authenticator,
+                verbosity,
+                block_interest_sender.clone(),
+            )
+            .await;
         });
         self.runner.replace(runner);
     }
@@ -39,6 +51,7 @@ impl LuantiWorldServer {
         bind_addr: SocketAddr,
         authenticator: Auth,
         verbosity: u8,
+        block_interest_sender: UnboundedSender<ToRouterMessage>,
     ) {
         let mut server = LuantiServer::new(bind_addr);
         let mut connection_id = 1;
@@ -48,7 +61,7 @@ impl LuantiWorldServer {
                     let id = connection_id;
                     connection_id += 1;
                     info!("[P{}] New client connected from {:?}", id, connection.remote_addr());
-                    ClientConnection::spawn(id, connection, authenticator.clone(), verbosity);
+                    ClientConnection::spawn(id, connection, authenticator.clone(), verbosity, block_interest_sender.clone());
                 },
             }
         }

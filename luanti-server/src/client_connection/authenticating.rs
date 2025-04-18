@@ -2,6 +2,7 @@ use crate::authentication::SrpUserAuthData;
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
+use flexstr::SharedStr;
 use glam::Vec3;
 use log::info;
 use log::warn;
@@ -167,8 +168,8 @@ impl AuthenticatingState {
         Ok(true)
     }
 
-    pub(crate) fn next() -> SetupState {
-        SetupState::new()
+    pub(crate) fn next(&self) -> SetupState {
+        SetupState::new(SharedStr::from(&self.user_auth_data.display_name))
     }
 }
 

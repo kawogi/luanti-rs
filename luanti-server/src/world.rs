@@ -1,5 +1,8 @@
 pub(crate) mod generation;
+pub(crate) mod map_block_router;
+pub(crate) mod priority;
 pub(crate) mod storage;
+pub(crate) mod view_tracker;
 
 use luanti_core::{MapBlockNodes, MapBlockPos, MapNodeIndex};
 use luanti_protocol::types::NodeMetadata;

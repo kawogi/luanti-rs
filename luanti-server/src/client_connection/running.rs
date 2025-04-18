@@ -1,5 +1,6 @@
 use anyhow::Result;
 use anyhow::bail;
+use flexstr::SharedStr;
 use log::debug;
 use luanti_protocol::LuantiConnection;
 use luanti_protocol::commands::CommandProperties;
@@ -16,14 +17,39 @@ use luanti_protocol::types::InventoryAction;
 use luanti_protocol::types::InventoryLocation;
 use luanti_protocol::types::PlayerPos;
 use luanti_protocol::types::PointedThing;
+use tokio::sync::mpsc;
+use tokio::sync::mpsc::UnboundedReceiver;
+use tokio::sync::mpsc::UnboundedSender;
+
+use crate::world::WorldUpdate;
+use crate::world::map_block_router::ToRouterMessage;
+use crate::world::view_tracker::PlayerViewEvent;
+use crate::world::view_tracker::ViewTracker;
 
 /// Everything has been set up. We're in-game now!
-pub(super) struct RunningState;
+pub(super) struct RunningState {
+    /// Keeps track of the player's movements and informs us about what parts of the world were
+    /// updated or emerged through a channel
+    view_tracker: ViewTracker,
+    /// Our channel endpoint informing this connection endpoint about changes in the world that
+    /// shall be forwarded to the client.
+    world_update_receiver: UnboundedReceiver<WorldUpdate>,
+}
 
 impl RunningState {
     #[must_use]
-    pub(super) fn new() -> Self {
-        Self {}
+    pub(super) fn new(
+        player_key: SharedStr,
+        block_interest_sender: UnboundedSender<ToRouterMessage>,
+    ) -> Self {
+        let (world_update_sender, world_update_receiver) = mpsc::unbounded_channel();
+
+        let view_tracker = ViewTracker::new(player_key, block_interest_sender, world_update_sender);
+
+        Self {
+            view_tracker,
+            world_update_receiver,
+        }
     }
 
     pub(crate) fn handle_message(
@@ -33,7 +59,7 @@ impl RunningState {
     ) -> Result<()> {
         match message {
             ToServerCommand::Playerpos(player_pos_command) => {
-                Self::handle_player_pos(*player_pos_command)?;
+                self.handle_player_pos(*player_pos_command)?;
             }
             ToServerCommand::UpdateClientInfo(update_client_info_spec) => {
                 Self::handle_update_client_info(&update_client_info_spec)?;
@@ -97,30 +123,24 @@ impl RunningState {
         Ok(())
     }
 
-    #[expect(
-        clippy::unnecessary_wraps,
-        clippy::needless_pass_by_value,
-        reason = "//TODO(kawogi) for symmetry with other handlers, but should be reviewed"
-    )]
     fn handle_player_pos(
+        &self,
         player_pos_command: PlayerPosCommand,
     ) -> std::result::Result<(), anyhow::Error> {
-        let PlayerPosCommand {
-            player_pos:
-                PlayerPos {
-                    position,
-                    speed,
-                    pitch,
-                    yaw,
-                    keys_pressed,
-                    fov,
-                    wanted_range,
+        let PlayerPosCommand { player_pos } = player_pos_command;
 
-                    camera_inverted,
-                    movement_speed,
-                    movement_direction,
-                },
-        } = player_pos_command;
+        let PlayerPos {
+            position,
+            speed,
+            pitch,
+            yaw,
+            keys_pressed,
+            fov,
+            wanted_range,
+            camera_inverted,
+            movement_speed,
+            movement_direction,
+        } = &player_pos;
 
         debug!(
             "player moved: pos:({px},{py},{pz}) speed:({sx},{sy},{sz}) pitch:{pitch} yaw:{yaw} keys:{keys_pressed} fov:{fov} range:{wanted_range} cam_inv:{camera_inverted} mov_speed:{movement_speed} mov_dir:{movement_direction} ",
@@ -131,6 +151,9 @@ impl RunningState {
             sy = speed.y,
             sz = speed.z,
         );
+
+        self.view_tracker
+            .update_view(PlayerViewEvent::PlayerPos(player_pos))?;
 
         Ok(())
     }

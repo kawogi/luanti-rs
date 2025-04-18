@@ -10,7 +10,6 @@
 pub mod authentication;
 mod client_connection;
 mod server;
-mod view_tracker;
 mod world;
 
 use anyhow::bail;
@@ -20,7 +19,9 @@ use clap::Parser;
 use server::LuantiWorldServer;
 use std::net::SocketAddr;
 use std::time::Duration;
+use tokio::sync::mpsc;
 use world::generation::flat::MapgenFlat;
+use world::map_block_router::MapBlockRouter;
 use world::storage::dummy::DummyStorage;
 
 /// luanti-shark - Luanti proxy that gives detailed inspection of protocol
@@ -73,7 +74,12 @@ async fn real_main() -> anyhow::Result<()> {
     let storage = DummyStorage;
 
     let mut server = LuantiWorldServer::new(bind_addr, args.verbose);
-    server.start(DummyAuthenticator);
+
+    let (block_request_sender, block_request_receiver) = mpsc::unbounded_channel();
+    let (block_interest_sender, block_interest_receiver) = mpsc::unbounded_channel();
+    let map_block_router = MapBlockRouter::new(block_request_sender);
+
+    server.start(DummyAuthenticator, block_interest_sender);
     #[expect(
         clippy::infinite_loop,
         reason = "// TODO implement a cancellation mechanism"
