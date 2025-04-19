@@ -1,7 +1,5 @@
 use std::vec;
 
-use super::RunningState;
-use crate::world::view_tracker::ViewTracker;
 use anyhow::Result;
 use base64::{Engine, engine::general_purpose::STANDARD};
 use glam::I16Vec3;
@@ -266,55 +264,55 @@ impl LoadingState {
                 .map_or("<none>".into(), ToString::to_string)
         );
 
-        let rust_nodes = std::array::from_fn(|_index| MapNode {
-            content_id: ContentId(10),
-            param1: 255,
-            param2: 0,
-        });
+        // let rust_nodes = std::array::from_fn(|_index| MapNode {
+        //     content_id: ContentId(10),
+        //     param1: 255,
+        //     param2: 0,
+        // });
 
-        let air_nodes = std::array::from_fn(|_index| MapNode {
-            content_id: ContentId::AIR,
-            param1: 255,
-            param2: 0,
-        });
+        // let air_nodes = std::array::from_fn(|_index| MapNode {
+        //     content_id: ContentId::AIR,
+        //     param1: 255,
+        //     param2: 0,
+        // });
 
-        let floor_block = TransferrableMapBlock {
-            is_underground: true,
-            day_night_differs: false,
-            generated: true,
-            lighting_complete: Some(0x0000),
-            nodes: MapNodesBulk { nodes: rust_nodes },
-            node_metadata: NodeMetadataList { metadata: vec![] },
-        };
+        // let floor_block = TransferrableMapBlock {
+        //     is_underground: true,
+        //     day_night_differs: false,
+        //     generated: true,
+        //     lighting_complete: Some(0x0000),
+        //     nodes: MapNodesBulk { nodes: rust_nodes },
+        //     node_metadata: NodeMetadataList { metadata: vec![] },
+        // };
 
-        let air_block = TransferrableMapBlock {
-            is_underground: true,
-            day_night_differs: false,
-            generated: true,
-            lighting_complete: Some(0x0000),
-            nodes: MapNodesBulk { nodes: air_nodes },
-            node_metadata: NodeMetadataList { metadata: vec![] },
-        };
+        // let air_block = TransferrableMapBlock {
+        //     is_underground: true,
+        //     day_night_differs: false,
+        //     generated: true,
+        //     lighting_complete: Some(0x0000),
+        //     nodes: MapNodesBulk { nodes: air_nodes },
+        //     node_metadata: NodeMetadataList { metadata: vec![] },
+        // };
 
-        for z in -4..=4 {
-            for y in -4..=4 {
-                for x in -4..=4 {
-                    let block = if y < 0 {
-                        floor_block.clone()
-                    } else {
-                        air_block.clone()
-                    };
+        // for z in -4..=4 {
+        //     for y in -4..=4 {
+        //         for x in -4..=4 {
+        //             let block = if y < 0 {
+        //                 floor_block.clone()
+        //             } else {
+        //                 air_block.clone()
+        //             };
 
-                    let blockdata = BlockdataSpec {
-                        pos: I16Vec3::new(x, y, z),
-                        block,
-                        network_specific_version: 2,
-                    };
+        //             let blockdata = BlockdataSpec {
+        //                 pos: I16Vec3::new(x, y, z),
+        //                 block,
+        //                 network_specific_version: 2,
+        //             };
 
-                    connection.send(blockdata)?;
-                }
-            }
-        }
+        //             connection.send(blockdata)?;
+        //         }
+        //     }
+        // }
 
         connection.send(PrivilegesSpec {
             privileges: vec![
@@ -352,14 +350,6 @@ impl LoadingState {
         }
 
         Ok(false)
-    }
-
-    pub(crate) fn next(
-        &self,
-        view_tracker: ViewTracker,
-        // block_interest_sender: mpsc::UnboundedSender<ToRouterMessage>,
-    ) -> RunningState {
-        RunningState::new(view_tracker)
     }
 
     pub(crate) fn language(&self) -> Option<&String> {

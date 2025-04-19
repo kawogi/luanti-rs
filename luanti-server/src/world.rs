@@ -1,4 +1,5 @@
 pub(crate) mod generation;
+pub(crate) mod map_block_provider;
 pub(crate) mod map_block_router;
 pub(crate) mod priority;
 pub(crate) mod storage;
@@ -18,6 +19,7 @@ struct World {
 
 /// This is a wrapper for a raw `MapBlock` which contains extra information that simplifies handling
 /// in the API.
+#[derive(Clone)]
 pub(crate) struct WorldBlock {
     /// number of updates this `MapBlock` has received
     /// This can be used
@@ -63,6 +65,7 @@ pub(crate) struct WorldBlock {
 }
 
 /// A value of this type describes a change to the world.
+#[derive(Clone)]
 pub(crate) enum WorldUpdate {
     /// A new map block was made available. This usually means that this block has just been
     /// generated or loaded from storage.

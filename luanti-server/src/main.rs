@@ -21,6 +21,7 @@ use std::net::SocketAddr;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use world::generation::flat::MapgenFlat;
+use world::map_block_provider::MapBlockProvider;
 use world::map_block_router::MapBlockRouter;
 use world::storage::dummy::DummyStorage;
 
@@ -73,11 +74,23 @@ async fn real_main() -> anyhow::Result<()> {
     let world_generator = MapgenFlat;
     let storage = DummyStorage;
 
+    let (block_request_to_provider, block_request_from_router) = mpsc::unbounded_channel();
+    let (block_interest_sender, block_interest_receiver) = mpsc::unbounded_channel();
+    let (world_update_to_router, world_update_from_provider) = mpsc::unbounded_channel();
+    let _block_provider = MapBlockProvider::new(
+        block_request_from_router,
+        world_update_to_router,
+        Some(Box::new(storage)),
+        Some(Box::new(world_generator)),
+    );
+
     let mut server = LuantiWorldServer::new(bind_addr, args.verbose);
 
-    let (block_request_sender, block_request_receiver) = mpsc::unbounded_channel();
-    let (block_interest_sender, block_interest_receiver) = mpsc::unbounded_channel();
-    let map_block_router = MapBlockRouter::new(block_request_sender);
+    let _map_block_router = MapBlockRouter::new(
+        block_request_to_provider,
+        world_update_from_provider,
+        block_interest_receiver,
+    );
 
     server.start(DummyAuthenticator, block_interest_sender);
     #[expect(

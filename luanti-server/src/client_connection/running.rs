@@ -1,6 +1,5 @@
 use anyhow::Result;
 use anyhow::bail;
-use flexstr::SharedStr;
 use log::debug;
 use luanti_protocol::LuantiConnection;
 use luanti_protocol::commands::CommandProperties;

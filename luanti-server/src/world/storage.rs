@@ -5,7 +5,7 @@ use super::WorldBlock;
 
 pub(crate) mod dummy;
 
-pub(crate) trait WorldStorage {
+pub(crate) trait WorldStorage: Send + Sync {
     /// Stores a given world block containing a map block.
     fn store_block(&mut self, map_block: &WorldBlock) -> Result<()>;
     /// Tries to load a world block containing a map block from the storage.

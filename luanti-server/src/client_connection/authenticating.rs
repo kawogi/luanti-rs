@@ -19,8 +19,6 @@ use srp::{
     server::{SrpServer, SrpServerVerifier},
 };
 
-use super::SetupState;
-
 type Verifier = SrpServerVerifier<Sha256>;
 
 /// The state of a connection after receiving the player's name.
@@ -169,10 +167,6 @@ impl AuthenticatingState {
         connection.send(auth_accept)?;
 
         Ok(true)
-    }
-
-    pub(crate) fn next(&self) -> SetupState {
-        SetupState::new()
     }
 }
 

@@ -1,8 +1,9 @@
 pub(crate) mod flat;
 
 use luanti_core::MapBlockPos;
-use luanti_protocol::types::TransferrableMapBlock;
 
-pub(crate) trait WorldGenerator {
-    fn generate_map_block(&self, pos: MapBlockPos) -> TransferrableMapBlock;
+use super::WorldBlock;
+
+pub(crate) trait WorldGenerator: Send + Sync {
+    fn generate_block(&self, pos: MapBlockPos) -> WorldBlock;
 }

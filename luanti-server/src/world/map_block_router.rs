@@ -1,71 +1,148 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, hash_map::Entry},
     mem,
     thread::{self, JoinHandle},
+    time::Duration,
 };
 
-use anyhow::{Result, bail};
+use anyhow::Result;
 use flexstr::SharedStr;
-use log::{error, warn};
+use log::{debug, error, trace, warn};
 use luanti_core::MapBlockPos;
-use tokio::sync::mpsc;
+use tokio::sync::mpsc::{self, error::TryRecvError};
 
-use super::{WorldUpdate, priority::Priority, view_tracker::BlockInterest};
+use super::{WorldBlock, WorldUpdate, priority::Priority, view_tracker::BlockInterest};
 
 pub(crate) struct MapBlockRouter {
-    block_interest_sender: mpsc::UnboundedSender<ToRouterMessage>,
-    block_request_sender: mpsc::UnboundedSender<BlockInterest>,
-    runner: JoinHandle<Result<()>>,
+    // block_interest_sender: mpsc::UnboundedSender<ToRouterMessage>,
+    _runner: JoinHandle<Result<()>>,
 }
 
 impl MapBlockRouter {
-    pub(crate) fn new(block_request_sender: mpsc::UnboundedSender<BlockInterest>) -> Self {
-        let (block_interest_sender, block_interest_receiver) = mpsc::unbounded_channel();
-
-        let runner = thread::spawn(|| {
-            Self::run(block_interest_receiver).inspect_err(|error| {
+    pub(crate) fn new(
+        block_request_sender: mpsc::UnboundedSender<BlockInterest>,
+        world_update_receiver: mpsc::UnboundedReceiver<WorldUpdate>,
+        block_interest_receiver: mpsc::UnboundedReceiver<ToRouterMessage>,
+    ) -> Self {
+        let runner = thread::spawn(move || {
+            Self::run(
+                block_interest_receiver,
+                world_update_receiver,
+                &block_request_sender,
+            )
+            .inspect_err(|error| {
                 error!("router exited with error: {error}");
             })
         });
 
         Self {
-            block_interest_sender,
-            block_request_sender,
-            runner,
+            // block_interest_sender,
+            _runner: runner,
         }
     }
 
     pub(crate) fn run(
         mut block_interest_receiver: mpsc::UnboundedReceiver<ToRouterMessage>,
+        mut world_update_receiver: mpsc::UnboundedReceiver<WorldUpdate>,
+        block_request_sender: &mpsc::UnboundedSender<BlockInterest>,
     ) -> Result<()> {
         let mut players = HashMap::new();
         let mut block_subscriptions: HashMap<MapBlockPos, EffectiveBlockInterest> = HashMap::new();
-        loop {
-            let Some(message) = block_interest_receiver.blocking_recv() else {
-                bail!("no more block interest senders exist");
-            };
+        'thread_loop: loop {
+            // used to measure activity
+            let mut event_count = 0;
+            let mut subscription_change_count = 0;
 
-            match message {
-                ToRouterMessage::Register { player_key, sender } => {
-                    if players.insert(player_key.clone(), sender).is_some() {
-                        warn!("player '{player_key}' is already subscribed");
+            while let Some(message) = match block_interest_receiver.try_recv() {
+                Ok(message) => {
+                    event_count += 1;
+                    Some(message)
+                }
+                Err(TryRecvError::Empty) => None,
+                Err(TryRecvError::Disconnected) => {
+                    debug!("no more block interest senders exist");
+                    break 'thread_loop;
+                }
+            } {
+                match message {
+                    ToRouterMessage::Register { player_key, sender } => {
+                        if players.insert(player_key.clone(), sender).is_some() {
+                            warn!("player '{player_key}' is already subscribed");
+                        }
+                    }
+                    ToRouterMessage::Unregister(player_key) => {
+                        if players.remove(&player_key).is_none() {
+                            warn!("player '{player_key}' never subscribed");
+                        }
+                    }
+                    ToRouterMessage::BlockInterest(BlockInterest {
+                        player_key,
+                        pos,
+                        priority,
+                    }) => {
+                        if block_subscriptions
+                            .entry(pos)
+                            .or_default()
+                            .update_player(&player_key, priority)
+                        {
+                            subscription_change_count += 1;
+                        }
                     }
                 }
-                ToRouterMessage::Unregister(player_key) => {
-                    if players.remove(&player_key).is_none() {
-                        warn!("player '{player_key}' never subscribed");
+            }
+
+            while let Some(message) = match world_update_receiver.try_recv() {
+                Ok(message) => {
+                    event_count += 1;
+                    Some(message)
+                }
+                Err(TryRecvError::Empty) => None,
+                Err(TryRecvError::Disconnected) => break 'thread_loop,
+            } {
+                // FIXME(kawogi) until the player has received this block, it might continue to send interests for that block which will eventually result in multiple map block messages
+                #[expect(irrefutable_let_patterns, reason = "more variants will be added")]
+                if let &WorldUpdate::NewMapBlock(WorldBlock { pos, .. }) = &message {
+                    match block_subscriptions.entry(pos) {
+                        Entry::Occupied(occupied_entry) => {
+                            let interest = occupied_entry.remove();
+
+                            for (player_key, _priority) in interest.player_priorities {
+                                if let Some(to_player) = players.get(&player_key) {
+                                    // TODO(kawogi) cloning is mad expensive. There should be a way to use an Arc internally
+                                    to_player.send(message.clone())?;
+                                } else {
+                                    warn!("cannot forward block {pos} to player '{player_key}'");
+                                }
+                            }
+                        }
+                        Entry::Vacant(_vacant_entry) => {
+                            trace!(
+                                "generated block {pos} is unknown to the router and will be ignored"
+                            );
+                        }
                     }
                 }
-                ToRouterMessage::BlockInterest(BlockInterest {
-                    player_key,
-                    pos,
-                    priority,
-                }) => {
+            }
+
+            if subscription_change_count > 0 {
+                for (pos, priority) in
                     block_subscriptions
-                        .entry(pos)
-                        .or_default()
-                        .update_player(&player_key, priority);
+                        .iter_mut()
+                        .filter_map(|(&pos, interest)| {
+                            interest.ack_max().map(|priority| (pos, priority))
+                        })
+                {
+                    block_request_sender.send(BlockInterest {
+                        player_key: SharedStr::EMPTY,
+                        pos,
+                        priority,
+                    })?;
                 }
+            }
+
+            // slow down event polling if there was nothing to do in the recent iteration
+            if event_count == 0 {
+                thread::sleep(Duration::from_millis(50));
             }
         }
 
@@ -76,11 +153,12 @@ impl MapBlockRouter {
 #[derive(Default)]
 struct EffectiveBlockInterest {
     max_priority: Priority,
+    max_has_changed: bool,
     player_priorities: Vec<(SharedStr, Priority)>,
 }
 
 impl EffectiveBlockInterest {
-    fn update_player(&mut self, player_key: &SharedStr, priority: Priority) {
+    fn update_player(&mut self, player_key: &SharedStr, priority: Priority) -> bool {
         let max_priority = if priority.is_none() {
             // remove the player from the priority list and recompute the maximum value
             let mut new_max_priority = Priority::NONE;
@@ -153,7 +231,20 @@ impl EffectiveBlockInterest {
             }
         };
 
-        self.max_priority = max_priority;
+        let max_has_changed = max_priority != self.max_priority;
+        if max_has_changed {
+            self.max_priority = max_priority;
+            self.max_has_changed = true;
+        }
+        max_has_changed
+    }
+
+    /// If the maximum has changed since the recent call, the new maximum will be returned
+    fn ack_max(&mut self) -> Option<Priority> {
+        self.max_has_changed.then(|| {
+            self.max_has_changed = false;
+            self.max_priority
+        })
     }
 }
 
@@ -162,6 +253,7 @@ pub(crate) enum ToRouterMessage {
         player_key: SharedStr,
         sender: mpsc::UnboundedSender<WorldUpdate>,
     },
+    #[expect(unused, reason = "//TODO(kawogi) unregister disconnected players")]
     Unregister(SharedStr),
     BlockInterest(BlockInterest),
 }

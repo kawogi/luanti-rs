@@ -24,8 +24,8 @@ use super::{map_block_router::ToRouterMessage, priority::Priority};
 
 /// Keeps track of the map blocks a single player is and shall be aware of.
 pub(crate) struct ViewTracker {
-    player_key: SharedStr,
-    runner: JoinHandle<Result<()>>,
+    _player_key: SharedStr,
+    _runner: JoinHandle<Result<()>>,
     player_view_sender: UnboundedSender<PlayerViewEvent>,
 }
 
@@ -34,36 +34,36 @@ impl ViewTracker {
         player_key: SharedStr,
         block_interest_sender: UnboundedSender<ToRouterMessage>,
         world_update_sender: UnboundedSender<WorldUpdate>,
-    ) -> Self {
+    ) -> Result<Self> {
         let (player_view_sender, player_view_receiver) = mpsc::unbounded_channel();
         let (external_world_update_sender, world_update_receiver) = mpsc::unbounded_channel();
 
         block_interest_sender.send(ToRouterMessage::Register {
             player_key: player_key.clone(),
             sender: external_world_update_sender,
-        });
+        })?;
 
         // the implementation is expected to be compute intensive, so a dedicated thread should be
         // more appropriate than an async task
         let player_key_clone = player_key.clone();
         let runner = thread::spawn(move || {
             Self::run_inner(
-                player_key_clone.clone(),
+                &player_key_clone,
                 player_view_receiver,
-                block_interest_sender,
+                &block_interest_sender,
                 world_update_receiver,
-                world_update_sender,
+                &world_update_sender,
             )
             .inspect_err(|error| {
                 error!("view tracker for player '{player_key_clone}' exited with error: {error}");
             })
         });
 
-        Self {
-            player_key,
-            runner,
+        Ok(Self {
+            _player_key: player_key,
+            _runner: runner,
             player_view_sender,
-        }
+        })
     }
 
     pub(crate) fn update_view(&self, player_view_event: PlayerViewEvent) -> Result<()> {
@@ -76,13 +76,13 @@ impl ViewTracker {
     /// - `world_update_receiver`: informs this tracker about world updates (new blocks, changed nodes, etc.)
     /// - `world_update_sender`: used to forward changes of the world to the player
     /// - `map_block_states`: state of all map blocks the player is interested in
-    #[allow(dead_code, clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines, reason = "//TODO(kawogi) split this up")]
     fn run_inner(
-        player_key: SharedStr,
+        player_key: &SharedStr,
         mut player_view_receiver: UnboundedReceiver<PlayerViewEvent>,
-        block_interest_sender: UnboundedSender<ToRouterMessage>,
+        block_interest_sender: &UnboundedSender<ToRouterMessage>,
         mut world_update_receiver: UnboundedReceiver<WorldUpdate>,
-        world_update_sender: UnboundedSender<WorldUpdate>,
+        world_update_sender: &UnboundedSender<WorldUpdate>,
     ) -> Result<()> {
         let mut map_block_states = HashMap::with_capacity(1024);
         let mut recent_player_block_pos = None;
@@ -93,14 +93,16 @@ impl ViewTracker {
 
             // process bursts of user movements
             while let Some(event) = match player_view_receiver.try_recv() {
-                Ok(event) => Some(event),
+                Ok(event) => {
+                    event_count += 1;
+                    Some(event)
+                }
                 Err(TryRecvError::Disconnected) => {
                     debug!("The sender closed the view event channel for player '{player_key}'");
                     break 'thread_loop;
                 }
                 Err(TryRecvError::Empty) => None,
             } {
-                event_count += 1;
                 match event {
                     PlayerViewEvent::PlayerPos(PlayerPos {
                         position,
@@ -132,9 +134,9 @@ impl ViewTracker {
                             recent_player_block_pos = Some(current_block_pos);
 
                             // make sure that all surrounding blocks have an entry in the state table
-                            for dz in -2..=2 {
-                                for dy in -2..=2 {
-                                    for dx in -2..=2 {
+                            for dz in -1..=1 {
+                                for dy in -1..=1 {
+                                    for dx in -1..=1 {
                                         if let Some(block_pos) =
                                             current_block_pos.checked_add(I16Vec3::new(dx, dy, dz))
                                         {
@@ -165,14 +167,14 @@ impl ViewTracker {
                         }
                     }
                     PlayerViewEvent::GotMapBlocks(GotBlocksSpec { blocks }) => {
-                        Self::handle_got_map_blocks(&player_key, &mut map_block_states, blocks);
+                        Self::handle_got_map_blocks(player_key, &mut map_block_states, blocks);
                     }
                     PlayerViewEvent::DroppedBlocks(DeletedblocksSpec { blocks }) => {
                         Self::handle_deleted_map_blocks(
-                            &player_key,
+                            player_key,
                             &mut map_block_states,
                             blocks,
-                            &block_interest_sender,
+                            block_interest_sender,
                         )?;
                     }
                 }
@@ -180,7 +182,10 @@ impl ViewTracker {
 
             // process bursts of world updates
             while let Some(event) = match world_update_receiver.try_recv() {
-                Ok(event) => Some(event),
+                Ok(event) => {
+                    event_count += 1;
+                    Some(event)
+                }
                 Err(TryRecvError::Disconnected) => {
                     debug!(
                         "The sender closed the world update event channel for player '{player_key}'"
@@ -189,7 +194,6 @@ impl ViewTracker {
                 }
                 Err(TryRecvError::Empty) => None,
             } {
-                event_count += 1;
                 match event {
                     WorldUpdate::NewMapBlock(world_block) => {
                         let block_pos = world_block.pos;

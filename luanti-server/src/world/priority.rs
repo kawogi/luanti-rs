@@ -27,6 +27,7 @@ impl Priority {
         self == Self::NONE
     }
 
+    #[expect(dead_code, reason = "might come in handy later")]
     pub(crate) fn is_some(self) -> bool {
         !self.is_none()
     }

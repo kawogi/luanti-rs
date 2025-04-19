@@ -105,7 +105,7 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
                     let Some(message) = message else {
                         anyhow::bail!("world update sender has been disconnected");
                     };
-                    self.handle_world_update(message).await?;
+                    self.handle_world_update(message)?;
                 }
             }
         }
@@ -128,7 +128,7 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
             State::Authenticating(state) => {
                 if state.handle_message(message, &self.connection)? {
                     debug!("authentication successfully completed; switching to setup mode");
-                    self.state = State::Setup(state.next());
+                    self.state = State::Setup(SetupState::new());
                 } else {
                     debug!("authentication is still incomplete");
                 }
@@ -158,9 +158,9 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
                         self.player_key.clone(),
                         self.block_interest_sender.take().unwrap(),
                         self.world_update_sender.take().unwrap(),
-                    );
+                    )?;
 
-                    self.state = State::Running(state.next(view_tracker));
+                    self.state = State::Running(RunningState::new(view_tracker));
                 } else {
                     debug!("loading is still incomplete");
                 }
@@ -196,12 +196,12 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
         }
     }
 
-    async fn handle_world_update(&mut self, update: WorldUpdate) -> Result<()> {
+    fn handle_world_update(&mut self, update: WorldUpdate) -> Result<()> {
         match update {
             WorldUpdate::NewMapBlock(world_block) => {
                 let WorldBlock {
-                    version,
-                    pos,
+                    version: _,
+                    pos: _,
                     is_underground,
                     day_night_differs,
                     lighting_complete,
