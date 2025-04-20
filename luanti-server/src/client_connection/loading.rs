@@ -2,23 +2,19 @@ use std::vec;
 
 use anyhow::Result;
 use base64::{Engine, engine::general_purpose::STANDARD};
-use glam::I16Vec3;
 use log::{debug, info, warn};
-use luanti_core::{ContentId, MapNode};
 use luanti_protocol::{
     LuantiConnection,
     commands::{
         CommandProperties,
         client_to_server::{ClientReadySpec, RequestMediaSpec, ToServerCommand},
         server_to_client::{
-            AnnounceMediaSpec, BlockdataSpec, ItemdefCommand, ItemdefList, MediaSpec, NodedefSpec,
-            PrivilegesSpec,
+            AnnounceMediaSpec, ItemdefCommand, ItemdefList, MediaSpec, NodedefSpec, PrivilegesSpec,
         },
     },
     types::{
-        AlignStyle, ContentFeatures, DrawType, MapNodesBulk, MediaAnnouncement, MediaFileData,
-        NodeBox, NodeDefManager, NodeMetadataList, SColor, SimpleSoundSpec, TileAnimationParams,
-        TileDef, TransferrableMapBlock,
+        AlignStyle, ContentFeatures, DrawType, MediaAnnouncement, MediaFileData, NodeBox,
+        NodeDefManager, SColor, SimpleSoundSpec, TileAnimationParams, TileDef,
     },
 };
 use sha1::Digest;
@@ -263,56 +259,6 @@ impl LoadingState {
                 .as_ref()
                 .map_or("<none>".into(), ToString::to_string)
         );
-
-        // let rust_nodes = std::array::from_fn(|_index| MapNode {
-        //     content_id: ContentId(10),
-        //     param1: 255,
-        //     param2: 0,
-        // });
-
-        // let air_nodes = std::array::from_fn(|_index| MapNode {
-        //     content_id: ContentId::AIR,
-        //     param1: 255,
-        //     param2: 0,
-        // });
-
-        // let floor_block = TransferrableMapBlock {
-        //     is_underground: true,
-        //     day_night_differs: false,
-        //     generated: true,
-        //     lighting_complete: Some(0x0000),
-        //     nodes: MapNodesBulk { nodes: rust_nodes },
-        //     node_metadata: NodeMetadataList { metadata: vec![] },
-        // };
-
-        // let air_block = TransferrableMapBlock {
-        //     is_underground: true,
-        //     day_night_differs: false,
-        //     generated: true,
-        //     lighting_complete: Some(0x0000),
-        //     nodes: MapNodesBulk { nodes: air_nodes },
-        //     node_metadata: NodeMetadataList { metadata: vec![] },
-        // };
-
-        // for z in -4..=4 {
-        //     for y in -4..=4 {
-        //         for x in -4..=4 {
-        //             let block = if y < 0 {
-        //                 floor_block.clone()
-        //             } else {
-        //                 air_block.clone()
-        //             };
-
-        //             let blockdata = BlockdataSpec {
-        //                 pos: I16Vec3::new(x, y, z),
-        //                 block,
-        //                 network_specific_version: 2,
-        //             };
-
-        //             connection.send(blockdata)?;
-        //         }
-        //     }
-        // }
 
         connection.send(PrivilegesSpec {
             privileges: vec![

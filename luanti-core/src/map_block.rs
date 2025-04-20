@@ -38,7 +38,7 @@ impl IndexMut<MapNodeIndex> for MapBlockNodes {
 /// The position of a map block.
 /// The position is _not_ measured in world coordinates. It can be viewed as a signed 3D-index,
 /// where `(0, 0, 0)` is located at the world's center
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct MapBlockPos(I16Vec3);
 
 impl MapBlockPos {
@@ -73,7 +73,7 @@ impl MapBlockPos {
     /// Converts a given node position into that of the containing map block.
     #[must_use]
     pub const fn for_node(node_pos: MapNodePos) -> Self {
-        Self::for_pos(node_pos.0)
+        Self::for_vec(node_pos.0)
     }
 
     /// Converts a given world position into that of the containing map block.
@@ -81,7 +81,7 @@ impl MapBlockPos {
     /// `for_node` is preferred in most cases but sometimes we only have a raw vector and it would
     /// be unnecessary to wrap that in a `MapNodePos`.
     #[must_use]
-    pub const fn for_pos(pos: I16Vec3) -> Self {
+    pub const fn for_vec(pos: I16Vec3) -> Self {
         Self(I16Vec3 {
             x: pos.x >> MapBlockPos::SIZE_BITS,
             y: pos.y >> MapBlockPos::SIZE_BITS,
@@ -104,7 +104,7 @@ impl MapBlockPos {
     /// Returns `None` if the resulting block would be located out of this map.
     #[must_use]
     pub fn checked_add(self, delta: I16Vec3) -> Option<Self> {
-        self.0.checked_add(delta).map(Self)
+        self.0.checked_add(delta).and_then(Self::new)
     }
 
     /// Check whether the given map node is located within this map block
@@ -136,5 +136,187 @@ impl From<MapBlockPos> for MapNodePos {
 impl From<MapBlockPos> for I16Vec3 {
     fn from(value: MapBlockPos) -> Self {
         value.vec()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![expect(clippy::unwrap_used, reason = "ok for tests")]
+
+    use super::*;
+
+    #[test]
+    fn test_map_block_pos_new() {
+        let pos0 = MapBlockPos::new(I16Vec3::new(0, 0, 0)).unwrap();
+        assert_eq!(pos0.vec(), I16Vec3::new(0, 0, 0));
+        assert_eq!(pos0, MapBlockPos::ZERO);
+
+        let pos_max = MapBlockPos::new(I16Vec3::new(2047, 2047, 2047)).unwrap();
+        assert_eq!(pos_max.vec(), I16Vec3::new(2047, 2047, 2047));
+        assert_eq!(pos_max, MapBlockPos::MAX);
+
+        let pos_min = MapBlockPos::new(I16Vec3::new(-2048, -2048, -2048)).unwrap();
+        assert_eq!(pos_min.vec(), I16Vec3::new(-2048, -2048, -2048));
+        assert_eq!(pos_min, MapBlockPos::MIN);
+
+        assert!(MapBlockPos::new(I16Vec3::new(2048, 2047, 2047)).is_none());
+        assert!(MapBlockPos::new(I16Vec3::new(2047, 2048, 2047)).is_none());
+        assert!(MapBlockPos::new(I16Vec3::new(2047, 2047, 2048)).is_none());
+        assert!(MapBlockPos::new(I16Vec3::new(-2049, -2048, -2048)).is_none());
+        assert!(MapBlockPos::new(I16Vec3::new(-2048, -2049, -2048)).is_none());
+        assert!(MapBlockPos::new(I16Vec3::new(-2048, -2048, -2049)).is_none());
+        assert!(MapBlockPos::new(I16Vec3::new(i16::MAX, 0, 0)).is_none());
+        assert!(MapBlockPos::new(I16Vec3::new(0, i16::MAX, 0)).is_none());
+        assert!(MapBlockPos::new(I16Vec3::new(0, 0, i16::MAX)).is_none());
+        assert!(MapBlockPos::new(I16Vec3::new(i16::MIN, 0, 0)).is_none());
+        assert!(MapBlockPos::new(I16Vec3::new(0, i16::MIN, 0)).is_none());
+        assert!(MapBlockPos::new(I16Vec3::new(0, 0, i16::MIN)).is_none());
+    }
+
+    #[test]
+    fn test_for_pos() {
+        assert_eq!(MapBlockPos::for_vec(I16Vec3::ZERO), MapBlockPos::ZERO);
+        assert_eq!(MapBlockPos::for_vec(I16Vec3::MAX), MapBlockPos::MAX);
+        assert_eq!(MapBlockPos::for_vec(I16Vec3::MIN), MapBlockPos::MIN);
+        assert_eq!(
+            MapBlockPos::for_vec(I16Vec3::new(15, 15, 15)).vec(),
+            I16Vec3::new(0, 0, 0)
+        );
+        assert_eq!(
+            MapBlockPos::for_vec(I16Vec3::new(16, 15, 15)).vec(),
+            I16Vec3::new(1, 0, 0)
+        );
+        assert_eq!(
+            MapBlockPos::for_vec(I16Vec3::new(15, 16, 15)).vec(),
+            I16Vec3::new(0, 1, 0)
+        );
+        assert_eq!(
+            MapBlockPos::for_vec(I16Vec3::new(15, 15, 16)).vec(),
+            I16Vec3::new(0, 0, 1)
+        );
+        assert_eq!(
+            MapBlockPos::for_vec(I16Vec3::new(16, 16, 16)).vec(),
+            I16Vec3::new(1, 1, 1)
+        );
+        assert_eq!(
+            MapBlockPos::for_vec(I16Vec3::new(-1, 0, 0)).vec(),
+            I16Vec3::new(-1, 0, 0)
+        );
+        assert_eq!(
+            MapBlockPos::for_vec(I16Vec3::new(0, -1, 0)).vec(),
+            I16Vec3::new(0, -1, 0)
+        );
+        assert_eq!(
+            MapBlockPos::for_vec(I16Vec3::new(0, 0, -1)).vec(),
+            I16Vec3::new(0, 0, -1)
+        );
+        assert_eq!(
+            MapBlockPos::for_vec(I16Vec3::new(-1, -1, -1)).vec(),
+            I16Vec3::new(-1, -1, -1)
+        );
+    }
+
+    #[test]
+    fn node_pos() {
+        assert_eq!(
+            MapBlockPos::ZERO.node_pos(MapNodeIndex::MIN),
+            MapNodePos::ZERO
+        );
+        assert_eq!(
+            MapBlockPos::MAX.node_pos(MapNodeIndex::MAX),
+            MapNodePos::MAX
+        );
+        assert_eq!(
+            MapBlockPos::MIN.node_pos(MapNodeIndex::MIN),
+            MapNodePos::MIN
+        );
+        {
+            let node_pos = MapNodePos(I16Vec3::new(i16::MAX, 0, 0));
+            let (block_pos, node_index) = node_pos.split_index();
+            assert!(block_pos.contains(node_pos));
+            assert_eq!(node_pos, block_pos.node_pos(node_index));
+        }
+        {
+            let node_pos = MapNodePos(I16Vec3::new(0, i16::MAX, 0));
+            let (block_pos, node_index) = node_pos.split_index();
+            assert!(block_pos.contains(node_pos));
+            assert_eq!(node_pos, block_pos.node_pos(node_index));
+        }
+        {
+            let node_pos = MapNodePos(I16Vec3::new(0, 0, i16::MAX));
+            let (block_pos, node_index) = node_pos.split_index();
+            assert!(block_pos.contains(node_pos));
+            assert_eq!(node_pos, block_pos.node_pos(node_index));
+        }
+        {
+            let node_pos = MapNodePos(I16Vec3::new(i16::MIN, 0, 0));
+            let (block_pos, node_index) = node_pos.split_index();
+            assert!(block_pos.contains(node_pos));
+            assert_eq!(node_pos, block_pos.node_pos(node_index));
+        }
+        {
+            let node_pos = MapNodePos(I16Vec3::new(0, i16::MIN, 0));
+            let (block_pos, node_index) = node_pos.split_index();
+            assert!(block_pos.contains(node_pos));
+            assert_eq!(node_pos, block_pos.node_pos(node_index));
+        }
+        {
+            let node_pos = MapNodePos(I16Vec3::new(0, 0, i16::MIN));
+            let (block_pos, node_index) = node_pos.split_index();
+            assert!(block_pos.contains(node_pos));
+            assert_eq!(node_pos, block_pos.node_pos(node_index));
+        }
+    }
+
+    #[test]
+    fn test_checked_add() {
+        assert_eq!(
+            MapBlockPos::ZERO.checked_add(MapBlockPos::MAX.vec()),
+            Some(MapBlockPos::MAX)
+        );
+        assert_eq!(
+            MapBlockPos::ZERO.checked_add(MapBlockPos::MIN.vec()),
+            Some(MapBlockPos::MIN)
+        );
+        assert!(
+            MapBlockPos::MAX
+                .checked_add(I16Vec3::new(1, 0, 0))
+                .is_none()
+        );
+        assert!(
+            MapBlockPos::MAX
+                .checked_add(I16Vec3::new(0, 1, 0))
+                .is_none()
+        );
+        assert!(
+            MapBlockPos::MAX
+                .checked_add(I16Vec3::new(0, 0, 1))
+                .is_none()
+        );
+        assert!(
+            MapBlockPos::MAX
+                .checked_add(I16Vec3::new(1, 1, 1))
+                .is_none()
+        );
+        assert!(
+            MapBlockPos::MIN
+                .checked_add(I16Vec3::new(-1, 0, 0))
+                .is_none()
+        );
+        assert!(
+            MapBlockPos::MIN
+                .checked_add(I16Vec3::new(0, -1, 0))
+                .is_none()
+        );
+        assert!(
+            MapBlockPos::MIN
+                .checked_add(I16Vec3::new(0, 0, -1))
+                .is_none()
+        );
+        assert!(
+            MapBlockPos::MIN
+                .checked_add(I16Vec3::new(-1, -1, -1))
+                .is_none()
+        );
     }
 }

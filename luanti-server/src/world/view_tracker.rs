@@ -119,7 +119,7 @@ impl ViewTracker {
                         // TODO(kawogi) this entire implementation is a placeholder and shall be replaced
 
                         // find the block containing the player
-                        let current_block_pos = MapBlockPos::for_pos(position.round().as_i16vec3());
+                        let current_block_pos = MapBlockPos::for_vec(position.round().as_i16vec3());
 
                         // only recompute if the player moved into a different block …
                         // this will always evaluate to `true` for the first iteration
@@ -134,9 +134,11 @@ impl ViewTracker {
                             recent_player_block_pos = Some(current_block_pos);
 
                             // make sure that all surrounding blocks have an entry in the state table
-                            for dz in -1..=1 {
-                                for dy in -1..=1 {
-                                    for dx in -1..=1 {
+                            let radius = 1;
+                            let range = -radius..=radius;
+                            for dz in range.clone() {
+                                for dy in range.clone() {
+                                    for dx in range.clone() {
                                         if let Some(block_pos) =
                                             current_block_pos.checked_add(I16Vec3::new(dx, dy, dz))
                                         {

@@ -16,7 +16,7 @@ pub struct MapNode {
 }
 
 /// The coordinates of a single node within the world
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct MapNodePos(pub I16Vec3);
 
 impl MapNodePos {
@@ -61,6 +61,10 @@ impl MapNodeIndex {
     const SHIFT: UVec3 = UVec3::new(0, MapBlockPos::SIZE_BITS, 2 * MapBlockPos::SIZE_BITS);
     /// Bit masks of the individual coordinates when they've been aligned towards the least significant bit.
     const MASK: U16Vec3 = U16Vec3::splat(MapBlockPos::SIZE_MASK);
+    /// index of the first node within a block (0, 0, 0)
+    pub const MIN: Self = Self(0);
+    /// index of the last node within a block (15, 15, 15)
+    pub const MAX: Self = Self(MapBlockPos::NODE_COUNT - 1);
 
     /// Converts a given node position into the index within its containing map block.
     #[must_use]

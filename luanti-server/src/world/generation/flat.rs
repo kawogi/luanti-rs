@@ -11,11 +11,11 @@ impl WorldGenerator for MapgenFlat {
             let content = match node_pos.0.y {
                 i16::MIN..0 => {
                     if (node_pos.0.x & 0x1) == (node_pos.0.z & 0x1) {
-                        ContentId(10)
+                        ContentId(10) // demo node
                     } else {
                         ContentId::UNKNOWN
                     }
-                } // demo node
+                }
                 _ => ContentId::AIR,
             };
             MapNode {
