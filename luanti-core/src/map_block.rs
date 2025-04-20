@@ -151,9 +151,27 @@ mod tests {
         assert_eq!(pos0.vec(), I16Vec3::new(0, 0, 0));
         assert_eq!(pos0, MapBlockPos::ZERO);
 
+        let pos_max_x = MapBlockPos::new(I16Vec3::new(2047, 0, 0)).unwrap();
+        assert_eq!(pos_max_x.vec(), I16Vec3::new(2047, 0, 0));
+
+        let pos_max_y = MapBlockPos::new(I16Vec3::new(0, 2047, 0)).unwrap();
+        assert_eq!(pos_max_y.vec(), I16Vec3::new(0, 2047, 0));
+
+        let pos_max_z = MapBlockPos::new(I16Vec3::new(0, 0, 2047)).unwrap();
+        assert_eq!(pos_max_z.vec(), I16Vec3::new(0, 0, 2047));
+
         let pos_max = MapBlockPos::new(I16Vec3::new(2047, 2047, 2047)).unwrap();
         assert_eq!(pos_max.vec(), I16Vec3::new(2047, 2047, 2047));
         assert_eq!(pos_max, MapBlockPos::MAX);
+
+        let pos_min_x = MapBlockPos::new(I16Vec3::new(-2048, 0, 0)).unwrap();
+        assert_eq!(pos_min_x.vec(), I16Vec3::new(-2048, 0, 0));
+
+        let pos_min_y = MapBlockPos::new(I16Vec3::new(0, -2048, 0)).unwrap();
+        assert_eq!(pos_min_y.vec(), I16Vec3::new(0, -2048, 0));
+
+        let pos_min_z = MapBlockPos::new(I16Vec3::new(0, 0, -2048)).unwrap();
+        assert_eq!(pos_min_z.vec(), I16Vec3::new(0, 0, -2048));
 
         let pos_min = MapBlockPos::new(I16Vec3::new(-2048, -2048, -2048)).unwrap();
         assert_eq!(pos_min.vec(), I16Vec3::new(-2048, -2048, -2048));
@@ -162,15 +180,22 @@ mod tests {
         assert!(MapBlockPos::new(I16Vec3::new(2048, 2047, 2047)).is_none());
         assert!(MapBlockPos::new(I16Vec3::new(2047, 2048, 2047)).is_none());
         assert!(MapBlockPos::new(I16Vec3::new(2047, 2047, 2048)).is_none());
+        assert!(MapBlockPos::new(I16Vec3::new(2048, 2048, 2048)).is_none());
+
         assert!(MapBlockPos::new(I16Vec3::new(-2049, -2048, -2048)).is_none());
         assert!(MapBlockPos::new(I16Vec3::new(-2048, -2049, -2048)).is_none());
         assert!(MapBlockPos::new(I16Vec3::new(-2048, -2048, -2049)).is_none());
+        assert!(MapBlockPos::new(I16Vec3::new(-2049, -2049, -2049)).is_none());
+
         assert!(MapBlockPos::new(I16Vec3::new(i16::MAX, 0, 0)).is_none());
         assert!(MapBlockPos::new(I16Vec3::new(0, i16::MAX, 0)).is_none());
         assert!(MapBlockPos::new(I16Vec3::new(0, 0, i16::MAX)).is_none());
+        assert!(MapBlockPos::new(I16Vec3::MAX).is_none());
+
         assert!(MapBlockPos::new(I16Vec3::new(i16::MIN, 0, 0)).is_none());
         assert!(MapBlockPos::new(I16Vec3::new(0, i16::MIN, 0)).is_none());
         assert!(MapBlockPos::new(I16Vec3::new(0, 0, i16::MIN)).is_none());
+        assert!(MapBlockPos::new(I16Vec3::MIN).is_none());
     }
 
     #[test]
