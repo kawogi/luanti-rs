@@ -140,8 +140,9 @@ impl RunningState {
             sz = speed.z,
         );
 
-        self.view_tracker
-            .update_view(PlayerViewEvent::PlayerPos(player_pos))?;
+        self.view_tracker.update_view(PlayerViewEvent::PlayerPos {
+            position: position / 10.0,
+        })?;
 
         Ok(())
     }

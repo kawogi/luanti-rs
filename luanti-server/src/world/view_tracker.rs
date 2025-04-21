@@ -9,13 +9,10 @@ use std::{
 
 use anyhow::Result;
 use flexstr::SharedStr;
-use glam::I16Vec3;
+use glam::{I16Vec3, Vec3};
 use log::{debug, error, trace, warn};
 use luanti_core::MapBlockPos;
-use luanti_protocol::{
-    commands::client_to_server::{DeletedblocksSpec, GotBlocksSpec},
-    types::PlayerPos,
-};
+use luanti_protocol::commands::client_to_server::{DeletedblocksSpec, GotBlocksSpec};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender, error::TryRecvError};
 
 use crate::world::WorldUpdate;
@@ -104,18 +101,7 @@ impl ViewTracker {
                 Err(TryRecvError::Empty) => None,
             } {
                 match event {
-                    PlayerViewEvent::PlayerPos(PlayerPos {
-                        position,
-                        speed: _,
-                        pitch: _,
-                        yaw: _,
-                        keys_pressed: _,
-                        fov: _,
-                        wanted_range: _,
-                        camera_inverted: _,
-                        movement_speed: _,
-                        movement_direction: _,
-                    }) => {
+                    PlayerViewEvent::PlayerPos { position } => {
                         // TODO(kawogi) this entire implementation is a placeholder and shall be replaced
 
                         // find the block containing the player
@@ -321,7 +307,10 @@ impl ViewTracker {
 
 pub(crate) enum PlayerViewEvent {
     /// The player has changed its position or viewing direction
-    PlayerPos(PlayerPos),
+    PlayerPos {
+        position: Vec3,
+        // TODO(kawogi) add more information as needed
+    },
     /// The player confirmed to have received some blocks
     GotMapBlocks(GotBlocksSpec),
     /// The player reports to have removed some map blocks from its cache
