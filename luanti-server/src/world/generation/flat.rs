@@ -8,7 +8,7 @@ impl WorldGenerator for MapgenFlat {
     fn generate_block(&self, map_block_pos: MapBlockPos) -> WorldBlock {
         let nodes = std::array::from_fn(|index| {
             let node_pos = map_block_pos.node_pos(MapNodeIndex::from(index));
-            let content = match node_pos.0.y {
+            let content_id = match node_pos.0.y {
                 i16::MIN..0 => {
                     if (node_pos.0.x & 0x1) == (node_pos.0.z & 0x1) {
                         ContentId(10) // demo node
@@ -19,7 +19,7 @@ impl WorldGenerator for MapgenFlat {
                 _ => ContentId::AIR,
             };
             MapNode {
-                content_id: content,
+                content_id,
                 param1: 255,
                 param2: 255,
             }

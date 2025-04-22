@@ -23,7 +23,7 @@ use tokio::sync::mpsc;
 use world::generation::flat::MapgenFlat;
 use world::map_block_provider::MapBlockProvider;
 use world::map_block_router::MapBlockRouter;
-use world::storage::dummy::DummyStorage;
+use world::storage::minetestworld::MinetestworldStorage;
 
 /// luanti-shark - Luanti proxy that gives detailed inspection of protocol
 #[derive(Parser, Debug)]
@@ -72,7 +72,7 @@ async fn real_main() -> anyhow::Result<()> {
     };
 
     let world_generator = MapgenFlat;
-    let storage = DummyStorage;
+    let storage = pollster::block_on(MinetestworldStorage::new("worlds/luanti-rs"))?;
 
     let (block_request_to_provider, block_request_from_router) = mpsc::unbounded_channel();
     let (block_interest_sender, block_interest_receiver) = mpsc::unbounded_channel();

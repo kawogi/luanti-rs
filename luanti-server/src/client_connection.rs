@@ -92,7 +92,7 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
 
     async fn run_inner(&mut self) -> Result<()> {
         loop {
-            // TODO(kawogi) review whether this select remains useful after completion of the server's base implementation
+            // TODO(kawogi) review whether this should be refactored; all state transitions seem to be expressible as a simple sequence and do not require a full-fledged state machine
             tokio::select! {
                 message = self.connection.recv() => {
                     trace!("connection.recv: {message:?}");

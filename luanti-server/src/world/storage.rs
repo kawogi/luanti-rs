@@ -4,6 +4,7 @@ use luanti_core::MapBlockPos;
 use super::WorldBlock;
 
 pub(crate) mod dummy;
+pub(crate) mod minetestworld;
 
 pub(crate) trait WorldStorage: Send + Sync {
     /// Stores a given world block containing a map block.
