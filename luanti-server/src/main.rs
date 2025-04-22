@@ -16,8 +16,11 @@ use anyhow::bail;
 use authentication::dummy::DummyAuthenticator;
 use clap::ArgGroup;
 use clap::Parser;
+use luanti_core::ContentId;
 use server::LuantiWorldServer;
+use std::collections::HashMap;
 use std::net::SocketAddr;
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use world::generation::flat::MapgenFlat;
@@ -71,6 +74,18 @@ async fn real_main() -> anyhow::Result<()> {
         bail!("One of --listen or --bind must be specified");
     };
 
+    let content_map = {
+        let mut map = HashMap::new();
+        map.insert(Box::from(*b"air"), ContentId::AIR);
+        map.insert(Box::from(*b"basenodes:stone"), ContentId(1));
+        map.insert(Box::from(*b"basenodes:sand"), ContentId(2));
+        map.insert(Box::from(*b"basenodes:dirt_with_grass"), ContentId(3));
+        map.insert(Box::from(*b"basenodes:dirt"), ContentId(4));
+        map.insert(Box::from(*b"basenodes:water_source"), ContentId(5));
+        map.insert(Box::from(*b"basenodes:water_flowing"), ContentId(6));
+        map
+    };
+
     let world_generator = MapgenFlat;
     let storage = pollster::block_on(MinetestworldStorage::new("worlds/luanti-rs"))?;
 
@@ -82,6 +97,7 @@ async fn real_main() -> anyhow::Result<()> {
         world_update_to_router,
         Some(Box::new(storage)),
         Some(Box::new(world_generator)),
+        Arc::new(content_map),
     );
 
     let mut server = LuantiWorldServer::new(bind_addr, args.verbose);

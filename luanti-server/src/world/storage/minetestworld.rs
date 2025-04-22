@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{collections::HashMap, path::Path, sync::Arc};
 
 use super::WorldStorage;
 use crate::world::WorldBlock;
@@ -30,7 +30,11 @@ impl WorldStorage for MinetestworldStorage {
     }
 
     #[expect(clippy::panic_in_result_fn, clippy::unwrap_in_result)]
-    fn load_block(&self, map_block_pos: MapBlockPos) -> Result<Option<WorldBlock>> {
+    fn load_block(
+        &self,
+        map_block_pos: MapBlockPos,
+        content_map: Arc<HashMap<Box<[u8]>, ContentId>>,
+    ) -> Result<Option<WorldBlock>> {
         let (x, y, z) = map_block_pos.vec().into();
         let map_data: Result<_> = pollster::block_on(async {
             let map_data = self.world.get_map_data().await?;
@@ -40,19 +44,25 @@ impl WorldStorage for MinetestworldStorage {
 
         let mut id_map = Vec::with_capacity(map_block.name_id_mappings.len());
         for (id, name) in map_block.name_id_mappings {
-            let global_id = match name.as_slice() {
-                b"air" => ContentId::AIR,
-                b"basenodes:stone" => ContentId::UNKNOWN,
-                b"basenodes:sand" => ContentId::UNKNOWN,
-                b"basenodes:dirt_with_grass" => ContentId::UNKNOWN,
-                b"basenodes:dirt" => ContentId::UNKNOWN,
-                b"basenodes:water_source" => ContentId::UNKNOWN,
-                b"basenodes:water_flowing" => ContentId::UNKNOWN,
-                unknown => panic!(
+            let Some(&global_id) = content_map.get(name.as_slice()) else {
+                panic!(
                     "{id}: {name}",
-                    name = String::from_utf8(unknown.to_owned()).unwrap()
-                ),
+                    name = String::from_utf8(name.to_owned()).unwrap()
+                );
             };
+            // let global_id = match name.as_slice() {
+            //     b"air" => ContentId::AIR,
+            //     b"basenodes:stone" => ContentId::UNKNOWN,
+            //     b"basenodes:sand" => ContentId::UNKNOWN,
+            //     b"basenodes:dirt_with_grass" => ContentId::UNKNOWN,
+            //     b"basenodes:dirt" => ContentId::UNKNOWN,
+            //     b"basenodes:water_source" => ContentId::UNKNOWN,
+            //     b"basenodes:water_flowing" => ContentId::UNKNOWN,
+            //     unknown => panic!(
+            //         "{id}: {name}",
+            //         name = String::from_utf8(unknown.to_owned()).unwrap()
+            //     ),
+            // };
 
             let index = usize::from(id);
             if let Some(slot) = id_map.get_mut(index) {

@@ -1,5 +1,7 @@
+use std::{collections::HashMap, sync::Arc};
+
 use anyhow::Result;
-use luanti_core::MapBlockPos;
+use luanti_core::{ContentId, MapBlockPos};
 
 use super::WorldBlock;
 
@@ -11,5 +13,9 @@ pub(crate) trait WorldStorage: Send + Sync {
     fn store_block(&mut self, map_block: &WorldBlock) -> Result<()>;
     /// Tries to load a world block containing a map block from the storage.
     /// Returns `None`, if the requested block doesn't exist.
-    fn load_block(&self, pos: MapBlockPos) -> Result<Option<WorldBlock>>;
+    fn load_block(
+        &self,
+        pos: MapBlockPos,
+        content_map: Arc<HashMap<Box<[u8]>, ContentId>>,
+    ) -> Result<Option<WorldBlock>>;
 }
