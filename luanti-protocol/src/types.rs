@@ -491,11 +491,11 @@ pub struct ContentFeatures {
     pub sound_dug: SimpleSoundSpec,
     pub legacy_facedir_simple: bool,
     pub legacy_wallmounted: bool,
-    pub node_dig_prediction: Option<String>,
-    pub leveled_max: Option<u8>,
-    pub alpha: Option<AlphaMode>,
-    pub move_resistance: Option<u8>,
-    pub liquid_move_physics: Option<bool>,
+    pub node_dig_prediction: String,
+    pub leveled_max: u8,
+    pub alpha: AlphaMode,
+    pub move_resistance: u8,
+    pub liquid_move_physics: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]

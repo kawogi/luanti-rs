@@ -18,6 +18,7 @@ use clap::ArgGroup;
 use clap::Parser;
 use flexstr::SharedStr;
 use luanti_protocol::types::AlignStyle;
+use luanti_protocol::types::AlphaMode;
 use luanti_protocol::types::ContentFeatures;
 use luanti_protocol::types::DrawType;
 use luanti_protocol::types::NodeBox;
@@ -252,7 +253,12 @@ fn content_features(
 
     let is_water = matches!(drawtype, DrawType::Liquid);
     let waving = if is_water { 3 } else { 0 };
-    let alpha = is_water.then_some(luanti_protocol::types::AlphaMode::Blend);
+    let alpha = if is_water {
+        AlphaMode::Blend
+    } else {
+        AlphaMode::Opaque
+    };
+    let alpha_for_legacy = if is_water { 160 } else { 255 };
 
     ContentFeatures {
         version: CONTENT_FEATURES_VERSION,
@@ -267,7 +273,7 @@ fn content_features(
         tiledef,
         tiledef_overlay,
         tiledef_special,
-        alpha_for_legacy: 255,
+        alpha_for_legacy,
         red: 255,
         green: 255,
         blue: 255,
@@ -304,10 +310,10 @@ fn content_features(
         sound_dug,
         legacy_facedir_simple: false,
         legacy_wallmounted: false,
-        node_dig_prediction: None,
-        leveled_max: None,
+        node_dig_prediction: String::new(),
+        leveled_max: 0,
         alpha,
-        move_resistance: None,
-        liquid_move_physics: None,
+        move_resistance: 255,
+        liquid_move_physics: true,
     }
 }
