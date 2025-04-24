@@ -1,4 +1,4 @@
-use std::{array, vec};
+use std::vec;
 
 use anyhow::Result;
 use base64::{Engine, engine::general_purpose::STANDARD};
@@ -12,14 +12,9 @@ use luanti_protocol::{
             AnnounceMediaSpec, ItemdefCommand, ItemdefList, MediaSpec, NodedefSpec, PrivilegesSpec,
         },
     },
-    types::{
-        AlignStyle, ContentFeatures, DrawType, MediaAnnouncement, MediaFileData, NodeBox,
-        NodeDefManager, SColor, SimpleSoundSpec, TileAnimationParams, TileDef,
-    },
+    types::{MediaAnnouncement, MediaFileData, NodeDefManager},
 };
 use sha1::Digest;
-
-const CONTENT_FEATURES_VERSION: u8 = 13;
 
 /// The state after a successful setup.
 /// In this state all map data, media, etc. will be submitted
@@ -37,56 +32,16 @@ impl LoadingState {
         }
     }
 
-    #[expect(
-        clippy::too_many_lines,
-        reason = "// TODO extract creation of demo content"
-    )]
-    pub(super) fn send_data(&self, connection: &LuantiConnection) -> Result<()> {
+    pub(super) fn send_data(
+        &self,
+        connection: &LuantiConnection,
+        node_def: &NodeDefManager,
+    ) -> Result<()> {
         #[expect(
             unused_variables,
             reason = "// TODO(kawogi) This might come in handy for loading the resources"
         )]
         let language = self.language.as_ref();
-
-        let tile_dirt = tile_def("demo_dirt.png");
-        let tile_grass_east = tile_def("demo_grass_east.png");
-        let tile_grass_north = tile_def("demo_grass_north.png");
-        let tile_grass_south = tile_def("demo_grass_south.png");
-        let tile_grass_west = tile_def("demo_grass_west.png");
-        let tile_grass = tile_def("demo_grass.png");
-        let tile_sand = tile_def("demo_sand.png");
-        let tile_stone = tile_def("demo_stone.png");
-        let tile_water = tile_def("demo_water.png");
-
-        let tile_none = TileDef {
-            name: String::new(),
-            animation: TileAnimationParams::None,
-            backface_culling: true,
-            tileable_horizontal: false,
-            tileable_vertical: false,
-            color_rgb: None,
-            scale: 0,
-            align_style: AlignStyle::Node,
-        };
-
-        let content_dirt = content_features("basenodes:dirt", &[&tile_dirt], &[]);
-        let content_dirt_with_grass = content_features(
-            "basenodes:dirt_with_grass",
-            &[&tile_dirt],
-            &[
-                &tile_grass,
-                &tile_none,
-                &tile_grass_east,
-                &tile_grass_north,
-                &tile_grass_south,
-                &tile_grass_west,
-            ],
-        );
-        let content_sand = content_features("basenodes:sand", &[&tile_sand], &[]);
-        let content_stone = content_features("basenodes:stone", &[&tile_stone], &[]);
-        let content_water_source = content_features("basenodes:water_source", &[&tile_water], &[]);
-        let content_water_flowing =
-            content_features("basenodes:water_flowing", &[&tile_water], &[]);
 
         let textures = vec![
             (
@@ -148,23 +103,12 @@ impl LoadingState {
             aliases: vec![],
         };
 
-        let node_def_manager = NodeDefManager {
-            content_features: vec![
-                (1, content_stone),
-                (2, content_sand),
-                (3, content_dirt_with_grass),
-                (4, content_dirt),
-                (5, content_water_source),
-                (6, content_water_flowing),
-            ],
-        };
-
         connection.send(ItemdefCommand {
             item_def: itemdef_list,
         })?;
 
         connection.send(NodedefSpec {
-            node_def: node_def_manager,
+            node_def: node_def.clone(),
         })?;
 
         connection.send(AnnounceMediaSpec {
@@ -278,128 +222,5 @@ impl LoadingState {
 
     pub(crate) fn language(&self) -> Option<&String> {
         self.language.as_ref()
-    }
-}
-
-// #[expect(clippy::too_many_lines, reason = "//TODO fix this later")]
-#[expect(clippy::similar_names, reason = "English being English")]
-fn content_features(name: &str, tiles: &[&TileDef], overlays: &[&TileDef]) -> ContentFeatures {
-    let tile_none = TileDef {
-        name: String::new(),
-        animation: TileAnimationParams::None,
-        backface_culling: true,
-        tileable_horizontal: false,
-        tileable_vertical: false,
-        color_rgb: None,
-        scale: 0,
-        align_style: AlignStyle::Node,
-    };
-
-    let sound_footstep = SimpleSoundSpec {
-        name: String::new(),
-        gain: 1.0,
-        pitch: 1.0,
-        fade: 1.0,
-    };
-
-    let sound_dig = SimpleSoundSpec {
-        name: String::new(),
-        gain: 1.0,
-        pitch: 1.0,
-        fade: 1.0,
-    };
-
-    let sound_dug = SimpleSoundSpec {
-        name: String::new(),
-        gain: 1.0,
-        pitch: 1.0,
-        fade: 1.0,
-    };
-
-    let tiledef =
-        array::from_fn(|index| (*tiles.get(index).or(tiles.last()).unwrap_or(&&tile_none)).clone());
-    let tiledef_overlay = array::from_fn(|index| {
-        (*overlays
-            .get(index)
-            .or(overlays.last())
-            .unwrap_or(&&tile_none))
-        .clone()
-    });
-
-    ContentFeatures {
-        version: CONTENT_FEATURES_VERSION,
-        name: name.into(),
-        groups: Vec::new(),
-        param_type: 0,
-        param_type_2: 0,
-        drawtype: DrawType::Normal,
-        mesh: String::new(),
-        visual_scale: 1.0,
-        unused_six: 6,
-        tiledef,
-        tiledef_overlay,
-        tiledef_special: vec![
-            tile_none.clone(),
-            tile_none.clone(),
-            tile_none.clone(),
-            tile_none.clone(),
-            tile_none.clone(),
-            tile_none.clone(),
-        ],
-        alpha_for_legacy: 255,
-        red: 255,
-        green: 255,
-        blue: 255,
-        palette_name: String::new(),
-        waving: 0,
-        connect_sides: 0,
-        connects_to_ids: Vec::new(),
-        post_effect_color: SColor::new(0, 0, 255, 255),
-        leveled: 0,
-        light_propagates: 0,
-        sunlight_propagates: 0,
-        light_source: 0,
-        is_ground_content: true,
-        walkable: true,
-        pointable: true,
-        diggable: true,
-        climbable: false,
-        buildable_to: true,
-        rightclickable: true,
-        damage_per_second: 0,
-        liquid_type_bc: 0,
-        liquid_alternative_flowing: String::new(),
-        liquid_alternative_source: String::new(),
-        liquid_viscosity: 0,
-        liquid_renewable: false,
-        liquid_range: 0,
-        drowning: 0,
-        floodable: false,
-        node_box: NodeBox::Regular,
-        selection_box: NodeBox::Regular,
-        collision_box: NodeBox::Regular,
-        sound_footstep,
-        sound_dig,
-        sound_dug,
-        legacy_facedir_simple: false,
-        legacy_wallmounted: false,
-        node_dig_prediction: None,
-        leveled_max: None,
-        alpha: None,
-        move_resistance: None,
-        liquid_move_physics: None,
-    }
-}
-
-fn tile_def(name: &str) -> TileDef {
-    TileDef {
-        name: name.into(),
-        animation: TileAnimationParams::None,
-        backface_culling: true,
-        tileable_horizontal: false,
-        tileable_vertical: false,
-        color_rgb: None,
-        scale: 0,
-        align_style: AlignStyle::Node,
     }
 }

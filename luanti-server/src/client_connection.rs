@@ -6,6 +6,8 @@ mod running;
 mod setup;
 mod uninitialized;
 
+use std::sync::Arc;
+
 use crate::authentication::Authenticator;
 use crate::world::WorldBlock;
 use crate::world::WorldUpdate;
@@ -27,6 +29,7 @@ use luanti_protocol::commands::server_to_client::BlockdataSpec;
 use luanti_protocol::commands::server_to_client::ToClientCommand;
 use luanti_protocol::peer::PeerError;
 use luanti_protocol::types::MapNodesBulk;
+use luanti_protocol::types::NodeDefManager;
 use luanti_protocol::types::NodeMetadataList;
 use luanti_protocol::types::TransferrableMapBlock;
 use running::RunningState;
@@ -45,6 +48,7 @@ pub(crate) struct ClientConnection<Auth: Authenticator> {
     block_interest_sender: Option<mpsc::UnboundedSender<ToRouterMessage>>,
     world_update_sender: Option<mpsc::UnboundedSender<WorldUpdate>>,
     world_update_receiver: mpsc::UnboundedReceiver<WorldUpdate>,
+    node_def: Arc<NodeDefManager>,
 }
 
 impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
@@ -54,6 +58,7 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
         authenticator: Auth,
         verbosity: u8,
         block_interest_sender: mpsc::UnboundedSender<ToRouterMessage>,
+        node_def: Arc<NodeDefManager>,
     ) -> JoinHandle<()> {
         let (world_update_sender, world_update_receiver) = mpsc::unbounded_channel();
 
@@ -67,6 +72,7 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
             player_key: SharedStr::EMPTY,
             world_update_sender: Some(world_update_sender),
             world_update_receiver,
+            node_def,
         };
         tokio::spawn(async move { runner.run().await })
     }
@@ -145,7 +151,7 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
                         // sending out all media to the client
                         unreachable!();
                     };
-                    loading_state.send_data(&self.connection)?;
+                    loading_state.send_data(&self.connection, &self.node_def)?;
                 } else {
                     debug!("setup is still incomplete");
                 }

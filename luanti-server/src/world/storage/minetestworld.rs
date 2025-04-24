@@ -1,7 +1,7 @@
-use std::{collections::HashMap, path::Path, sync::Arc};
+use std::{path::Path, sync::Arc};
 
 use super::WorldStorage;
-use crate::world::WorldBlock;
+use crate::{ContentIdMap, world::WorldBlock};
 use anyhow::Result;
 use log::{debug, info};
 use luanti_core::{ContentId, MapBlockNodes, MapBlockPos, MapNode, MapNodePos};
@@ -10,17 +10,24 @@ use minetestworld::Position;
 /// A world storage provider which uses the `minetestworld` crate.
 pub(crate) struct MinetestworldStorage {
     world: minetestworld::World,
+    content_id_map: Arc<ContentIdMap>,
 }
 
 impl MinetestworldStorage {
-    pub(crate) async fn new(path: impl AsRef<Path>) -> Result<Self> {
+    pub(crate) async fn new(
+        path: impl AsRef<Path>,
+        content_id_map: Arc<ContentIdMap>,
+    ) -> Result<Self> {
         info!("loading world from {path}", path = path.as_ref().display());
         let world = minetestworld::World::open(path);
         for (key, value) in world.get_world_metadata().await? {
             debug!("world metadata: {key}: {value}");
         }
 
-        Ok(MinetestworldStorage { world })
+        Ok(MinetestworldStorage {
+            world,
+            content_id_map,
+        })
     }
 }
 
@@ -29,12 +36,7 @@ impl WorldStorage for MinetestworldStorage {
         Ok(())
     }
 
-    #[expect(clippy::panic_in_result_fn, clippy::unwrap_in_result)]
-    fn load_block(
-        &self,
-        map_block_pos: MapBlockPos,
-        content_map: Arc<HashMap<Box<[u8]>, ContentId>>,
-    ) -> Result<Option<WorldBlock>> {
+    fn load_block(&self, map_block_pos: MapBlockPos) -> Result<Option<WorldBlock>> {
         let (x, y, z) = map_block_pos.vec().into();
         let map_data: Result<_> = pollster::block_on(async {
             let map_data = self.world.get_map_data().await?;
@@ -44,26 +46,7 @@ impl WorldStorage for MinetestworldStorage {
 
         let mut id_map = Vec::with_capacity(map_block.name_id_mappings.len());
         for (id, name) in map_block.name_id_mappings {
-            let Some(&global_id) = content_map.get(name.as_slice()) else {
-                panic!(
-                    "{id}: {name}",
-                    name = String::from_utf8(name.to_owned()).unwrap()
-                );
-            };
-            // let global_id = match name.as_slice() {
-            //     b"air" => ContentId::AIR,
-            //     b"basenodes:stone" => ContentId::UNKNOWN,
-            //     b"basenodes:sand" => ContentId::UNKNOWN,
-            //     b"basenodes:dirt_with_grass" => ContentId::UNKNOWN,
-            //     b"basenodes:dirt" => ContentId::UNKNOWN,
-            //     b"basenodes:water_source" => ContentId::UNKNOWN,
-            //     b"basenodes:water_flowing" => ContentId::UNKNOWN,
-            //     unknown => panic!(
-            //         "{id}: {name}",
-            //         name = String::from_utf8(unknown.to_owned()).unwrap()
-            //     ),
-            // };
-
+            let global_id = self.content_id_map[name.as_slice()];
             let index = usize::from(id);
             if let Some(slot) = id_map.get_mut(index) {
                 *slot = global_id;

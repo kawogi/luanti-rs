@@ -1,6 +1,8 @@
+pub(crate) mod content_id_map;
 pub(crate) mod generation;
 pub(crate) mod map_block_provider;
 pub(crate) mod map_block_router;
+pub(crate) mod media_registry;
 pub(crate) mod priority;
 pub(crate) mod storage;
 pub(crate) mod view_tracker;

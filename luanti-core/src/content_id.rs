@@ -1,5 +1,7 @@
 //! Holds the content id type
 
+use std::num::TryFromIntError;
+
 /// The content id describes the _material_ a `MapNode` is made of.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[repr(transparent)]
@@ -32,4 +34,18 @@ impl ContentId {
     /// Doesn't create faces with anything and is considered being
     /// out-of-map in the game map.
     pub const IGNORE: Self = Self(127);
+}
+
+impl From<ContentId> for usize {
+    fn from(value: ContentId) -> Self {
+        usize::from(value.0)
+    }
+}
+
+impl TryFrom<usize> for ContentId {
+    type Error = TryFromIntError;
+
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        value.try_into().map(Self)
+    }
 }

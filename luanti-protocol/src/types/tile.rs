@@ -129,18 +129,20 @@ pub enum TileAnimationParams {
     },
 }
 
-// TileAnimationType
-const TAT_NONE: u8 = 0;
-const TAT_VERTICAL_FRAMES: u8 = 1;
-const TAT_SHEET_2D: u8 = 2;
+impl TileAnimationParams {
+    // TileAnimationType
+    const NONE: u8 = 0;
+    const VERTICAL_FRAMES: u8 = 1;
+    const SHEET_2D: u8 = 2;
+}
 
 impl Serialize for TileAnimationParams {
     type Input = Self;
     fn serialize<S: Serializer>(value: &Self::Input, ser: &mut S) -> SerializeResult {
         let typ = match value {
-            TileAnimationParams::None => TAT_NONE,
-            TileAnimationParams::VerticalFrames { .. } => TAT_VERTICAL_FRAMES,
-            TileAnimationParams::Sheet2D { .. } => TAT_SHEET_2D,
+            TileAnimationParams::None => Self::NONE,
+            TileAnimationParams::VerticalFrames { .. } => Self::VERTICAL_FRAMES,
+            TileAnimationParams::Sheet2D { .. } => Self::SHEET_2D,
         };
         u8::serialize(&typ, ser)?;
         match value {
@@ -173,13 +175,13 @@ impl Deserialize for TileAnimationParams {
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         let typ = u8::deserialize(deser)?;
         match typ {
-            TAT_NONE => Ok(TileAnimationParams::None),
-            TAT_VERTICAL_FRAMES => Ok(TileAnimationParams::VerticalFrames {
+            Self::NONE => Ok(TileAnimationParams::None),
+            Self::VERTICAL_FRAMES => Ok(TileAnimationParams::VerticalFrames {
                 aspect_w: u16::deserialize(deser)?,
                 aspect_h: u16::deserialize(deser)?,
                 length: f32::deserialize(deser)?,
             }),
-            TAT_SHEET_2D => Ok(TileAnimationParams::Sheet2D {
+            Self::SHEET_2D => Ok(TileAnimationParams::Sheet2D {
                 frames_w: u8::deserialize(deser)?,
                 frames_h: u8::deserialize(deser)?,
                 frame_length: f32::deserialize(deser)?,
