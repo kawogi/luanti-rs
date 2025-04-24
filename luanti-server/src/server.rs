@@ -1,5 +1,6 @@
 //! Minimal Server implementation serving as prototype
 
+use crate::MediaRegistry;
 use crate::authentication::Authenticator;
 use crate::client_connection::ClientConnection;
 use crate::world::map_block_router::ToRouterMessage;
@@ -18,15 +19,22 @@ pub(crate) struct LuantiWorldServer {
     verbosity: u8,
     runner: Option<JoinHandle<()>>,
     node_def: Arc<NodeDefManager>,
+    media: Arc<MediaRegistry>,
 }
 
 impl LuantiWorldServer {
-    pub(crate) fn new(bind_addr: SocketAddr, verbosity: u8, node_def: Arc<NodeDefManager>) -> Self {
+    pub(crate) fn new(
+        bind_addr: SocketAddr,
+        verbosity: u8,
+        node_def: Arc<NodeDefManager>,
+        media: Arc<MediaRegistry>,
+    ) -> Self {
         Self {
             bind_addr,
             verbosity,
             runner: None,
             node_def,
+            media,
         }
     }
 
@@ -40,6 +48,7 @@ impl LuantiWorldServer {
         let bind_addr = self.bind_addr;
         let verbosity = self.verbosity;
         let node_def_clone = Arc::clone(&self.node_def);
+        let media_clone = Arc::clone(&self.media);
         let runner = tokio::spawn(async move {
             Self::accept_connections(
                 bind_addr,
@@ -47,6 +56,7 @@ impl LuantiWorldServer {
                 verbosity,
                 block_interest_sender.clone(),
                 node_def_clone,
+                media_clone,
             )
             .await;
         });
@@ -59,6 +69,7 @@ impl LuantiWorldServer {
         verbosity: u8,
         block_interest_sender: UnboundedSender<ToRouterMessage>,
         node_def: Arc<NodeDefManager>,
+        media: Arc<MediaRegistry>,
     ) {
         let mut server = LuantiServer::new(bind_addr);
         let mut connection_id = 1;
@@ -68,7 +79,7 @@ impl LuantiWorldServer {
                     let id = connection_id;
                     connection_id += 1;
                     info!("[P{}] New client connected from {:?}", id, connection.remote_addr());
-                    ClientConnection::spawn(id, connection, authenticator.clone(), verbosity, block_interest_sender.clone(), Arc::clone(&node_def));
+                    ClientConnection::spawn(id, connection, authenticator.clone(), verbosity, block_interest_sender.clone(), Arc::clone(&node_def), Arc::clone(&media));
                 },
             }
         }

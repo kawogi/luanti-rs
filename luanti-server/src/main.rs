@@ -65,6 +65,7 @@ async fn main() -> anyhow::Result<()> {
     real_main().await
 }
 
+#[expect(clippy::too_many_lines, reason = "// TODO(kawogi) split this up")]
 async fn real_main() -> anyhow::Result<()> {
     // TODO make this configurable through command line arguments
     env_logger::builder()
@@ -99,6 +100,8 @@ async fn real_main() -> anyhow::Result<()> {
         content_id_map.push(SharedStr::from_static("basenodes:water_source"))?;
     let content_id_water_flowing =
         content_id_map.push(SharedStr::from_static("basenodes:water_flowing"))?;
+    let content_id_block_of_rust =
+        content_id_map.push(SharedStr::from_static("demo:block_of_rust"))?;
 
     let tile_dirt = tile_def("demo_dirt.png");
     let tile_grass_east = tile_def("demo_grass_east.png");
@@ -108,11 +111,11 @@ async fn real_main() -> anyhow::Result<()> {
     let tile_grass = tile_def("demo_grass.png");
     let tile_sand = tile_def("demo_sand.png");
     let tile_stone = tile_def("demo_stone.png");
-    let tile_water = tile_def("demo_water.png");
+    let tile_water = tile_def("demo_water.png^[opacity:160");
+    let tile_rust = tile_def("rust_tile_32.png");
 
     let tile_none = tile_def("");
-
-    let content_dirt = content_features("basenodes:dirt", &[&tile_dirt], &[]);
+    let content_dirt = content_features("basenodes:dirt", &[&tile_dirt], &[], DrawType::Normal);
     let content_dirt_with_grass = content_features(
         "basenodes:dirt_with_grass",
         &[&tile_dirt],
@@ -124,11 +127,24 @@ async fn real_main() -> anyhow::Result<()> {
             &tile_grass_south,
             &tile_grass_west,
         ],
+        DrawType::Normal,
     );
-    let content_sand = content_features("basenodes:sand", &[&tile_sand], &[]);
-    let content_stone = content_features("basenodes:stone", &[&tile_stone], &[]);
-    let content_water_source = content_features("basenodes:water_source", &[&tile_water], &[]);
-    let content_water_flowing = content_features("basenodes:water_flowing", &[&tile_water], &[]);
+    let content_sand = content_features("basenodes:sand", &[&tile_sand], &[], DrawType::Normal);
+    let content_stone = content_features("basenodes:stone", &[&tile_stone], &[], DrawType::Normal);
+    let content_water_source = content_features(
+        "basenodes:water_source",
+        &[&tile_water],
+        &[],
+        DrawType::Liquid,
+    );
+    let content_water_flowing = content_features(
+        "basenodes:water_flowing",
+        &[&tile_water],
+        &[],
+        DrawType::Liquid,
+    );
+    let content_block_of_rust =
+        content_features("demo:block_of_rust", &[&tile_rust], &[], DrawType::Normal);
 
     let node_def_manager = NodeDefManager {
         content_features: vec![
@@ -138,10 +154,11 @@ async fn real_main() -> anyhow::Result<()> {
             (content_id_dirt.0, content_dirt),
             (content_id_water_source.0, content_water_source),
             (content_id_water_flowing.0, content_water_flowing),
+            (content_id_block_of_rust.0, content_block_of_rust),
         ],
     };
 
-    let world_generator = MapgenFlat;
+    let world_generator = MapgenFlat::new(content_id_block_of_rust);
     let storage = pollster::block_on(MinetestworldStorage::new(
         "worlds/luanti-rs",
         Arc::new(content_id_map),
@@ -157,7 +174,12 @@ async fn real_main() -> anyhow::Result<()> {
         Some(Box::new(world_generator)),
     );
 
-    let mut server = LuantiWorldServer::new(bind_addr, args.verbose, Arc::new(node_def_manager));
+    let mut server = LuantiWorldServer::new(
+        bind_addr,
+        args.verbose,
+        Arc::new(node_def_manager),
+        Arc::new(media_registry),
+    );
 
     let _map_block_router = MapBlockRouter::new(
         block_request_to_provider,
@@ -190,7 +212,12 @@ fn tile_def(name: &str) -> TileDef {
 
 // #[expect(clippy::too_many_lines, reason = "//TODO fix this later")]
 #[expect(clippy::similar_names, reason = "English being English")]
-fn content_features(name: &str, tiles: &[&TileDef], overlays: &[&TileDef]) -> ContentFeatures {
+fn content_features(
+    name: &str,
+    tiles: &[&TileDef],
+    overlays: &[&TileDef],
+    drawtype: DrawType,
+) -> ContentFeatures {
     let tile_none = TileDef {
         name: String::new(),
         animation: TileAnimationParams::None,
@@ -221,6 +248,11 @@ fn content_features(name: &str, tiles: &[&TileDef], overlays: &[&TileDef]) -> Co
             .unwrap_or(&&tile_none))
         .clone()
     });
+    let tiledef_special = vec![tile_none.clone(); 6];
+
+    let is_water = matches!(drawtype, DrawType::Liquid);
+    let waving = if is_water { 3 } else { 0 };
+    let alpha = is_water.then_some(luanti_protocol::types::AlphaMode::Blend);
 
     ContentFeatures {
         version: CONTENT_FEATURES_VERSION,
@@ -228,37 +260,30 @@ fn content_features(name: &str, tiles: &[&TileDef], overlays: &[&TileDef]) -> Co
         groups: Vec::new(),
         param_type: 0,
         param_type_2: 0,
-        drawtype: DrawType::Normal,
+        drawtype,
         mesh: String::new(),
         visual_scale: 1.0,
         unused_six: 6,
         tiledef,
         tiledef_overlay,
-        tiledef_special: vec![
-            tile_none.clone(),
-            tile_none.clone(),
-            tile_none.clone(),
-            tile_none.clone(),
-            tile_none.clone(),
-            tile_none.clone(),
-        ],
+        tiledef_special,
         alpha_for_legacy: 255,
         red: 255,
         green: 255,
         blue: 255,
         palette_name: String::new(),
-        waving: 0,
+        waving,
         connect_sides: 0,
         connects_to_ids: Vec::new(),
-        post_effect_color: SColor::new(0, 0, 255, 255),
+        post_effect_color: SColor::new(64, 100, 100, 200),
         leveled: 0,
         light_propagates: 0,
         sunlight_propagates: 0,
         light_source: 0,
         is_ground_content: true,
-        walkable: true,
-        pointable: true,
-        diggable: true,
+        walkable: !is_water,
+        pointable: !is_water,
+        diggable: !is_water,
         climbable: false,
         buildable_to: true,
         rightclickable: true,
@@ -269,7 +294,7 @@ fn content_features(name: &str, tiles: &[&TileDef], overlays: &[&TileDef]) -> Co
         liquid_viscosity: 0,
         liquid_renewable: false,
         liquid_range: 0,
-        drowning: 0,
+        drowning: u8::from(is_water),
         floodable: false,
         node_box: NodeBox::Regular,
         selection_box: NodeBox::Regular,
@@ -281,7 +306,7 @@ fn content_features(name: &str, tiles: &[&TileDef], overlays: &[&TileDef]) -> Co
         legacy_wallmounted: false,
         node_dig_prediction: None,
         leveled_max: None,
-        alpha: None,
+        alpha,
         move_resistance: None,
         liquid_move_physics: None,
     }

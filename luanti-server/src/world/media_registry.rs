@@ -1,11 +1,13 @@
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
-
 use anyhow::Result;
+use base64::{Engine, engine::general_purpose::STANDARD};
 use flexstr::SharedStr;
 use log::{debug, warn};
+use sha2::Digest;
+use std::{
+    collections::HashMap,
+    fs,
+    path::{Path, PathBuf},
+};
 
 #[derive(Default)]
 pub(crate) struct MediaRegistry {
@@ -73,6 +75,19 @@ impl MediaRegistry {
         }
 
         Ok(())
+    }
+
+    pub(crate) fn hashes(&self) -> impl Iterator<Item = (&SharedStr, String)> {
+        let hash_base64 = |path| {
+            let mut hasher = sha1::Sha1::new();
+            hasher.update(fs::read(path).unwrap());
+            let hash = hasher.finalize();
+            STANDARD.encode(hash)
+        };
+
+        self.media
+            .iter()
+            .map(move |(name, file)| (name, hash_base64(&file.path)))
     }
 }
 

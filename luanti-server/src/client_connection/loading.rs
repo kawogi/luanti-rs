@@ -1,7 +1,7 @@
 use std::vec;
 
+use crate::MediaRegistry;
 use anyhow::Result;
-use base64::{Engine, engine::general_purpose::STANDARD};
 use log::{debug, error, info, warn};
 use luanti_protocol::{
     LuantiConnection,
@@ -14,7 +14,6 @@ use luanti_protocol::{
     },
     types::{MediaAnnouncement, MediaFileData, NodeDefManager},
 };
-use sha1::Digest;
 
 /// The state after a successful setup.
 /// In this state all map data, media, etc. will be submitted
@@ -36,6 +35,7 @@ impl LoadingState {
         &self,
         connection: &LuantiConnection,
         node_def: &NodeDefManager,
+        media: &MediaRegistry,
     ) -> Result<()> {
         #[expect(
             unused_variables,
@@ -43,59 +43,13 @@ impl LoadingState {
         )]
         let language = self.language.as_ref();
 
-        let textures = vec![
-            (
-                "demo_dirt.png",
-                include_bytes!("../../assets/demo_dirt.png").as_slice(),
-            ),
-            (
-                "demo_grass_east.png",
-                include_bytes!("../../assets/demo_grass_east.png").as_slice(),
-            ),
-            (
-                "demo_grass_north.png",
-                include_bytes!("../../assets/demo_grass_north.png").as_slice(),
-            ),
-            (
-                "demo_grass_south.png",
-                include_bytes!("../../assets/demo_grass_south.png").as_slice(),
-            ),
-            (
-                "demo_grass_west.png",
-                include_bytes!("../../assets/demo_grass_west.png").as_slice(),
-            ),
-            (
-                "demo_grass.png",
-                include_bytes!("../../assets/demo_grass.png").as_slice(),
-            ),
-            (
-                "demo_sand.png",
-                include_bytes!("../../assets/demo_sand.png").as_slice(),
-            ),
-            (
-                "demo_stone.png",
-                include_bytes!("../../assets/demo_stone.png").as_slice(),
-            ),
-            (
-                "demo_water.png",
-                include_bytes!("../../assets/demo_water.png").as_slice(),
-            ),
-        ];
-
-        let mut files = vec![];
-        for (name, png) in textures {
-            // let png = include_bytes!("../../assets/rust_tile_32.png");
-            let mut hasher = sha1::Sha1::new();
-            hasher.update(png);
-            let hash = hasher.finalize();
-            let sha1_base64 = STANDARD.encode(hash);
-
-            let media_announcement = MediaAnnouncement {
-                name: name.into(),
+        let files = media
+            .hashes()
+            .map(|(name, sha1_base64)| MediaAnnouncement {
+                name: name.to_string(),
                 sha1_base64,
-            };
-            files.push(media_announcement);
-        }
+            })
+            .collect();
 
         let itemdef_list = ItemdefList {
             itemdef_manager_version: 0,

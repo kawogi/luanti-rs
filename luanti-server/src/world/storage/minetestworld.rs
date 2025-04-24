@@ -2,14 +2,14 @@ use std::{path::Path, sync::Arc};
 
 use super::WorldStorage;
 use crate::{ContentIdMap, world::WorldBlock};
-use anyhow::Result;
-use log::{debug, info};
+use anyhow::{Result, anyhow};
+use log::{debug, info, trace};
 use luanti_core::{ContentId, MapBlockNodes, MapBlockPos, MapNode, MapNodePos};
-use minetestworld::Position;
+use minetestworld::{MapDataError, Position};
 
 /// A world storage provider which uses the `minetestworld` crate.
 pub(crate) struct MinetestworldStorage {
-    world: minetestworld::World,
+    map_data: minetestworld::MapData,
     content_id_map: Arc<ContentIdMap>,
 }
 
@@ -25,7 +25,7 @@ impl MinetestworldStorage {
         }
 
         Ok(MinetestworldStorage {
-            world,
+            map_data: world.get_map_data().await?,
             content_id_map,
         })
     }
@@ -38,11 +38,17 @@ impl WorldStorage for MinetestworldStorage {
 
     fn load_block(&self, map_block_pos: MapBlockPos) -> Result<Option<WorldBlock>> {
         let (x, y, z) = map_block_pos.vec().into();
-        let map_data: Result<_> = pollster::block_on(async {
-            let map_data = self.world.get_map_data().await?;
-            Ok(map_data.get_mapblock(Position::new(x, y, z)).await?)
-        });
-        let map_block = map_data?;
+        let map_block =
+            pollster::block_on(async { self.map_data.get_mapblock(Position::new(x, y, z)).await });
+
+        let map_block = match map_block {
+            Ok(map_block) => map_block,
+            Err(MapDataError::MapBlockNonexistent(_position)) => {
+                trace!("map block {map_block_pos} doesn't exist in map store");
+                return Ok(None);
+            }
+            Err(error) => return Err(anyhow!(error)),
+        };
 
         let mut id_map = Vec::with_capacity(map_block.name_id_mappings.len());
         for (id, name) in map_block.name_id_mappings {

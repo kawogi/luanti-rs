@@ -28,7 +28,7 @@ members = ["luanti-core", "luanti-protocol", "luanti-protocol-derive", "luanti-s
 [workspace.package]
 version = "0.2.0"
 edition = "2024"
-authors = ["paradust", "kawogi"]
+authors = ["kawogi", "paradust"]
 rust-version = "1.85.0"
 license = "MIT"
 readme = "README.md"

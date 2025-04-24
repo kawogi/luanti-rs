@@ -2,20 +2,22 @@ use super::WorldGenerator;
 use crate::world::WorldBlock;
 use luanti_core::{ContentId, MapBlockNodes, MapBlockPos, MapNode, MapNodeIndex, MapNodePos};
 
-pub(crate) struct MapgenFlat;
+pub(crate) struct MapgenFlat {
+    node: ContentId,
+}
+
+impl MapgenFlat {
+    pub(crate) fn new(node: ContentId) -> Self {
+        Self { node }
+    }
+}
 
 impl WorldGenerator for MapgenFlat {
     fn generate_block(&self, map_block_pos: MapBlockPos) -> WorldBlock {
         let nodes = std::array::from_fn(|index| {
             let node_pos = map_block_pos.node_pos(MapNodeIndex::from(index));
             let content_id = match node_pos.0.y {
-                i16::MIN..0 => {
-                    if (node_pos.0.x & 0x1) == (node_pos.0.z & 0x1) {
-                        ContentId(10) // demo node
-                    } else {
-                        ContentId::UNKNOWN
-                    }
-                }
+                i16::MIN..0 => self.node,
                 _ => ContentId::AIR,
             };
             MapNode {

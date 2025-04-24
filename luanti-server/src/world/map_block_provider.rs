@@ -19,7 +19,7 @@ impl MapBlockProvider {
     ) -> Self {
         let runner = thread::spawn(move || {
             Self::run(request_receiver, &block_sender, storage, generator).inspect_err(|error| {
-                error!("router exited with error: {error}");
+                error!("map block provider exited with error: {error}");
             })
         });
 

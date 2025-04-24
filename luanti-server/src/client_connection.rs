@@ -8,6 +8,7 @@ mod uninitialized;
 
 use std::sync::Arc;
 
+use crate::MediaRegistry;
 use crate::authentication::Authenticator;
 use crate::world::WorldBlock;
 use crate::world::WorldUpdate;
@@ -49,6 +50,7 @@ pub(crate) struct ClientConnection<Auth: Authenticator> {
     world_update_sender: Option<mpsc::UnboundedSender<WorldUpdate>>,
     world_update_receiver: mpsc::UnboundedReceiver<WorldUpdate>,
     node_def: Arc<NodeDefManager>,
+    media: Arc<MediaRegistry>,
 }
 
 impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
@@ -59,6 +61,7 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
         verbosity: u8,
         block_interest_sender: mpsc::UnboundedSender<ToRouterMessage>,
         node_def: Arc<NodeDefManager>,
+        media: Arc<MediaRegistry>,
     ) -> JoinHandle<()> {
         let (world_update_sender, world_update_receiver) = mpsc::unbounded_channel();
 
@@ -73,6 +76,7 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
             world_update_sender: Some(world_update_sender),
             world_update_receiver,
             node_def,
+            media,
         };
         tokio::spawn(async move { runner.run().await })
     }
@@ -151,12 +155,12 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
                         // sending out all media to the client
                         unreachable!();
                     };
-                    loading_state.send_data(&self.connection, &self.node_def)?;
+                    loading_state.send_data(&self.connection, &self.node_def, &self.media)?;
                 } else {
                     debug!("setup is still incomplete");
                 }
             }
-            State::Loading(state) => {
+            State::Loading(_state) => {
                 if LoadingState::handle_message(message, &self.connection)? {
                     debug!("loading successfully completed; switching to authenticated mode");
 
