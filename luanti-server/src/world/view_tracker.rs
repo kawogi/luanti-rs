@@ -136,6 +136,10 @@ impl ViewTracker {
                                 }
                             }
 
+                            #[expect(
+                                unused_variables,
+                                reason = "// TODO(kawogi) this implementation is likely still incomplete"
+                            )]
                             for (&block_pos, state) in &mut map_block_states {
                                 let priority = Priority::from_block_distance(
                                     current_block_pos,
@@ -187,7 +191,11 @@ impl ViewTracker {
                         let block_pos = world_block.pos;
 
                         match map_block_states.entry(block_pos) {
-                            Entry::Occupied(mut occupied_entry) => {
+                            #[expect(
+                                unused_variables,
+                                reason = "// TODO(kawogi) this implementation is likely still incomplete"
+                            )]
+                            Entry::Occupied(occupied_entry) => {
                                 // let mut state = occupied_entry.get_mut();
                                 // if state.sent_to_client {
                                 //     warn!(
@@ -312,12 +320,20 @@ pub(crate) enum PlayerViewEvent {
         // TODO(kawogi) add more information as needed
     },
     /// The player confirmed to have received some blocks
+    #[expect(
+        dead_code,
+        reason = "// TODO(kawogi) this implementation is likely still incomplete"
+    )]
     GotMapBlocks(GotBlocksSpec),
     /// The player reports to have removed some map blocks from its cache
+    #[expect(
+        dead_code,
+        reason = "// TODO(kawogi) this implementation is likely still incomplete"
+    )]
     DroppedBlocks(DeletedblocksSpec),
 }
 
-pub(crate) struct BlockInterest {
+pub struct BlockInterest {
     pub(crate) player_key: SharedStr,
     /// position of the block
     pub(crate) pos: MapBlockPos,
@@ -346,6 +362,10 @@ impl BlockInterest {
 #[derive(Clone, Copy, Default)]
 struct MapBlockState {
     /// How important it is that the player sees this map block
+    #[expect(
+        dead_code,
+        reason = "// TODO(kawogi) this implementation is likely still incomplete"
+    )]
     priority: Priority,
     /// whether this block has been sent to the client
     sent_to_client: bool,

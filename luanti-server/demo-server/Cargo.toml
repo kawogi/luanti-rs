@@ -1,6 +1,6 @@
 [package]
-name = "luanti-server"
-description = "Minimal skeleton implementation of a server compatible with the Luanti protocol"
+name = "demo-server"
+description = "A simple demo server compatible with the Luanti protocol"
 keywords = ["luanti", "minetest", "server"]
 edition.workspace = true
 version.workspace = true
@@ -10,21 +10,22 @@ license.workspace = true
 readme = "README.md"
 repository.workspace = true
 
+[[bin]]
+name = "luanti-server"
+path = "src/main.rs"
+test = false
+bench = false
+
 [dependencies]
+luanti-server.workspace = true
 luanti-protocol.workspace = true
-luanti-core.workspace = true
 
 anyhow = { workspace = true, features = ["backtrace"] }
-base64.workspace = true
+clap = { workspace = true, features = ["derive"] }
+env_logger.workspace = true
 flexstr.workspace = true
-glam.workspace = true
 log.workspace = true
-minetestworld = { workspace = true, features = ["sqlite"] }
 pollster.workspace = true
-rand.workspace = true
-sha1.workspace = true
-sha2.workspace = true
-srp.workspace = true
 tokio = { workspace = true, features = ["full"] }
 
 [lints]

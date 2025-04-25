@@ -13,7 +13,7 @@ use tokio::sync::mpsc::UnboundedSender;
 use tokio::task::JoinHandle;
 
 /// A server providing access to a single Luanti world
-pub(crate) struct LuantiWorldServer {
+pub struct LuantiWorldServer {
     /// used to accept connection from clients
     bind_addr: SocketAddr,
     verbosity: u8,
@@ -23,7 +23,9 @@ pub(crate) struct LuantiWorldServer {
 }
 
 impl LuantiWorldServer {
-    pub(crate) fn new(
+    /// Creates a new [`LuantiWorldServer`].
+    #[must_use]
+    pub fn new(
         bind_addr: SocketAddr,
         verbosity: u8,
         node_def: Arc<NodeDefManager>,
@@ -38,7 +40,13 @@ impl LuantiWorldServer {
         }
     }
 
-    pub(crate) fn start(
+    /// Starts a runner task for the server which listens on the configured socket for incoming
+    /// connections and then return immediately.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the server is already running.
+    pub fn start(
         &mut self,
         authenticator: impl Authenticator + 'static,
         block_interest_sender: UnboundedSender<ToRouterMessage>,

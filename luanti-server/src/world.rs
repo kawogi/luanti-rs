@@ -1,30 +1,36 @@
-pub(crate) mod content_id_map;
-pub(crate) mod generation;
-pub(crate) mod map_block_provider;
-pub(crate) mod map_block_router;
-pub(crate) mod media_registry;
+//! Contains types related to the configuration and state of an entire world.
+//! Everything in here should be kept decoupled from the server types if possible.
+
+pub mod content_id_map;
+pub mod generation;
+pub mod map_block_provider;
+pub mod map_block_router;
+pub mod media_registry;
 pub(crate) mod priority;
-pub(crate) mod storage;
+pub mod storage;
 pub(crate) mod view_tracker;
 
 use luanti_core::{MapBlockNodes, MapBlockPos, MapNodeIndex};
 use luanti_protocol::types::NodeMetadata;
-use storage::WorldStorage;
 
-/// A single Luanti world with all items, nodes, media, etc.
-struct World {
-    /// The user-facing name of the world
-    name: String,
-    /// This is where the world is being stored.
-    storage: Box<dyn WorldStorage>,
-}
+// /// A single Luanti world with all items, nodes, media, etc.
+// struct World {
+//     /// The user-facing name of the world
+//     name: String,
+//     /// This is where the world is being stored.
+//     storage: Box<dyn WorldStorage>,
+// }
 
 /// This is a wrapper for a raw `MapBlock` which contains extra information that simplifies handling
 /// in the API.
 #[derive(Clone)]
-pub(crate) struct WorldBlock {
+pub struct WorldBlock {
     /// number of updates this `MapBlock` has received
     /// This can be used
+    #[expect(
+        dead_code,
+        reason = "// TODO(kawogi) update handling still needs to be implemented"
+    )]
     pub(crate) version: u64,
     /// Location within the world
     pub(crate) pos: MapBlockPos,
@@ -68,7 +74,7 @@ pub(crate) struct WorldBlock {
 
 /// A value of this type describes a change to the world.
 #[derive(Clone)]
-pub(crate) enum WorldUpdate {
+pub enum WorldUpdate {
     /// A new map block was made available. This usually means that this block has just been
     /// generated or loaded from storage.
     ///

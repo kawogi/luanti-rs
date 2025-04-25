@@ -1,3 +1,5 @@
+//! Contains `MapBlockProvider`
+
 use super::{
     WorldUpdate, generation::WorldGenerator, storage::WorldStorage, view_tracker::BlockInterest,
 };
@@ -6,12 +8,21 @@ use log::{error, trace};
 use std::thread::{self, JoinHandle};
 use tokio::sync::mpsc;
 
-pub(crate) struct MapBlockProvider {
+/// Implements a runner which provides map blocks in request.
+/// Possible sources are map storage and map generators.
+pub struct MapBlockProvider {
     _runner: JoinHandle<Result<()>>,
 }
 
 impl MapBlockProvider {
-    pub(crate) fn new(
+    /// Creates a new [`MapBlockProvider`].
+    ///
+    /// - `request_receiver` is being used to accept requests for map blocks
+    /// - `block_sender` is being used to forward map blocks that have been loaded or generated
+    /// - `storage` is being used first to load existing generated map blocks
+    /// - `generator` is being used second to generate map block that could not be loaded
+    #[must_use]
+    pub fn new(
         request_receiver: mpsc::UnboundedReceiver<BlockInterest>,
         block_sender: mpsc::UnboundedSender<WorldUpdate>,
         storage: Option<Box<dyn WorldStorage>>,

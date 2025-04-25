@@ -1,8 +1,12 @@
+use std::sync::Arc;
+
 use log::info;
 use log::warn;
 use luanti_protocol::commands::CommandProperties;
 use luanti_protocol::commands::client_to_server::Init2Spec;
 use luanti_protocol::commands::client_to_server::ToServerCommand;
+
+use crate::world::media_registry::MediaRegistry;
 
 use super::LoadingState;
 
@@ -45,7 +49,7 @@ impl SetupState {
         true
     }
 
-    pub(crate) fn next(&self) -> LoadingState {
-        LoadingState::new(self.language.clone())
+    pub(crate) fn next(&self, media: Arc<MediaRegistry>) -> LoadingState {
+        LoadingState::new(self.language.clone(), media)
     }
 }

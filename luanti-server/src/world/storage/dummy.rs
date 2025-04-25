@@ -1,3 +1,5 @@
+//! contains the `DummyStorage`
+
 use super::WorldStorage;
 use crate::world::WorldBlock;
 use anyhow::Result;
@@ -5,7 +7,7 @@ use luanti_core::MapBlockPos;
 
 /// A world storage provider which actually never stores or loads anything.
 /// This is useful for temporary throwaway worlds and for mapgen tests.
-pub(crate) struct DummyStorage;
+pub struct DummyStorage;
 
 impl WorldStorage for DummyStorage {
     fn store_block(&mut self, _map_block: &WorldBlock) -> Result<()> {

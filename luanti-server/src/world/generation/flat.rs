@@ -1,13 +1,18 @@
+//! contains `MapgenFlat`
+
 use super::WorldGenerator;
 use crate::world::WorldBlock;
 use luanti_core::{ContentId, MapBlockNodes, MapBlockPos, MapNode, MapNodeIndex, MapNodePos};
 
-pub(crate) struct MapgenFlat {
+/// Generates a world where all nodes below z=0 are of a given type, while everything above is air.
+pub struct MapgenFlat {
     node: ContentId,
 }
 
 impl MapgenFlat {
-    pub(crate) fn new(node: ContentId) -> Self {
+    /// Create a new flat world generator.
+    #[must_use]
+    pub fn new(node: ContentId) -> Self {
         Self { node }
     }
 }

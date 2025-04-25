@@ -1,9 +1,13 @@
-pub(crate) mod flat;
+//! Contains the `WorldGenerator` trait and some implementations thereof.
+
+pub mod flat;
 
 use luanti_core::MapBlockPos;
 
 use super::WorldBlock;
 
-pub(crate) trait WorldGenerator: Send + Sync {
+/// This trait is implemented by map generators.
+pub trait WorldGenerator: Send + Sync {
+    /// generate and return a new `WorldBlock` for the given position.
     fn generate_block(&self, pos: MapBlockPos) -> WorldBlock;
 }

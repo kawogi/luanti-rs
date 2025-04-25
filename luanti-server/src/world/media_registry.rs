@@ -1,3 +1,5 @@
+//! Contains `MediaRegistry`
+
 use anyhow::Result;
 use base64::{Engine, engine::general_purpose::STANDARD};
 use flexstr::SharedStr;
@@ -9,13 +11,17 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// Contains a list of media files and provides access to them
 #[derive(Default)]
-pub(crate) struct MediaRegistry {
+pub struct MediaRegistry {
     media: HashMap<SharedStr, MediaFile>,
 }
 
 impl MediaRegistry {
-    pub(crate) fn load_directory(&mut self, path: impl AsRef<Path>) -> Result<()> {
+    /// # Errors
+    ///
+    /// Returns an error if the given directory could not be read.
+    pub fn load_directory(&mut self, path: impl AsRef<Path>) -> Result<()> {
         for entry in path.as_ref().read_dir()? {
             let entry = entry?;
             let file_type = entry.file_type()?;
@@ -80,6 +86,10 @@ impl MediaRegistry {
     pub(crate) fn hashes(&self) -> impl Iterator<Item = (&SharedStr, String)> {
         let hash_base64 = |path| {
             let mut hasher = sha1::Sha1::new();
+            #[expect(
+                clippy::unwrap_used,
+                reason = "// TODO(kawogi) the computation of hashes should be done at load time so that it cannot fail at run-time; also improves performance"
+            )]
             hasher.update(fs::read(path).unwrap());
             let hash = hasher.finalize();
             STANDARD.encode(hash)
@@ -88,6 +98,13 @@ impl MediaRegistry {
         self.media
             .iter()
             .map(move |(name, file)| (name, hash_base64(&file.path)))
+    }
+
+    pub(crate) fn file_content(&self, key: &str) -> Result<Option<Vec<u8>>> {
+        let Some(file) = self.media.get(key) else {
+            return Ok(None);
+        };
+        Ok(Some(fs::read(&file.path)?))
     }
 }
 

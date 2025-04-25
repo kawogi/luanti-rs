@@ -1,22 +1,11 @@
-//! Luanti server implemented in Rust
-// #![expect(clippy::expect_used, reason = "//TODO improve error handling")]
+//! Luanti demo server implemented in Rust
 
-#![expect(
-    clippy::todo,
-    clippy::expect_used,
-    reason = "//TODO remove before completion of the prototype"
-)]
-
-pub mod authentication;
-mod client_connection;
-mod server;
-mod world;
-
+use anyhow::Context;
 use anyhow::bail;
-use authentication::dummy::DummyAuthenticator;
 use clap::ArgGroup;
 use clap::Parser;
 use flexstr::SharedStr;
+use log::info;
 use luanti_protocol::types::AlignStyle;
 use luanti_protocol::types::AlphaMode;
 use luanti_protocol::types::ContentFeatures;
@@ -27,18 +16,19 @@ use luanti_protocol::types::SColor;
 use luanti_protocol::types::SimpleSoundSpec;
 use luanti_protocol::types::TileAnimationParams;
 use luanti_protocol::types::TileDef;
-use server::LuantiWorldServer;
+use luanti_server::authentication::dummy::DummyAuthenticator;
+use luanti_server::server::LuantiWorldServer;
+use luanti_server::world::content_id_map::ContentIdMap;
+use luanti_server::world::generation::flat::MapgenFlat;
+use luanti_server::world::map_block_provider::MapBlockProvider;
+use luanti_server::world::map_block_router::MapBlockRouter;
+use luanti_server::world::media_registry::MediaRegistry;
+use luanti_server::world::storage::minetestworld::MinetestworldStorage;
 use std::array;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc;
-use world::content_id_map::ContentIdMap;
-use world::generation::flat::MapgenFlat;
-use world::map_block_provider::MapBlockProvider;
-use world::map_block_router::MapBlockRouter;
-use world::media_registry::MediaRegistry;
-use world::storage::minetestworld::MinetestworldStorage;
 
 const CONTENT_FEATURES_VERSION: u8 = 13;
 
@@ -87,9 +77,12 @@ async fn real_main() -> anyhow::Result<()> {
     } else {
         bail!("One of --listen or --bind must be specified");
     };
+    info!("Starting demo server on {bind_addr}");
 
     let mut media_registry = MediaRegistry::default();
-    media_registry.load_directory("luanti-server/assets")?;
+    media_registry
+        .load_directory("luanti-server/demo-server/assets")
+        .context("failed to load assets")?;
 
     let mut content_id_map = ContentIdMap::new();
     let content_id_stone = content_id_map.push(SharedStr::from_static("basenodes:stone"))?;

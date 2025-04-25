@@ -1,3 +1,5 @@
+//! Contains the `MinetestworldStorage`
+
 use std::{path::Path, sync::Arc};
 
 use super::WorldStorage;
@@ -8,18 +10,27 @@ use luanti_core::{ContentId, MapBlockNodes, MapBlockPos, MapNode, MapNodePos};
 use minetestworld::{MapDataError, Position};
 
 /// A world storage provider which uses the `minetestworld` crate.
-pub(crate) struct MinetestworldStorage {
+pub struct MinetestworldStorage {
     map_data: minetestworld::MapData,
     content_id_map: Arc<ContentIdMap>,
 }
 
 impl MinetestworldStorage {
-    pub(crate) async fn new(
-        path: impl AsRef<Path>,
+    /// Loads a world from the given path. The path points to a `world`-directory containing a
+    /// `world.mt` file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the given path doesn't contain a valid luanti world.
+    pub async fn new(
+        world_directory: impl AsRef<Path>,
         content_id_map: Arc<ContentIdMap>,
     ) -> Result<Self> {
-        info!("loading world from {path}", path = path.as_ref().display());
-        let world = minetestworld::World::open(path);
+        info!(
+            "loading world from {path}",
+            path = world_directory.as_ref().display()
+        );
+        let world = minetestworld::World::open(world_directory);
         for (key, value) in world.get_world_metadata().await? {
             debug!("world metadata: {key}: {value}");
         }

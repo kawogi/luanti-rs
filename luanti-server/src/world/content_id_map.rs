@@ -1,10 +1,13 @@
+//! Contains `ContentIdMap`
+
 use std::{borrow::Borrow, collections::HashMap, hash::Hash, ops::Index};
 
 use anyhow::{Result, bail};
 use flexstr::SharedStr;
 use luanti_core::ContentId;
 
-pub(crate) struct ContentIdMap {
+/// Translates between numeric content ids and their names
+pub struct ContentIdMap {
     to_name: Vec<SharedStr>,
     to_id: HashMap<NameKey, ContentId>,
 }
@@ -12,7 +15,14 @@ pub(crate) struct ContentIdMap {
 impl ContentIdMap {
     const EMPTY: &SharedStr = &SharedStr::EMPTY;
 
-    pub(crate) fn new() -> Self {
+    /// Create a new id map containing the default mappings for `UNKNOWN`, `AIR` and `IGNORE`.
+    /// This is what you normally need.
+    #[expect(
+        clippy::new_without_default,
+        reason = "a Default implementation is expected to create something less complex"
+    )]
+    #[must_use]
+    pub fn new() -> Self {
         let mut result = Self::empty();
 
         result.insert(ContentId::UNKNOWN, SharedStr::from_static("unknown"));
@@ -34,7 +44,13 @@ impl ContentIdMap {
         self.insert_to_name(id, name);
     }
 
-    pub(crate) fn push(&mut self, name: SharedStr) -> Result<ContentId> {
+    /// Add a new entry to this map and automatically assign a new id.
+    /// Return the assigned content id.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if there's no space left.
+    pub fn push(&mut self, name: SharedStr) -> Result<ContentId> {
         let Some(id) = self.find_free_id() else {
             bail!("cannot create more content ids");
         };

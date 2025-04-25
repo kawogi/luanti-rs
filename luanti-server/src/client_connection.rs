@@ -15,6 +15,7 @@ use crate::world::WorldUpdate;
 use crate::world::map_block_router::ToRouterMessage;
 use crate::world::view_tracker::ViewTracker;
 use anyhow::Result;
+use anyhow::anyhow;
 use authenticating::AuthenticatingState;
 use flexstr::SharedStr;
 use loading::LoadingState;
@@ -83,6 +84,10 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
 
     async fn run(mut self) {
         debug!("starting Luanti server runner");
+        #[expect(
+            clippy::large_futures,
+            reason = "// TODO(kawogi) check whether a refactoring of the state machine can bring this down to normal"
+        )]
         match self.run_inner().await {
             Ok(()) => (),
             Err(err) => {
@@ -146,7 +151,7 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
             State::Setup(state) => {
                 if state.handle_message(message) {
                     debug!("setup successfully completed; switching to loading mode");
-                    let next_state = state.next();
+                    let next_state = state.next(Arc::clone(&self.media));
                     self.language = next_state.language().cloned();
                     self.state = State::Loading(next_state);
 
@@ -160,14 +165,22 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
                     debug!("setup is still incomplete");
                 }
             }
-            State::Loading(_state) => {
-                if LoadingState::handle_message(message, &self.connection)? {
+            State::Loading(state) => {
+                if state.handle_message(message, &self.connection)? {
                     debug!("loading successfully completed; switching to authenticated mode");
 
+                    let block_interest_sender = self
+                        .block_interest_sender
+                        .take()
+                        .ok_or(anyhow!("tried to take block_interest_sender twice"))?;
+                    let world_update_sender = self
+                        .world_update_sender
+                        .take()
+                        .ok_or(anyhow!("tried to take world_update_sender twice"))?;
                     let view_tracker = ViewTracker::new(
                         self.player_key.clone(),
-                        self.block_interest_sender.take().unwrap(),
-                        self.world_update_sender.take().unwrap(),
+                        block_interest_sender,
+                        world_update_sender,
                     )?;
 
                     self.state = State::Running(RunningState::new(view_tracker));

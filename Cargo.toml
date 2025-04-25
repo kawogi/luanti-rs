@@ -23,7 +23,7 @@ workspace = true
 
 [workspace]
 resolver = "2"
-members = ["luanti-core", "luanti-protocol", "luanti-protocol-derive", "luanti-server", "luanti-shark"]
+members = ["luanti-core", "luanti-protocol", "luanti-protocol-derive", "luanti-server", "luanti-shark", "luanti-server/demo-server"]
 
 [workspace.package]
 version = "0.2.0"
@@ -42,6 +42,7 @@ luanti-core = { version = "0.2", path = "luanti-core" }
 luanti-protocol = { version = "0.2", path = "luanti-protocol" }
 luanti-protocol-derive = { version = "0.2", path = "luanti-protocol-derive" }
 luanti-shark = { path = "luanti-shark" }
+luanti-server = { path = "luanti-server" }
 
 # from crates.io
 

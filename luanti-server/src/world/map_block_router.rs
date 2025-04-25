@@ -1,3 +1,5 @@
+//! Contains `MapBlockRouter`
+
 use std::{
     collections::{HashMap, hash_map::Entry},
     mem,
@@ -13,13 +15,17 @@ use tokio::sync::mpsc::{self, error::TryRecvError};
 
 use super::{WorldBlock, WorldUpdate, priority::Priority, view_tracker::BlockInterest};
 
-pub(crate) struct MapBlockRouter {
-    // block_interest_sender: mpsc::UnboundedSender<ToRouterMessage>,
+/// Handles map block requests from multiple players and combines them according to their priority.
+/// The requests will be forwarded to a `MapBlockProvider` which will load or generate those blocks.
+/// The resulting blocks will then be forwarded to the players.
+pub struct MapBlockRouter {
     _runner: JoinHandle<Result<()>>,
 }
 
 impl MapBlockRouter {
-    pub(crate) fn new(
+    /// Creates a new [`MapBlockRouter`].
+    #[must_use]
+    pub fn new(
         block_request_sender: mpsc::UnboundedSender<BlockInterest>,
         world_update_receiver: mpsc::UnboundedReceiver<WorldUpdate>,
         block_interest_receiver: mpsc::UnboundedReceiver<ToRouterMessage>,
@@ -248,12 +254,18 @@ impl EffectiveBlockInterest {
     }
 }
 
-pub(crate) enum ToRouterMessage {
+/// Any message that can be sent from a `ViewTracker` to a `MapBlockRouter`.
+pub enum ToRouterMessage {
+    /// This is the first message to register a new player with the router.
     Register {
+        /// Name of the player
         player_key: SharedStr,
+        /// The channel to send back loaded map blocks
         sender: mpsc::UnboundedSender<WorldUpdate>,
     },
-    #[expect(unused, reason = "//TODO(kawogi) unregister disconnected players")]
+    /// This is the last message used to unregister an existing player
     Unregister(SharedStr),
+    /// Tells the router about which blocks a player is interested in and how important that block
+    /// is to the player.
     BlockInterest(BlockInterest),
 }

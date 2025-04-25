@@ -519,6 +519,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "demo-server"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "env_logger",
+ "flexstr",
+ "log",
+ "luanti-protocol",
+ "luanti-server",
+ "pollster",
+ "tokio",
+]
+
+[[package]]
 name = "der"
 version = "0.7.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1313,8 +1328,6 @@ version = "0.2.0"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
- "clap",
- "env_logger",
  "flexstr",
  "glam",
  "log",

@@ -1,4 +1,4 @@
-use std::vec;
+use std::{sync::Arc, vec};
 
 use crate::MediaRegistry;
 use anyhow::Result;
@@ -19,14 +19,16 @@ use luanti_protocol::{
 /// In this state all map data, media, etc. will be submitted
 pub(super) struct LoadingState {
     language: Option<String>,
+    media: Arc<MediaRegistry>,
     // pub(crate) player_key: SharedStr,
 }
 
 impl LoadingState {
     #[must_use]
-    pub(super) fn new(language: Option<String>) -> Self {
+    pub(super) fn new(language: Option<String>, media: Arc<MediaRegistry>) -> Self {
         Self {
             language,
+            media,
             // player_key,
         }
     }
@@ -74,6 +76,7 @@ impl LoadingState {
     }
 
     pub(crate) fn handle_message(
+        &self,
         message: ToServerCommand,
         connection: &LuantiConnection,
     ) -> Result<bool> {
@@ -82,7 +85,7 @@ impl LoadingState {
                 Self::handle_client_ready(*client_ready_spec, connection)
             }
             ToServerCommand::RequestMedia(request_media_spec) => {
-                Self::handle_request_media(*request_media_spec, connection)
+                self.handle_request_media(*request_media_spec, connection)
             }
             unexpected => {
                 warn!(
@@ -128,6 +131,7 @@ impl LoadingState {
     }
 
     fn handle_request_media(
+        &self,
         request_media_spec: RequestMediaSpec,
         connection: &LuantiConnection,
     ) -> Result<bool> {
@@ -138,28 +142,9 @@ impl LoadingState {
         for file in files {
             debug!("sending file: {file}");
 
-            let data = match file.as_str() {
-                "demo_dirt.png" => include_bytes!("../../assets/demo_dirt.png").to_vec(),
-                "demo_grass_east.png" => {
-                    include_bytes!("../../assets/demo_grass_east.png").to_vec()
-                }
-                "demo_grass_north.png" => {
-                    include_bytes!("../../assets/demo_grass_north.png").to_vec()
-                }
-                "demo_grass_south.png" => {
-                    include_bytes!("../../assets/demo_grass_south.png").to_vec()
-                }
-                "demo_grass_west.png" => {
-                    include_bytes!("../../assets/demo_grass_west.png").to_vec()
-                }
-                "demo_grass.png" => include_bytes!("../../assets/demo_grass.png").to_vec(),
-                "demo_sand.png" => include_bytes!("../../assets/demo_sand.png").to_vec(),
-                "demo_stone.png" => include_bytes!("../../assets/demo_stone.png").to_vec(),
-                "demo_water.png" => include_bytes!("../../assets/demo_water.png").to_vec(),
-                unknown => {
-                    error!("unknown file requested: {unknown}");
-                    continue;
-                }
+            let Some(data) = self.media.file_content(&file)? else {
+                error!("could not find file: {file}");
+                continue;
             };
 
             media_file_data.push(MediaFileData { name: file, data });
