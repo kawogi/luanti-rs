@@ -23,7 +23,7 @@ workspace = true
 
 [workspace]
 resolver = "2"
-members = ["luanti-core", "luanti-protocol", "luanti-protocol-derive", "luanti-server", "luanti-shark", "luanti-server/demo-server"]
+members = ["luanti-core", "luanti-protocol", "luanti-protocol-derive", "luanti-server", "luanti-shark", "luanti-server/demo-server", "luanti-server/lua-runtime"]
 
 [workspace.package]
 version = "0.2.0"
@@ -56,6 +56,7 @@ glam = "0.30"
 log = "0.4"
 minetestworld = "0.5"
 miniz_oxide = "0.8"
+mlua = "0.10.3"
 png = "0.17"
 pollster = "0.4"
 proc-macro2 = "1"

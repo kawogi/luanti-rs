@@ -1,4 +1,4 @@
-//! Luanti demo server implemented in Rust
+//! Luanti demo server
 
 use anyhow::Context;
 use anyhow::bail;

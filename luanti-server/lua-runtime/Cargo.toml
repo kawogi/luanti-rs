@@ -1,0 +1,12 @@
+[package]
+name = "luanti-lua-runtime"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+env_logger.workspace = true
+log.workspace = true
+mlua = { workspace = true, features = ["luajit52", "macros"] }
+
+[lints]
+workspace = true
