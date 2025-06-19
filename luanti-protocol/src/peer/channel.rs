@@ -99,12 +99,10 @@ impl Channel {
     }
 
     pub(crate) fn process_control(&mut self, body: ControlBody) {
-        match body {
-            ControlBody::Ack(ack) => {
-                self.reliable_out.process_ack(&ack);
-            }
+        if let ControlBody::Ack(ack) = body {
+            self.reliable_out.process_ack(&ack);
+        } else {
             // Everything else is handled one level up
-            _ => (),
         }
     }
 
