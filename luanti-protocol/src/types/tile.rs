@@ -20,6 +20,21 @@ pub struct TileDef {
     pub align_style: AlignStyle,
 }
 
+impl Default for TileDef {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            animation: TileAnimationParams::default(),
+            backface_culling: true,
+            tileable_horizontal: true,
+            tileable_vertical: true,
+            color_rgb: None,
+            scale: 0,
+            align_style: AlignStyle::default(),
+        }
+    }
+}
+
 const TILE_FLAG_BACKFACE_CULLING: u16 = 1 << 0;
 const TILE_FLAG_TILEABLE_HORIZONTAL: u16 = 1 << 1;
 const TILE_FLAG_TILEABLE_VERTICAL: u16 = 1 << 2;
@@ -114,8 +129,9 @@ impl Deserialize for TileDef {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Default, Debug, Clone, PartialEq)]
 pub enum TileAnimationParams {
+    #[default]
     None,
     VerticalFrames {
         aspect_w: u16,
@@ -194,8 +210,9 @@ impl Deserialize for TileAnimationParams {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+#[derive(Default, Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub enum AlignStyle {
+    #[default]
     Node,
     World,
     UserDefined,
