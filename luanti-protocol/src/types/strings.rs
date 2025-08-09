@@ -1,8 +1,7 @@
 use crate::wire::{
-    deser::{Deserialize, DeserializeError, DeserializeResult, Deserializer},
+    deser::{Deserialize, DeserializeResult, Deserializer},
     ser::{Serialize, SerializeResult, Serializer},
 };
-use anyhow::bail;
 use std::ops::DerefMut;
 use std::{marker::PhantomData, ops::Deref};
 
@@ -95,10 +94,7 @@ impl Deserialize for String {
         //     num_bytes,
         //     deser.remaining()
         // );
-        match std::str::from_utf8(deser.take(num_bytes)?) {
-            Ok(str) => Ok(str.into()),
-            Err(error) => bail!(DeserializeError::InvalidValue(error.to_string())),
-        }
+        Ok(String::from_utf8_lossy(deser.take(num_bytes)?).into_owned())
     }
 }
 
@@ -117,10 +113,7 @@ impl Deserialize for LongString {
     type Output = String;
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self::Output> {
         let num_bytes = u32::deserialize(deser)? as usize;
-        match std::str::from_utf8(deser.take(num_bytes)?) {
-            Ok(str) => Ok(str.into()),
-            Err(error) => bail!(DeserializeError::InvalidValue(error.to_string())),
-        }
+        Ok(String::from_utf8_lossy(deser.take(num_bytes)?).into_owned())
     }
 }
 
@@ -155,9 +148,6 @@ impl Deserialize for WString {
         for i in 0..length {
             seq[i] = u16::from_be_bytes(raw[2 * i..2 * i + 2].try_into().unwrap());
         }
-        match String::from_utf16(&seq) {
-            Ok(str) => Ok(str),
-            Err(err) => bail!(DeserializeError::InvalidValue(err.to_string())),
-        }
+        Ok(String::from_utf16_lossy(&seq))
     }
 }
