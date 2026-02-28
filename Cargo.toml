@@ -23,7 +23,7 @@ workspace = true
 
 [workspace]
 resolver = "2"
-members = ["luanti-core", "luanti-protocol", "luanti-protocol-derive", "luanti-server", "luanti-shark", "luanti-server/demo-server"]
+members = ["luanti-core", "luanti-protocol", "luanti-protocol-derive", "luanti-server", "luanti-shark", "luanti-server/demo-server", "luanti-cli"]
 
 [workspace.package]
 version = "0.2.0"

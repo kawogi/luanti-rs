@@ -1291,6 +1291,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "luanti-cli"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "env_logger",
+ "flexstr",
+ "log",
+]
+
+[[package]]
 name = "luanti-core"
 version = "0.2.0"
 dependencies = [
