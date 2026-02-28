@@ -13,6 +13,7 @@ use minetestworld::{MapDataError, Position};
 pub struct MinetestworldStorage {
     map_data: minetestworld::MapData,
     content_id_map: Arc<ContentIdMap>,
+    runtime: tokio::runtime::Runtime,
 }
 
 impl MinetestworldStorage {
@@ -35,9 +36,14 @@ impl MinetestworldStorage {
             debug!("world metadata: {key}: {value}");
         }
 
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_time()
+            .build()?;
+
         Ok(MinetestworldStorage {
             map_data: world.get_map_data().await?,
             content_id_map,
+            runtime,
         })
     }
 }
@@ -49,8 +55,9 @@ impl WorldStorage for MinetestworldStorage {
 
     fn load_block(&self, map_block_pos: MapBlockPos) -> Result<Option<WorldBlock>> {
         let (x, y, z) = map_block_pos.vec().into();
-        let map_block =
-            pollster::block_on(async { self.map_data.get_mapblock(Position::new(x, y, z)).await });
+        let map_block = self
+            .runtime
+            .block_on(async { self.map_data.get_mapblock(Position::new(x, y, z)).await });
 
         let map_block = match map_block {
             Ok(map_block) => map_block,

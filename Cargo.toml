@@ -54,7 +54,7 @@ env_logger = "0.11"
 flexstr = "0.11"
 glam = "0.32"
 log = "0.4"
-minetestworld = "0.5"
+minetestworld = { version = "0.6", default-features = false }
 miniz_oxide = "0.9"
 png = "0.18"
 pollster = "0.4"

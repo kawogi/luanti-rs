@@ -20,7 +20,6 @@ flexstr.workspace = true
 glam.workspace = true
 log.workspace = true
 minetestworld = { workspace = true, features = ["sqlite"] }
-pollster.workspace = true
 rand.workspace = true
 sha1.workspace = true
 sha2.workspace = true
