@@ -140,7 +140,7 @@ impl Deserialize for ActiveObjectCommand {
             AO_CMD_SET_ANIMATION_SPEED => {
                 SetAnimationSpeed(AOCSetAnimationSpeed::deserialize(deser)?)
             }
-            _ => bail!("ActiveObjectCommand: Invalid cmd={}", cmd),
+            _ => bail!("ActiveObjectCommand: Invalid cmd={cmd}"),
         })
     }
 }

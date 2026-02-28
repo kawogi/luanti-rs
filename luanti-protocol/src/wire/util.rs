@@ -199,7 +199,7 @@ pub fn from_hex(hex_digit: u8) -> Result<u8> {
     } else if (b'A'..=b'F').contains(&hex_digit) {
         Ok(10 + (hex_digit - b'A'))
     } else {
-        bail!("Invalid hex digit: {}", hex_digit);
+        bail!("Invalid hex digit: {hex_digit}");
     }
 }
 
@@ -366,12 +366,7 @@ pub fn decompress_zlib(input: &[u8]) -> Result<(usize, Vec<u8>)> {
                 ret.resize(new_len, 0);
             }
 
-            err => bail!(
-                "zlib decompression error: in_pos={}, out_pos={}, {:?}",
-                in_pos,
-                out_pos,
-                err
-            ),
+            err => bail!("zlib decompression error: in_pos={in_pos}, out_pos={out_pos}, {err:?}"),
         }
     }
 }
@@ -384,12 +379,11 @@ mod tests {
     use log::error;
     use rand;
     use rand::Rng;
-    use rand::RngCore;
     use rand::rng;
 
     fn rand_bytes(range: Range<usize>) -> Vec<u8> {
         let mut rng = rng();
-        let length = rng.random_range(range);
+        let length = rand::random_range(range);
         let mut input = vec![0_u8; length];
         rng.fill_bytes(input.as_mut_slice());
         input

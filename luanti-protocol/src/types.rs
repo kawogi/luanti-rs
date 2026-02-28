@@ -718,7 +718,6 @@ impl Deserialize for MapBlockHeader {
                 "Invalid MapBlock flags".into(),
             ));
         }
-        #[expect(clippy::if_then_some_else_none, reason = "`?`-operator prohibits this")]
         let lighting_complete = if deser.context().ser_fmt >= 27 {
             Some(u16::deserialize(deser)?)
         } else {
@@ -1471,8 +1470,7 @@ impl Serialize for HudSetParam {
                 u16::serialize(&4, ser)?;
                 i32::serialize(value, ser)?;
             }
-            SetHotBarImage(value) => String::serialize(value, ser)?,
-            SetHotBarSelectedImage(value) => String::serialize(value, ser)?,
+            SetHotBarImage(value) | SetHotBarSelectedImage(value) => String::serialize(value, ser)?,
         }
         Ok(())
     }
@@ -1488,13 +1486,13 @@ impl Deserialize for HudSetParam {
             1 => {
                 let size = u16::deserialize(deser)?;
                 if size != 4 {
-                    bail!("Invalid size in SetHotBarItemCount: {}", size);
+                    bail!("Invalid size in SetHotBarItemCount: {size}");
                 }
                 SetHotBarItemCount(i32::deserialize(deser)?)
             }
             2 => SetHotBarImage(String::deserialize(deser)?),
             3 => SetHotBarSelectedImage(String::deserialize(deser)?),
-            _ => bail!("Invalid HudSetParam param: {}", param),
+            _ => bail!("Invalid HudSetParam param: {param}"),
         })
     }
 }
@@ -1562,7 +1560,7 @@ impl Deserialize for HudFlags {
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         let value = u32::deserialize(deser)?;
         if (value & !0b1_1111_1111) != 0 {
-            bail!("Invalid HudFlags: {}", value);
+            bail!("Invalid HudFlags: {value}");
         }
         Ok(HudFlags::from_u32(value))
     }
@@ -1626,7 +1624,7 @@ impl Deserialize for PointedThing {
     fn deserialize(deser: &mut Deserializer<'_>) -> DeserializeResult<Self> {
         let ver = u8::deserialize(deser)?;
         if ver != 0 {
-            bail!("Invalid PointedThing version: {}", ver);
+            bail!("Invalid PointedThing version: {ver}");
         }
         let typ = u8::deserialize(deser)?;
         Ok(match typ {
@@ -1638,7 +1636,7 @@ impl Deserialize for PointedThing {
             2 => PointedThing::Object {
                 object_id: u16::deserialize(deser)?,
             },
-            _ => bail!("Invalid PointedThing type: {}", typ),
+            _ => bail!("Invalid PointedThing type: {typ}"),
         })
     }
 }
@@ -1740,7 +1738,6 @@ impl Deserialize for InventoryAction {
                 from_i: stoi(deser.take_word(true))?,
                 to_inv: InventoryLocation::deserialize(deser)?,
                 to_list: std::str::from_utf8(deser.take_word(true))?.to_owned(),
-                #[expect(clippy::if_then_some_else_none, reason = "`?`-operator prohibits this")]
                 to_i: if word == b"Move" {
                     Some(stoi(deser.take_word(true))?)
                 } else {
@@ -1825,7 +1822,7 @@ impl Deserialize for InventoryLocation {
                 name: std::str::from_utf8(&word[9..])?.into(),
             })
         } else {
-            Err(anyhow!("Unknown InventoryLocation: {:?}", word))
+            Err(anyhow!("Unknown InventoryLocation: {word:?}"))
         }
     }
 }

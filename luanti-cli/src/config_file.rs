@@ -92,20 +92,23 @@ impl ConfigBuilder {
                     ConfigBuilderState::Complete
                 } else {
                     let Some((key, value)) = trimmed.split_once('=') else {
-                        return Err(anyhow::anyhow!("Invalid config line: {}", line));
+                        return Err(anyhow::anyhow!("Invalid config line: {line}"));
                     };
                     let key = key.trim();
                     let value = value.trim();
 
                     if value == "{" {
                         ConfigBuilderState::Section {
-                            key: key.into(),
+                            key: key.to_owned().into(),
                             builder: Box::new(Self::new(self.config.depth + 1)),
                         }
                     } else {
                         let item = ConfigItem {
                             prelude: mem::take(&mut self.prelude),
-                            key_value: Some((key.into(), ConfigValue::String(value.into()))),
+                            key_value: Some((
+                                key.to_owned().into(),
+                                ConfigValue::String(value.to_owned().into()),
+                            )),
                         };
                         self.config.items.push(item);
                         ConfigBuilderState::Default

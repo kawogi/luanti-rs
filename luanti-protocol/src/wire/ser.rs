@@ -34,7 +34,7 @@ pub trait Serializer {
     // Request writing directly to a slice
     // Needed for random access writes
     // It is not guaranteed the 'f' is called.
-    fn write<F>(&mut self, length: usize, f: F) -> SerializeResult
+    fn write<F>(&mut self, length: usize, write_fn: F) -> SerializeResult
     where
         F: FnOnce(&mut [u8]);
 

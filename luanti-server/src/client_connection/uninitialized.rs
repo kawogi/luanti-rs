@@ -124,7 +124,7 @@ impl<Auth: Authenticator + 'static> UninitializedState<Auth> {
         AuthenticatingState::new(
             self.user_auth_data
                 .take()
-                .expect("tried to progress to the next state while isn't available (this is either a double-call or a premature one)"),
+                .expect("tried to progress to the next state which isn't available (this is either a double-call or a premature one)"),
         )
     }
 }

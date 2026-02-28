@@ -12,5 +12,5 @@ To start a server run the following command:
 cargo run --package demo-server -- --listen 40000
 ```
 
-The server will accept connections from a regular Luanti client (5.11.0) on port 40000.
-Other Clients versions _may_ work as well.
+The server will accept connections from a regular Luanti client (5.11.0) on port 40000 with any
+user name and an empty password. Other Clients versions _may_ work as well.

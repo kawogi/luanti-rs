@@ -4,7 +4,7 @@
 use std::pin::Pin;
 
 use anyhow::Result;
-use rand::RngCore;
+use rand::Rng;
 
 use super::{Authenticator, SrpUserAuthData};
 

@@ -20,7 +20,7 @@ impl Deserialize for bool {
         Ok(match byte {
             0 => false,
             1 => true,
-            _ => bail!("Invalid bool: {}", byte),
+            _ => bail!("Invalid bool: {byte}"),
         })
     }
 }

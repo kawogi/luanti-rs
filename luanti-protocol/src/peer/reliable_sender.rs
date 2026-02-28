@@ -158,7 +158,7 @@ mod tests {
     use std::collections::BTreeSet;
     use std::collections::HashMap;
 
-    use rand::Rng;
+    use rand::RngExt;
     use rand::rng;
 
     use crate::commands::server_to_client::HudrmSpec;

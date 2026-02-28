@@ -71,6 +71,7 @@ impl Deserialize for AccessDeniedCode {
         #![allow(clippy::enum_glob_use, reason = "improves readability")]
         use AccessDeniedCode::*;
         let deny_code = u8::deserialize(deser)?;
+        #[expect(clippy::match_same_arms, reason = "better be explicit")]
         match deny_code {
             0 => Ok(WrongPassword),
             1 => Ok(UnexpectedData),

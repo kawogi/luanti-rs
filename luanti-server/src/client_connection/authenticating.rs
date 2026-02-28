@@ -12,7 +12,7 @@ use luanti_protocol::commands::{
     client_to_server::{SrpBytesASpec, SrpBytesMSpec},
     server_to_client::{AuthAcceptSpec, SrpBytesSBSpec},
 };
-use rand::RngCore;
+use rand::Rng;
 use sha2::Sha256;
 use srp::{
     groups::G_2048,

@@ -139,7 +139,7 @@ impl MapBlockRouter {
                         })
                 {
                     block_request_sender.send(BlockInterest {
-                        player_key: SharedStr::EMPTY,
+                        player_key: SharedStr::empty(),
                         pos,
                         priority,
                     })?;

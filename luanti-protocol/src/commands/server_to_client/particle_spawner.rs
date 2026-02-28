@@ -375,7 +375,7 @@ impl Deserialize for Attractor {
             1 => Attractor::Point(PointAttractor::deserialize(deser)?),
             2 => Attractor::Line(LineAttractor::deserialize(deser)?),
             3 => Attractor::Plane(PlaneAttractor::deserialize(deser)?),
-            _ => bail!("Invalid AttractorKind: {}", kind),
+            _ => bail!("Invalid AttractorKind: {kind}"),
         })
     }
 }
@@ -557,7 +557,7 @@ impl BlendMode {
             1 => BlendMode::Add,
             2 => BlendMode::Sub,
             3 => BlendMode::Screen,
-            _ => bail!("Invalid BlendMode u8: {}", value),
+            _ => bail!("Invalid BlendMode u8: {value}"),
         })
     }
 }

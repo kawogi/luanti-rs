@@ -13,7 +13,7 @@ pub struct ContentIdMap {
 }
 
 impl ContentIdMap {
-    const EMPTY: &SharedStr = &SharedStr::EMPTY;
+    const EMPTY: &SharedStr = &SharedStr::from_borrowed("");
 
     /// Create a new id map containing the default mappings for `UNKNOWN`, `AIR` and `IGNORE`.
     /// This is what you normally need.
@@ -25,9 +25,9 @@ impl ContentIdMap {
     pub fn new() -> Self {
         let mut result = Self::empty();
 
-        result.insert(ContentId::UNKNOWN, SharedStr::from_static("unknown"));
-        result.insert(ContentId::AIR, SharedStr::from_static("air"));
-        result.insert(ContentId::IGNORE, SharedStr::from_static("ignore"));
+        result.insert(ContentId::UNKNOWN, SharedStr::from_borrowed("unknown"));
+        result.insert(ContentId::AIR, SharedStr::from_borrowed("air"));
+        result.insert(ContentId::IGNORE, SharedStr::from_borrowed("ignore"));
 
         result
     }
@@ -61,7 +61,7 @@ impl ContentIdMap {
     fn find_free_id(&self) -> Option<ContentId> {
         self.to_name
             .iter()
-            .position(SharedStr::is_empty)
+            .position(|entry| entry.is_empty())
             .unwrap_or(self.to_name.len())
             .try_into()
             .ok()
@@ -76,7 +76,7 @@ impl ContentIdMap {
             *entry = name;
         } else {
             self.to_name
-                .resize(usize::from(id).saturating_sub(1), SharedStr::EMPTY);
+                .resize(usize::from(id).saturating_sub(1), SharedStr::empty());
             self.to_name.push(name);
         }
     }

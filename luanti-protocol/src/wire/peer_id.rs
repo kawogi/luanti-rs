@@ -1,7 +1,5 @@
 use std::fmt::{self, Display};
 
-use rand::{Rng, SeedableRng, rngs::StdRng};
-
 use crate::wire::{
     deser::{Deserialize, DeserializeResult, Deserializer},
     ser::{Serialize, SerializeResult, Serializer},
@@ -24,7 +22,7 @@ impl PeerId {
     }
 
     pub(crate) fn random() -> Self {
-        Self(StdRng::from_os_rng().random_range(2..0xFFFF))
+        Self(rand::random_range(2..0xFFFF))
     }
 }
 

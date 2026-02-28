@@ -80,7 +80,6 @@ impl Deserialize for TileDef {
         let name = String::deserialize(deserializer)?;
         let animation = TileAnimationParams::deserialize(deserializer)?;
         let flags = u16::deserialize(deserializer)?;
-        #[expect(clippy::if_then_some_else_none, reason = "`?`-operator prohibits this")]
         let color = if (flags & TILE_FLAG_HAS_COLOR) != 0 {
             Some((
                 u8::deserialize(deserializer)?,

@@ -85,17 +85,17 @@ async fn real_main() -> anyhow::Result<()> {
         .context("failed to load assets")?;
 
     let mut content_id_map = ContentIdMap::new();
-    let content_id_stone = content_id_map.push(SharedStr::from_static("basenodes:stone"))?;
-    let content_id_sand = content_id_map.push(SharedStr::from_static("basenodes:sand"))?;
+    let content_id_stone = content_id_map.push(SharedStr::from_borrowed("basenodes:stone"))?;
+    let content_id_sand = content_id_map.push(SharedStr::from_borrowed("basenodes:sand"))?;
     let content_id_dirt_with_grass =
-        content_id_map.push(SharedStr::from_static("basenodes:dirt_with_grass"))?;
-    let content_id_dirt = content_id_map.push(SharedStr::from_static("basenodes:dirt"))?;
+        content_id_map.push(SharedStr::from_borrowed("basenodes:dirt_with_grass"))?;
+    let content_id_dirt = content_id_map.push(SharedStr::from_borrowed("basenodes:dirt"))?;
     let content_id_water_source =
-        content_id_map.push(SharedStr::from_static("basenodes:water_source"))?;
+        content_id_map.push(SharedStr::from_borrowed("basenodes:water_source"))?;
     let content_id_water_flowing =
-        content_id_map.push(SharedStr::from_static("basenodes:water_flowing"))?;
+        content_id_map.push(SharedStr::from_borrowed("basenodes:water_flowing"))?;
     let content_id_block_of_rust =
-        content_id_map.push(SharedStr::from_static("demo:block_of_rust"))?;
+        content_id_map.push(SharedStr::from_borrowed("demo:block_of_rust"))?;
 
     let tile_dirt = tile_def("demo_dirt.png");
     let tile_grass_east = tile_def("demo_grass_east.png");

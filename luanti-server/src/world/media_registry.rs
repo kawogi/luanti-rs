@@ -46,6 +46,7 @@ impl MediaRegistry {
                 continue;
             }
 
+            // TODO switch to camino for UTF-8-only
             let file_name = entry.file_name();
             let Some(file_name) = file_name.to_str() else {
                 debug!(
@@ -66,10 +67,10 @@ impl MediaRegistry {
                 continue;
             }
 
-            if let Some(duplicate) = self
-                .media
-                .insert(file_name.into(), MediaFile { path: entry.path() })
-            {
+            if let Some(duplicate) = self.media.insert(
+                file_name.to_owned().into(),
+                MediaFile { path: entry.path() },
+            ) {
                 warn!(
                     "the media file {} was overloaded by {}",
                     duplicate.path.display(),

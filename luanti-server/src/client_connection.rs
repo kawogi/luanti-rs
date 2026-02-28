@@ -73,7 +73,7 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
             state: State::Uninitialized(UninitializedState::new(authenticator)),
             language: None,
             block_interest_sender: Some(block_interest_sender),
-            player_key: SharedStr::EMPTY,
+            player_key: SharedStr::empty(),
             world_update_sender: Some(world_update_sender),
             world_update_receiver,
             node_def,
@@ -134,7 +134,7 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
                         "initialization successfully completed; switching to authentication mode"
                     );
                     let next_state = state.next();
-                    self.player_key = next_state.player_key().into();
+                    self.player_key = next_state.player_key().to_owned().into();
                     self.state = State::Authenticating(next_state);
                 } else {
                     debug!("initialization is still incomplete");
