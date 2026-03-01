@@ -224,7 +224,7 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
             WorldUpdate::NewMapBlock(world_block) => {
                 let WorldBlock {
                     version: _,
-                    pos: _,
+                    pos,
                     is_underground,
                     day_night_differs,
                     lighting_complete,
@@ -234,7 +234,7 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
 
                 self.connection
                     .send(ToClientCommand::Blockdata(Box::new(BlockdataSpec {
-                        pos: world_block.pos.vec(),
+                        pos: pos.vec(),
                         block: TransferrableMapBlock {
                             is_underground,
                             day_night_differs,
