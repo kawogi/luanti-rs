@@ -79,7 +79,7 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
             node_def,
             media,
         };
-        tokio::spawn(async move { runner.run().await })
+        tokio::spawn(runner.run())
     }
 
     async fn run(mut self) {

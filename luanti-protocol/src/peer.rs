@@ -154,7 +154,7 @@ pub fn new_peer(
         now: Instant::now(),
         last_received: Instant::now(),
     };
-    tokio::spawn(async move { socket_peer_runner.run().await });
+    tokio::spawn(socket_peer_runner.run());
     (socket_peer, socket_peer_io)
 }
 

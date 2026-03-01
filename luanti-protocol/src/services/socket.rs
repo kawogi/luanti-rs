@@ -59,7 +59,7 @@ impl LuantiSocket {
             knock_rx,
             for_server,
         };
-        tokio::spawn(async move { luanti_socket_runner.run().await });
+        tokio::spawn(luanti_socket_runner.run());
         Ok(luanti_socket)
     }
 
@@ -106,7 +106,7 @@ pub struct LuantiSocketRunner {
 }
 
 impl LuantiSocketRunner {
-    pub async fn run(mut self) {
+    pub async fn run(self) {
         // Top-level error handler
         match self.run_inner().await {
             Ok(()) => (),
@@ -116,7 +116,7 @@ impl LuantiSocketRunner {
         }
     }
 
-    pub async fn run_inner(&mut self) -> anyhow::Result<()> {
+    pub async fn run_inner(mut self) -> anyhow::Result<()> {
         let mut knock_closed = false;
         let mut buf = vec![0_u8; MAX_DATAGRAM_SIZE];
 

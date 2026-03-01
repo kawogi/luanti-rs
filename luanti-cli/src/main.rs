@@ -1,4 +1,6 @@
 //! This crate provides some command line tools for administering a Luanti server.
+//!
+//! The current implementation is an incomplete stub at the moment.
 
 mod config_file;
 

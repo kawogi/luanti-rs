@@ -28,9 +28,7 @@ impl LuantiServer {
             server_address,
             accept_tx,
         };
-        tokio::spawn(async move {
-            runner.run().await;
-        });
+        tokio::spawn(runner.run());
         Self { accept_rx }
     }
 
@@ -46,9 +44,14 @@ struct LuantiServerRunner {
 
 impl LuantiServerRunner {
     async fn run(self) {
-        info!("LuantiServer listening on {}", self.server_address);
+        let Self {
+            server_address,
+            accept_tx,
+        } = self;
+
+        info!("LuantiServer listening on {server_address}");
         let mut socket = loop {
-            match LuantiSocket::new(self.server_address, true).await {
+            match LuantiSocket::new(server_address, true).await {
                 Ok(socket) => break socket,
                 Err(err) => {
                     warn!("LuantiServer: bind failed: {err}");
@@ -66,7 +69,7 @@ impl LuantiServerRunner {
             let peer = socket.accept().await.unwrap();
             info!("LuantiServer accepted connection");
             let conn = LuantiConnection::new(peer);
-            if let Err(error) = self.accept_tx.send(conn) {
+            if let Err(error) = accept_tx.send(conn) {
                 error!("Unexpected send fail in LuantiServer: {error}");
             }
         }

@@ -27,7 +27,7 @@ impl MapNodePos {
     /// Position of the map node with the highest possible coordinates.
     pub const MAX: Self = Self(I16Vec3::MAX);
 
-    /// Splits a map node position into its map block position and its index wherein.
+    /// Splits a map node position into its map block position and its index therein.
     #[must_use]
     pub fn split_index(self) -> (MapBlockPos, MapNodeIndex) {
         (self.block_pos(), self.index())

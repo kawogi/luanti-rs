@@ -57,17 +57,14 @@ impl LuantiWorldServer {
         let verbosity = self.verbosity;
         let node_def_clone = Arc::clone(&self.node_def);
         let media_clone = Arc::clone(&self.media);
-        let runner = tokio::spawn(async move {
-            Self::accept_connections(
-                bind_addr,
-                authenticator,
-                verbosity,
-                block_interest_sender.clone(),
-                node_def_clone,
-                media_clone,
-            )
-            .await;
-        });
+        let runner = tokio::spawn(Self::accept_connections(
+            bind_addr,
+            authenticator,
+            verbosity,
+            block_interest_sender,
+            node_def_clone,
+            media_clone,
+        ));
         self.runner.replace(runner);
     }
 

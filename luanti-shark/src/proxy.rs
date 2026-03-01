@@ -41,7 +41,7 @@ impl LuantiProxy {
             forwarding_addr,
             verbosity,
         };
-        tokio::spawn(async move { runner.run().await });
+        tokio::spawn(runner.run());
         LuantiProxy {}
     }
 }
@@ -56,7 +56,13 @@ struct LuantiProxyRunner {
 
 impl LuantiProxyRunner {
     async fn run(self) {
-        let mut server = LuantiServer::new(self.bind_addr);
+        let Self {
+            bind_addr,
+            forwarding_addr,
+            verbosity,
+        } = self;
+
+        let mut server = LuantiServer::new(bind_addr);
         let mut next_id: u64 = 1;
         loop {
             tokio::select! {
@@ -64,11 +70,11 @@ impl LuantiProxyRunner {
                     let id = next_id;
                     next_id += 1;
                     info!("[P{}] New client connected from {:?}", id, conn.remote_addr());
-                    debug!("forwarding connection to {addr}", addr = self.forwarding_addr);
+                    debug!("forwarding connection to {forwarding_addr}");
                     // TODO(kawogi) this outgoing connection attempt blocks accepting new incoming connections
-                    let client = LuantiClient::connect(self.forwarding_addr).await.expect("Connect failed");
-                    debug!("successfully connected to {addr}", addr = self.forwarding_addr);
-                    ProxyAdapterRunner::spawn(id, conn, client, self.verbosity);
+                    let client = LuantiClient::connect(forwarding_addr).await.expect("Connect failed");
+                    debug!("successfully connected to {forwarding_addr}");
+                    ProxyAdapterRunner::spawn(id, conn, client, verbosity);
                 },
             }
         }
@@ -90,7 +96,7 @@ impl ProxyAdapterRunner {
             client,
             verbosity,
         };
-        tokio::spawn(async move { runner.run().await });
+        tokio::spawn(runner.run());
     }
 
     pub(crate) async fn run(mut self) {
