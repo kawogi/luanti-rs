@@ -457,7 +457,7 @@ impl ServerParticleTexture {
         skip_animation: bool,
     ) -> SerializeResult {
         let animated = value.base.animation.is_some();
-        let flags = (value.base.blend_mode.to_u8() << 1) | u8::from(animated);
+        let flags = (u8::from(value.base.blend_mode) << 1) | u8::from(animated);
         u8::serialize(&flags, ser)?;
 
         <TweenedParameter<f32>>::serialize(&value.base.alpha, ser)?;
@@ -526,37 +526,47 @@ impl ParticleTextureFlags {
         (self.0 & 0x0000_0001) != 0
     }
     fn blend_mode(self) -> DeserializeResult<BlendMode> {
-        BlendMode::from_u8(self.0 >> 1)
+        BlendMode::try_from(self.0 >> 1)
     }
 }
 
 /// This is serialized as part of a combined 'flags' field on
-/// `ServerParticleTexture`, so it doesn't implement the  methods
+/// `ServerParticleTexture`, so it doesn't implement the methods
 /// on its own.
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[repr(u8)]
 pub enum BlendMode {
-    Alpha,
-    Add,
-    Sub,
-    Screen,
+    Alpha = Self::ALPHA,
+    Add = Self::ADD,
+    Sub = Self::SUB,
+    Screen = Self::SCREEN,
+    Clip = Self::CLIP,
 }
 
 impl BlendMode {
-    fn to_u8(self) -> u8 {
-        match self {
-            BlendMode::Alpha => 0,
-            BlendMode::Add => 1,
-            BlendMode::Sub => 2,
-            BlendMode::Screen => 3,
-        }
-    }
+    const ALPHA: u8 = 0;
+    const ADD: u8 = 1;
+    const SUB: u8 = 2;
+    const SCREEN: u8 = 3;
+    const CLIP: u8 = 4;
+}
 
-    fn from_u8(value: u8) -> DeserializeResult<BlendMode> {
+impl From<BlendMode> for u8 {
+    fn from(value: BlendMode) -> Self {
+        value as u8
+    }
+}
+
+impl TryFrom<u8> for BlendMode {
+    type Error = anyhow::Error;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
         Ok(match value {
-            0 => BlendMode::Alpha,
-            1 => BlendMode::Add,
-            2 => BlendMode::Sub,
-            3 => BlendMode::Screen,
+            Self::ALPHA => BlendMode::Alpha,
+            Self::ADD => BlendMode::Add,
+            Self::SUB => BlendMode::Sub,
+            Self::SCREEN => BlendMode::Screen,
+            Self::CLIP => BlendMode::Clip,
             _ => bail!("Invalid BlendMode u8: {value}"),
         })
     }
