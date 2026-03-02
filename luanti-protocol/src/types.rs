@@ -411,6 +411,17 @@ pub struct SimpleSoundSpec {
     pub fade: f32,
 }
 
+impl Default for SimpleSoundSpec {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            gain: 1.0,
+            pitch: 1.0,
+            fade: 0.0,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 pub enum DrawType {
     Normal,
@@ -434,14 +445,46 @@ pub enum DrawType {
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub enum ParamType {
+    None,
+    Light,
+}
+
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub enum ParamType2 {
+    None,
+    Full,
+    FlowingLiquid,
+    FaceDir,
+    WallMounted,
+    Leveled,
+    DegRotate,
+    MeshOptions,
+    Color,
+    ColoredFaceDir,
+    ColoredWallMounted,
+    GlassLikeLiquidLevel,
+    ColoredDegRotate,
+    Dir4,
+    ColoredDir4,
+}
+
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub enum LiquidType {
+    None,
+    Flowing,
+    Source,
+}
+
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
 #[expect(clippy::struct_excessive_bools, reason = "this is mandated by the API")]
 pub struct ContentFeatures {
     pub version: u8,
     pub name: String,
     #[wrap(Array16<Pair<String, i16>>)]
     pub groups: Vec<(String, i16)>,
-    pub param_type: u8,
-    pub param_type_2: u8,
+    pub param_type: ParamType,
+    pub param_type_2: ParamType2,
     pub drawtype: DrawType,
     pub mesh: String,
     pub visual_scale: f32,
@@ -464,8 +507,8 @@ pub struct ContentFeatures {
     pub connects_to_ids: Vec<u16>,
     pub post_effect_color: SColor,
     pub leveled: u8,
-    pub light_propagates: u8,
-    pub sunlight_propagates: u8,
+    pub light_propagates: bool,
+    pub sunlight_propagates: bool,
     pub light_source: u8,
     pub is_ground_content: bool,
     pub walkable: bool,
@@ -475,7 +518,7 @@ pub struct ContentFeatures {
     pub buildable_to: bool,
     pub rightclickable: bool,
     pub damage_per_second: u32,
-    pub liquid_type_bc: u8,
+    pub liquid_type_bc: LiquidType,
     pub liquid_alternative_flowing: String,
     pub liquid_alternative_source: String,
     pub liquid_viscosity: u8,
@@ -496,6 +539,72 @@ pub struct ContentFeatures {
     pub alpha: AlphaMode,
     pub move_resistance: u8,
     pub liquid_move_physics: bool,
+}
+
+impl Default for ContentFeatures {
+    // compare to Luanti, nodedef.cpp, ContentFeatures::reset
+    fn default() -> Self {
+        let default_tiles = std::array::from_fn(|_| TileDef::default());
+        Self {
+            version: 1, // compare to NodeDefManager::serialize
+            name: String::new(),
+            groups: vec![(String::from("dig_immediate"), 2)],
+            param_type: ParamType::None,
+            param_type_2: ParamType2::None,
+            drawtype: DrawType::Normal,
+            mesh: String::new(),
+            visual_scale: 1.0,
+            unused_six: 6,
+            tiledef: default_tiles.clone(),
+            tiledef_overlay: default_tiles.clone(),
+            tiledef_special: Vec::from(default_tiles),
+            alpha_for_legacy: 255,
+            red: 255,
+            green: 255,
+            blue: 255,
+            palette_name: String::new(),
+            waving: 0,
+            connect_sides: 0,
+            connects_to_ids: Vec::new(),
+            post_effect_color: SColor(U8Vec4::ZERO),
+            leveled: 0,
+            light_propagates: false,
+            sunlight_propagates: false,
+            light_source: 0,
+            is_ground_content: false,
+            walkable: true,
+            pointable: true,
+            diggable: true,
+            climbable: false,
+            buildable_to: false,
+            rightclickable: true,
+            damage_per_second: 0,
+            liquid_type_bc: LiquidType::None,
+            liquid_alternative_flowing: String::new(),
+            liquid_alternative_source: String::new(),
+            liquid_viscosity: 0,
+            liquid_renewable: true,
+            liquid_range: 8,
+            drowning: 0,
+            floodable: false,
+            node_box: NodeBox::Regular,
+            selection_box: NodeBox::Regular,
+            collision_box: NodeBox::Regular,
+            sound_footstep: SimpleSoundSpec::default(),
+            sound_dig: SimpleSoundSpec {
+                name: String::from("__group"),
+                ..SimpleSoundSpec::default()
+            },
+            sound_dug: SimpleSoundSpec::default(),
+            legacy_facedir_simple: false,
+            legacy_wallmounted: false,
+            node_dig_prediction: String::from("air"),
+            leveled_max: 127,
+            alpha: AlphaMode::Opaque,
+            move_resistance: 0,
+            liquid_move_physics: false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
