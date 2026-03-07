@@ -82,6 +82,7 @@ impl MapBlockPos {
     /// be unnecessary to wrap that in a `MapNodePos`.
     #[must_use]
     pub const fn for_vec(pos: I16Vec3) -> Self {
+        // same as `pos >> MapBlockPos::SIZE_BITS` which wouldn't be `const`
         Self(I16Vec3 {
             x: pos.x >> MapBlockPos::SIZE_BITS,
             y: pos.y >> MapBlockPos::SIZE_BITS,
@@ -92,7 +93,7 @@ impl MapBlockPos {
     /// returns the inner position vector of this block which is measured in block steps from the
     /// origin
     #[must_use]
-    pub fn vec(self) -> I16Vec3 {
+    pub const fn vec(self) -> I16Vec3 {
         self.0
     }
 
@@ -199,7 +200,7 @@ mod tests {
     }
 
     #[test]
-    fn test_for_pos() {
+    fn test_for_vec() {
         assert_eq!(MapBlockPos::for_vec(I16Vec3::ZERO), MapBlockPos::ZERO);
         assert_eq!(MapBlockPos::for_vec(I16Vec3::MAX), MapBlockPos::MAX);
         assert_eq!(MapBlockPos::for_vec(I16Vec3::MIN), MapBlockPos::MIN);
