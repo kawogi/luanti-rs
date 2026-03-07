@@ -20,10 +20,12 @@ pub struct TileDef {
     pub align_style: AlignStyle,
 }
 
-impl Default for TileDef {
-    fn default() -> Self {
+impl TileDef {
+    /// Create a new tile definition with default properties.
+    #[must_use]
+    pub fn new(name: String) -> Self {
         Self {
-            name: String::new(),
+            name,
             animation: TileAnimationParams::default(),
             backface_culling: true,
             tileable_horizontal: true,
@@ -32,6 +34,12 @@ impl Default for TileDef {
             scale: 0,
             align_style: AlignStyle::default(),
         }
+    }
+
+    /// Create a new tile definition that can be used as an empty placeholder.
+    #[must_use]
+    pub fn new_null() -> Self {
+        Self::new(String::new())
     }
 }
 

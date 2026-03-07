@@ -1,5 +1,5 @@
 use crate::types::{
-    Array16, Array32, Option16, Pair, SColor, SimpleSoundSpec, Wrapped16, ZLibCompressed,
+    Array16, Array32, Option16, Pair, SColor, SoundSpec, Wrapped16, ZLibCompressed,
 };
 use crate::wire::{
     deser::{Deserialize, DeserializeResult, Deserializer},
@@ -40,16 +40,16 @@ pub struct ItemDef {
     #[wrap(Array16<Pair<String, i16>>)]
     pub groups: Vec<(String, i16)>,
     pub node_placement_prediction: String,
-    pub sound_place: SimpleSoundSpec,
-    pub sound_place_failed: SimpleSoundSpec,
+    pub sound_place: SoundSpec,
+    pub sound_place_failed: SoundSpec,
     pub range: f32,
     pub palette_image: String,
     pub color: SColor,
     pub inventory_overlay: String,
     pub wield_overlay: String,
     pub short_description: Option<String>,
-    pub sound_use: Option<SimpleSoundSpec>,
-    pub sound_use_air: Option<SimpleSoundSpec>,
+    pub sound_use: Option<SoundSpec>,
+    pub sound_use_air: Option<SoundSpec>,
     pub place_param2: Option<u8>,
 }
 

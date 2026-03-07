@@ -10,10 +10,10 @@ use luanti_protocol::types::AlignStyle;
 use luanti_protocol::types::AlphaMode;
 use luanti_protocol::types::ContentFeatures;
 use luanti_protocol::types::DrawType;
-use luanti_protocol::types::NodeBox;
+use luanti_protocol::types::LiquidType;
 use luanti_protocol::types::NodeDefManager;
+use luanti_protocol::types::PointabilityType;
 use luanti_protocol::types::SColor;
-use luanti_protocol::types::SimpleSoundSpec;
 use luanti_protocol::types::TileAnimationParams;
 use luanti_protocol::types::TileDef;
 use luanti_server::authentication::dummy::DummyAuthenticator;
@@ -29,8 +29,6 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc;
-
-const CONTENT_FEATURES_VERSION: u8 = 13;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -204,109 +202,51 @@ fn tile_def(name: &str) -> TileDef {
     }
 }
 
-// #[expect(clippy::too_many_lines, reason = "//TODO fix this later")]
-#[expect(clippy::similar_names, reason = "English being English")]
 fn content_features(
     name: &str,
     tiles: &[&TileDef],
     overlays: &[&TileDef],
     drawtype: DrawType,
 ) -> ContentFeatures {
-    let tile_none = TileDef {
-        name: String::new(),
-        animation: TileAnimationParams::None,
-        backface_culling: true,
-        tileable_horizontal: false,
-        tileable_vertical: false,
-        color_rgb: None,
-        scale: 0,
-        align_style: AlignStyle::Node,
-    };
-
-    let no_sound = SimpleSoundSpec {
-        name: String::new(),
-        gain: 1.0,
-        pitch: 1.0,
-        fade: 1.0,
-    };
-    let sound_footstep = no_sound.clone();
-    let sound_dig = no_sound.clone();
-    let sound_dug = no_sound.clone();
-
-    let tiledef =
-        array::from_fn(|index| (*tiles.get(index).or(tiles.last()).unwrap_or(&&tile_none)).clone());
+    let tiledef = array::from_fn(|index| {
+        (*tiles
+            .get(index)
+            .or(tiles.last())
+            .unwrap_or(&&TileDef::new(String::new())))
+        .clone()
+    });
     let tiledef_overlay = array::from_fn(|index| {
         (*overlays
             .get(index)
             .or(overlays.last())
-            .unwrap_or(&&tile_none))
+            .unwrap_or(&&TileDef::new(String::new())))
         .clone()
     });
-    let tiledef_special = vec![tile_none.clone(); 6];
 
     let is_water = matches!(drawtype, DrawType::Liquid);
-    let waving = if is_water { 3 } else { 0 };
-    let alpha = if is_water {
-        AlphaMode::Blend
+    if is_water {
+        ContentFeatures {
+            drawtype,
+            tiledef,
+            tiledef_overlay,
+            alpha_for_legacy: 160,
+            waving: 3,
+            post_effect_color: SColor::new(64, 100, 100, 200),
+            walkable: false,
+            pointable: PointabilityType::PointableNot,
+            diggable: false,
+            liquid_type: LiquidType::Source,
+            drowning: 1,
+            alpha: AlphaMode::Blend,
+            liquid_move_physics: true,
+            ..ContentFeatures::new_unknown(name.into())
+        }
     } else {
-        AlphaMode::Opaque
-    };
-    let alpha_for_legacy = if is_water { 160 } else { 255 };
-
-    ContentFeatures {
-        version: CONTENT_FEATURES_VERSION,
-        name: name.into(),
-        groups: Vec::new(),
-        param_type: 0,
-        param_type_2: 0,
-        drawtype,
-        mesh: String::new(),
-        visual_scale: 1.0,
-        unused_six: 6,
-        tiledef,
-        tiledef_overlay,
-        tiledef_special,
-        alpha_for_legacy,
-        red: 255,
-        green: 255,
-        blue: 255,
-        palette_name: String::new(),
-        waving,
-        connect_sides: 0,
-        connects_to_ids: Vec::new(),
-        post_effect_color: SColor::new(64, 100, 100, 200),
-        leveled: 0,
-        light_propagates: 0,
-        sunlight_propagates: 0,
-        light_source: 0,
-        is_ground_content: true,
-        walkable: !is_water,
-        pointable: !is_water,
-        diggable: !is_water,
-        climbable: false,
-        buildable_to: true,
-        rightclickable: true,
-        damage_per_second: 0,
-        liquid_type_bc: 0,
-        liquid_alternative_flowing: String::new(),
-        liquid_alternative_source: String::new(),
-        liquid_viscosity: 0,
-        liquid_renewable: false,
-        liquid_range: 0,
-        drowning: u8::from(is_water),
-        floodable: false,
-        node_box: NodeBox::Regular,
-        selection_box: NodeBox::Regular,
-        collision_box: NodeBox::Regular,
-        sound_footstep,
-        sound_dig,
-        sound_dug,
-        legacy_facedir_simple: false,
-        legacy_wallmounted: false,
-        node_dig_prediction: String::new(),
-        leveled_max: 0,
-        alpha,
-        move_resistance: 255,
-        liquid_move_physics: true,
+        ContentFeatures {
+            drawtype,
+            tiledef,
+            tiledef_overlay,
+            ..ContentFeatures::new_unknown(name.into())
+        }
     }
 }

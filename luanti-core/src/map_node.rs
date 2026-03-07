@@ -4,6 +4,22 @@
 use crate::{content_id::ContentId, map_block::MapBlockPos};
 use glam::{I16Vec3, U8Vec3, U16Vec3, UVec3};
 
+/// Masks for MapNode.param2 of flowing liquids
+pub(crate) const LIQUID_LEVEL_MASK: u8 = 0x07;
+// pub(crate) const LIQUID_FLOW_DOWN_MASK: u8 = 0x08;
+
+/// maximum amount of liquid in a block
+pub(crate) const LIQUID_LEVEL_MAX: u8 = LIQUID_LEVEL_MASK;
+/// liquid level indicating a source node
+pub const LIQUID_LEVEL_SOURCE: u8 = LIQUID_LEVEL_MAX + 1;
+
+// pub(crate) const LIQUID_INFINITY_MASK: u8 = 0x80; //0b10000000
+
+/// mask for leveled nodebox param2
+pub(crate) const LEVELED_MASK: u8 = 0x7F;
+/// maximum value for the level parameter of a node
+pub const LEVELED_MAX: u8 = LEVELED_MASK;
+
 /// A single map node with its parameters.
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct MapNode {

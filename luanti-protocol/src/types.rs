@@ -62,6 +62,8 @@ use glam::U8Vec4;
 use glam::Vec3;
 use glam::Vec4Swizzles;
 use luanti_core::ContentId;
+use luanti_core::LEVELED_MAX;
+use luanti_core::LIQUID_LEVEL_SOURCE;
 use luanti_core::MapNode;
 use luanti_core::MapNodeIndex;
 use luanti_protocol_derive::LuantiDeserialize;
@@ -72,6 +74,10 @@ use std::fmt;
 use std::marker::PhantomData;
 pub use strings::*;
 pub use tile::*;
+
+/// `PROTOCOL_VERSION` >= 37. This is legacy and should not be increased anymore,
+/// write checks that depend directly on the protocol version instead.
+const CONTENTFEATURES_VERSION: u8 = 13;
 
 pub type CommandId = u8;
 
@@ -404,21 +410,28 @@ impl Deserialize for AuthMechsBitset {
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
-pub struct SimpleSoundSpec {
+pub struct SoundSpec {
     pub name: String,
     pub gain: f32,
     pub pitch: f32,
     pub fade: f32,
 }
 
-impl Default for SimpleSoundSpec {
-    fn default() -> Self {
+impl SoundSpec {
+    /// Create a new instance with default configuration
+    #[must_use]
+    pub fn new(name: String) -> Self {
         Self {
-            name: String::new(),
+            name,
             gain: 1.0,
             pitch: 1.0,
             fade: 0.0,
         }
+    }
+
+    /// Create a new placeholder value.
+    fn new_null() -> Self {
+        Self::new(String::new())
     }
 }
 
@@ -512,13 +525,13 @@ pub struct ContentFeatures {
     pub light_source: u8,
     pub is_ground_content: bool,
     pub walkable: bool,
-    pub pointable: bool,
+    pub pointable: PointabilityType,
     pub diggable: bool,
     pub climbable: bool,
     pub buildable_to: bool,
     pub rightclickable: bool,
     pub damage_per_second: u32,
-    pub liquid_type_bc: LiquidType,
+    pub liquid_type: LiquidType,
     pub liquid_alternative_flowing: String,
     pub liquid_alternative_source: String,
     pub liquid_viscosity: u8,
@@ -529,9 +542,9 @@ pub struct ContentFeatures {
     pub node_box: NodeBox,
     pub selection_box: NodeBox,
     pub collision_box: NodeBox,
-    pub sound_footstep: SimpleSoundSpec,
-    pub sound_dig: SimpleSoundSpec,
-    pub sound_dug: SimpleSoundSpec,
+    pub sound_footstep: SoundSpec,
+    pub sound_dig: SoundSpec,
+    pub sound_dug: SoundSpec,
     pub legacy_facedir_simple: bool,
     pub legacy_wallmounted: bool,
     pub node_dig_prediction: String,
@@ -541,14 +554,19 @@ pub struct ContentFeatures {
     pub liquid_move_physics: bool,
 }
 
-impl Default for ContentFeatures {
-    // compare to Luanti, nodedef.cpp, ContentFeatures::reset
-    fn default() -> Self {
-        let default_tiles = std::array::from_fn(|_| TileDef::default());
+impl ContentFeatures {
+    /// Create a new node description with all fields set to a default configuration of an unknown node.
+    ///
+    /// This can be used as a basis to derive own node definitions.
+    #[must_use]
+    pub fn new_unknown(name: String) -> Self {
+        let default_tiles = std::array::from_fn(|_| TileDef::new(String::new()));
+        // compare field values to Luanti, `nodedef.cpp`, `ContentFeatures::reset`
         Self {
-            version: 1, // compare to NodeDefManager::serialize
-            name: String::new(),
-            groups: vec![(String::from("dig_immediate"), 2)],
+            version: CONTENTFEATURES_VERSION, // compare to NodeDefManager::serialize
+            name,
+            // Unknown nodes can be dug
+            groups: vec![("dig_immediate".into(), 2)],
             param_type: ParamType::None,
             param_type_2: ParamType2::None,
             drawtype: DrawType::Normal,
@@ -557,7 +575,7 @@ impl Default for ContentFeatures {
             unused_six: 6,
             tiledef: default_tiles.clone(),
             tiledef_overlay: default_tiles.clone(),
-            tiledef_special: Vec::from(default_tiles),
+            tiledef_special: default_tiles.to_vec(),
             alpha_for_legacy: 255,
             red: 255,
             green: 255,
@@ -573,38 +591,98 @@ impl Default for ContentFeatures {
             light_source: 0,
             is_ground_content: false,
             walkable: true,
-            pointable: true,
+            pointable: PointabilityType::Pointable,
             diggable: true,
             climbable: false,
             buildable_to: false,
             rightclickable: true,
             damage_per_second: 0,
-            liquid_type_bc: LiquidType::None,
+            liquid_type: LiquidType::None,
             liquid_alternative_flowing: String::new(),
             liquid_alternative_source: String::new(),
             liquid_viscosity: 0,
             liquid_renewable: true,
-            liquid_range: 8,
+            liquid_range: LIQUID_LEVEL_SOURCE,
             drowning: 0,
             floodable: false,
             node_box: NodeBox::Regular,
             selection_box: NodeBox::Regular,
             collision_box: NodeBox::Regular,
-            sound_footstep: SimpleSoundSpec::default(),
-            sound_dig: SimpleSoundSpec {
-                name: String::from("__group"),
-                ..SimpleSoundSpec::default()
-            },
-            sound_dug: SimpleSoundSpec::default(),
+            sound_footstep: SoundSpec::new_null(),
+            sound_dig: SoundSpec::new("__group".into()),
+            sound_dug: SoundSpec::new_null(),
             legacy_facedir_simple: false,
             legacy_wallmounted: false,
-            node_dig_prediction: String::from("air"),
-            leveled_max: 127,
+            node_dig_prediction: "air".into(),
+            leveled_max: LEVELED_MAX,
             alpha: AlphaMode::Opaque,
             move_resistance: 0,
             liquid_move_physics: false,
+            // post_effect_color_shaded: false,
         }
     }
+
+    /// Create the node definition for `CONTENT_UNKNOWN`.
+    #[must_use]
+    pub fn unknown() -> Self {
+        let tiledef = std::array::from_fn(|_| TileDef::new("unknown_node.png".into()));
+
+        Self {
+            tiledef,
+            ..Self::new_unknown("unknown".into())
+        }
+    }
+
+    /// Create the node definition for `CONTENT_AIR`.
+    #[must_use]
+    pub fn air() -> Self {
+        Self {
+            drawtype: DrawType::AirLike,
+            param_type: ParamType::Light,
+            light_propagates: true,
+            sunlight_propagates: true,
+            walkable: false,
+            pointable: PointabilityType::PointableNot,
+            diggable: false,
+            buildable_to: true,
+            floodable: true,
+            is_ground_content: true,
+            ..Self::new_unknown("air".into())
+        }
+    }
+
+    /// Create the node definition for `CONTENT_IGNORE`.
+    #[must_use]
+    pub fn ignore() -> Self {
+        Self {
+            drawtype: DrawType::AirLike,
+            param_type: ParamType::None,
+            light_propagates: false,
+            sunlight_propagates: false,
+            walkable: false,
+            pointable: PointabilityType::PointableNot,
+            diggable: false,
+            buildable_to: true, // A way to remove accidental CONTENT_IGNORE
+            is_ground_content: true,
+            ..Self::new_unknown("ignore".into())
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
+pub enum PointabilityType {
+    // Can be pointed through.
+    // Note: This MUST be the 0-th item in the enum for backwards compat.
+    // Older Minetest versions send "pointable=false" as "0".
+    PointableNot,
+    // Is pointable.
+    // Note: This MUST be the 1-th item in the enum for backwards compat:
+    // Older Minetest versions send "pointable=true" as "1".
+    Pointable,
+    // Note: Since (u8) 2 is truthy,
+    // older clients will understand this as "pointable=true",
+    // which is a reasonable fallback.
+    PointableBlocking,
 }
 
 #[derive(Debug, Clone, PartialEq, LuantiSerialize, LuantiDeserialize)]
