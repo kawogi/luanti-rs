@@ -16,7 +16,9 @@ use luanti_protocol::types::InventoryAction;
 use luanti_protocol::types::InventoryLocation;
 use luanti_protocol::types::PlayerPos;
 use luanti_protocol::types::PointedThing;
+use tokio::sync::mpsc;
 
+use crate::api::ToPluginEvent;
 use crate::world::view_tracker::PlayerViewEvent;
 use crate::world::view_tracker::ViewTracker;
 
@@ -28,6 +30,7 @@ pub(super) struct RunningState {
     // /// Our channel endpoint informing this connection endpoint about changes in the world that
     // /// shall be forwarded to the client.
     // world_update_receiver: UnboundedReceiver<WorldUpdate>,
+    plugin_event_sender: mpsc::UnboundedSender<ToPluginEvent>,
 }
 
 impl RunningState {
@@ -36,8 +39,12 @@ impl RunningState {
         // player_key: SharedStr,
         // block_interest_sender: UnboundedSender<ToRouterMessage>,
         view_tracker: ViewTracker,
+        plugin_event_sender: mpsc::UnboundedSender<ToPluginEvent>,
     ) -> Self {
-        Self { view_tracker }
+        Self {
+            view_tracker,
+            plugin_event_sender,
+        }
     }
 
     pub(crate) fn handle_message(
@@ -47,19 +54,27 @@ impl RunningState {
     ) -> Result<()> {
         match message {
             ToServerCommand::Playerpos(player_pos_command) => {
-                self.handle_player_pos(*player_pos_command)?;
+                self.handle_player_pos(*player_pos_command.clone())?;
+                let event = ToPluginEvent::Playerpos(*player_pos_command);
+                self.plugin_event_sender.send(event)?;
             }
             ToServerCommand::UpdateClientInfo(update_client_info_spec) => {
                 Self::handle_update_client_info(&update_client_info_spec)?;
             }
-            ToServerCommand::ModchannelJoin(_modchannel_join_spec) => {
-                todo!();
+            ToServerCommand::ModchannelJoin(modchannel_join_spec) => {
+                let event = ToPluginEvent::ModchannelJoin(*modchannel_join_spec);
+                self.plugin_event_sender.send(event)?;
+                // todo!();
             }
-            ToServerCommand::ModchannelLeave(_modchannel_leave_spec) => {
-                todo!();
+            ToServerCommand::ModchannelLeave(modchannel_leave_spec) => {
+                let event = ToPluginEvent::ModchannelLeave(*modchannel_leave_spec);
+                self.plugin_event_sender.send(event)?;
+                // todo!();
             }
-            ToServerCommand::TSModchannelMsg(_tsmodchannel_msg_spec) => {
-                todo!();
+            ToServerCommand::TSModchannelMsg(ts_modchannel_msg_spec) => {
+                let event = ToPluginEvent::TSModchannelMsg(*ts_modchannel_msg_spec);
+                self.plugin_event_sender.send(event)?;
+                // todo!();
             }
             ToServerCommand::GotBlocks(got_blocks_spec) => {
                 Self::handle_got_blocks(*got_blocks_spec)?;
@@ -68,31 +83,47 @@ impl RunningState {
                 todo!();
             }
             ToServerCommand::InventoryAction(inventory_action_spec) => {
-                Self::handle_inventory_action(*inventory_action_spec)?;
+                Self::handle_inventory_action(*inventory_action_spec.clone())?;
+                let event = ToPluginEvent::InventoryAction(*inventory_action_spec);
+                self.plugin_event_sender.send(event)?;
             }
-            ToServerCommand::TSChatMessage(tschat_message_spec) => {
-                Self::handle_chat_message(*tschat_message_spec)?;
+            ToServerCommand::TSChatMessage(ts_chat_message_spec) => {
+                Self::handle_chat_message(*ts_chat_message_spec.clone())?;
+                let event = ToPluginEvent::TSChatMessage(*ts_chat_message_spec);
+                self.plugin_event_sender.send(event)?;
             }
             ToServerCommand::Damage(damage_spec) => {
                 Self::handle_damage(&damage_spec)?;
+                let event = ToPluginEvent::Damage(*damage_spec);
+                self.plugin_event_sender.send(event)?;
             }
             ToServerCommand::PlayerItem(player_item_spec) => {
                 Self::handle_player_item(&player_item_spec)?;
+                let event = ToPluginEvent::PlayerItem(*player_item_spec);
+                self.plugin_event_sender.send(event)?;
             }
-            ToServerCommand::Respawn(_respawn_spec) => {
-                todo!();
+            ToServerCommand::Respawn(respawn_spec) => {
+                let event = ToPluginEvent::Respawn(*respawn_spec);
+                self.plugin_event_sender.send(event)?;
+                // todo!();
             }
             ToServerCommand::Interact(interact_spec) => {
-                Self::handle_interact(*interact_spec)?;
+                Self::handle_interact(*interact_spec.clone())?;
+                let event = ToPluginEvent::Interact(*interact_spec);
+                self.plugin_event_sender.send(event)?;
             }
             ToServerCommand::RemovedSounds(_removed_sounds_spec) => {
-                todo!();
+                // todo!();
             }
-            ToServerCommand::NodemetaFields(_nodemeta_fields_spec) => {
-                todo!();
+            ToServerCommand::NodemetaFields(nodemeta_fields_spec) => {
+                let event = ToPluginEvent::NodemetaFields(*nodemeta_fields_spec);
+                self.plugin_event_sender.send(event)?;
+                // todo!();
             }
-            ToServerCommand::InventoryFields(_inventory_fields_spec) => {
-                todo!();
+            ToServerCommand::InventoryFields(inventory_fields_spec) => {
+                let event = ToPluginEvent::InventoryFields(*inventory_fields_spec);
+                self.plugin_event_sender.send(event)?;
+                // todo!();
             }
             ToServerCommand::HaveMedia(_have_media_spec) => {
                 todo!();

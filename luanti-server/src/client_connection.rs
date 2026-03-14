@@ -9,6 +9,8 @@ mod uninitialized;
 use std::sync::Arc;
 
 use crate::MediaRegistry;
+use crate::api::FromPluginEvent;
+use crate::api::ToPluginEvent;
 use crate::authentication::Authenticator;
 use crate::world::WorldBlock;
 use crate::world::WorldUpdate;
@@ -52,6 +54,8 @@ pub(crate) struct ClientConnection<Auth: Authenticator> {
     world_update_receiver: mpsc::UnboundedReceiver<WorldUpdate>,
     node_def: Arc<NodeDefManager>,
     media: Arc<MediaRegistry>,
+    plugin_event_sender: mpsc::UnboundedSender<ToPluginEvent>,
+    from_plugin_event_receiver: mpsc::UnboundedReceiver<FromPluginEvent>,
 }
 
 impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
@@ -63,6 +67,8 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
         block_interest_sender: mpsc::UnboundedSender<ToRouterMessage>,
         node_def: Arc<NodeDefManager>,
         media: Arc<MediaRegistry>,
+        plugin_event_sender: mpsc::UnboundedSender<ToPluginEvent>,
+        from_plugin_event_receiver: mpsc::UnboundedReceiver<FromPluginEvent>,
     ) -> JoinHandle<()> {
         let (world_update_sender, world_update_receiver) = mpsc::unbounded_channel();
 
@@ -78,6 +84,8 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
             world_update_receiver,
             node_def,
             media,
+            plugin_event_sender,
+            from_plugin_event_receiver,
         };
         tokio::spawn(runner.run())
     }
@@ -106,21 +114,49 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
     }
 
     async fn run_inner(&mut self) -> Result<()> {
+        enum Event {
+            ClientMessage(Result<ToServerCommand>),
+            WorldUpdate(Option<WorldUpdate>),
+            FromPlugin(Option<FromPluginEvent>),
+        }
+
         loop {
             // TODO(kawogi) review whether this should be refactored; all state transitions seem to be expressible as a simple sequence and do not require a full-fledged state machine
-            tokio::select! {
-                message = self.connection.recv() => {
+            let event = tokio::select! {
+                message = self.connection.recv() => Event::ClientMessage(message),
+                message = self.world_update_receiver.recv() => Event::WorldUpdate(message),
+                message = self.from_plugin_event_receiver.recv() => Event::FromPlugin(message),
+            };
+
+            match event {
+                Event::ClientMessage(message) => {
                     trace!("connection.recv: {message:?}");
                     let message = message?;
                     self.maybe_show(&message);
                     self.handle_client_message(message).await?;
-                },
-                message = self.world_update_receiver.recv() => {
+                }
+                Event::WorldUpdate(message) => {
                     trace!("world_update_receiver.recv: {message:?}");
                     let Some(message) = message else {
                         anyhow::bail!("world update sender has been disconnected");
                     };
                     self.handle_world_update(message)?;
+                }
+                Event::FromPlugin(message) => {
+                    trace!("from_plugin_event_receiver.recv: {message:?}");
+                    let Some(message) = message else {
+                        anyhow::bail!("plugin sender has been disconnected");
+                    };
+                    match message {
+                        FromPluginEvent::Fov(fov) => {
+                            if self.connection.send(fov).is_err() {
+                                error!("failed to send API command");
+                            }
+                        }
+                        other => {
+                            error!("unhandled API call: {other:?}");
+                        }
+                    }
                 }
             }
         }
@@ -183,7 +219,10 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
                         world_update_sender,
                     )?;
 
-                    self.state = State::Running(RunningState::new(view_tracker));
+                    self.state = State::Running(RunningState::new(
+                        view_tracker,
+                        self.plugin_event_sender.clone(),
+                    ));
                 } else {
                     debug!("loading is still incomplete");
                 }

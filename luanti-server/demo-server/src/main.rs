@@ -6,16 +6,32 @@ use clap::ArgGroup;
 use clap::Parser;
 use flexstr::SharedStr;
 use log::info;
+use luanti_protocol::commands::client_to_server::DamageSpec;
+use luanti_protocol::commands::client_to_server::InteractSpec;
+use luanti_protocol::commands::client_to_server::InventoryActionSpec;
+use luanti_protocol::commands::client_to_server::InventoryFieldsSpec;
+use luanti_protocol::commands::client_to_server::ModchannelJoinSpec;
+use luanti_protocol::commands::client_to_server::ModchannelLeaveSpec;
+use luanti_protocol::commands::client_to_server::NodemetaFieldsSpec;
+use luanti_protocol::commands::client_to_server::PlayerItemSpec;
+use luanti_protocol::commands::client_to_server::PlayerPosCommand;
+use luanti_protocol::commands::client_to_server::RespawnSpec;
+use luanti_protocol::commands::client_to_server::TSChatMessageSpec;
+use luanti_protocol::commands::client_to_server::TSModchannelMsgSpec;
 use luanti_protocol::types::AlignStyle;
 use luanti_protocol::types::AlphaMode;
 use luanti_protocol::types::ContentFeatures;
 use luanti_protocol::types::DrawType;
+use luanti_protocol::types::InventoryAction;
 use luanti_protocol::types::LiquidType;
 use luanti_protocol::types::NodeDefManager;
+use luanti_protocol::types::PlayerPos;
 use luanti_protocol::types::PointabilityType;
 use luanti_protocol::types::SColor;
 use luanti_protocol::types::TileAnimationParams;
 use luanti_protocol::types::TileDef;
+use luanti_server::api::FromPluginEvent;
+use luanti_server::api::ToPluginEvent;
 use luanti_server::authentication::dummy::DummyAuthenticator;
 use luanti_server::server::LuantiWorldServer;
 use luanti_server::world::content_id_map::ContentIdMap;
@@ -24,11 +40,19 @@ use luanti_server::world::map_block_provider::MapBlockProvider;
 use luanti_server::world::map_block_router::MapBlockRouter;
 use luanti_server::world::media_registry::MediaRegistry;
 use luanti_server::world::storage::minetestworld::MinetestworldStorage;
+use pyo3::Python;
+use pyo3::types::PyAnyMethods;
+use pyo3::types::PyModule;
 use std::array;
+use std::ffi::CString;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::sync::Mutex;
+use std::thread;
 use std::time::Duration;
 use tokio::sync::mpsc;
+use tokio::sync::mpsc::UnboundedReceiver;
+use tokio::sync::mpsc::UnboundedSender;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -61,7 +85,18 @@ async fn real_main() -> anyhow::Result<()> {
         .filter_level(log::LevelFilter::Trace)
         .init();
 
+    let (to_plugin_event_sender, to_plugin_event_receiver) = mpsc::unbounded_channel();
+    let (from_plugin_event_sender, from_plugin_event_receiver) = mpsc::unbounded_channel();
+
+    API_SENDER.lock().unwrap().sender = Some(from_plugin_event_sender);
+
     let args = Args::parse();
+
+    let _python_thread = thread::spawn(|| {
+        if let Err(error) = run_python(to_plugin_event_receiver) {
+            log::error!("Python runner returned with error: {error}");
+        }
+    });
 
     let bind_addr: SocketAddr = if let Some(listen_port) = args.listen {
         // TODO(kawogi) re-enable IPv6 support
@@ -171,6 +206,8 @@ async fn real_main() -> anyhow::Result<()> {
         args.verbose,
         Arc::new(node_def_manager),
         Arc::new(media_registry),
+        to_plugin_event_sender,
+        from_plugin_event_receiver,
     );
 
     let _map_block_router = MapBlockRouter::new(
@@ -187,6 +224,144 @@ async fn real_main() -> anyhow::Result<()> {
     loop {
         tokio::time::sleep(Duration::from_secs(3600)).await;
     }
+
+    // python_thread.join().unwrap();
+}
+
+static API_SENDER: Mutex<ApiSender> = Mutex::new(ApiSender::new());
+
+struct ApiSender {
+    sender: Option<UnboundedSender<FromPluginEvent>>,
+}
+
+impl ApiSender {
+    const fn new() -> Self {
+        Self { sender: None }
+    }
+
+    fn send(&self, event: FromPluginEvent) {
+        let Some(sender) = &self.sender else {
+            log::error!("API sender not initialized");
+            return;
+        };
+
+        if sender.send(event).is_err() {
+            log::error!("failed to send API event to engine");
+        }
+    }
+}
+
+fn run_python(mut receiver: UnboundedReceiver<ToPluginEvent>) -> anyhow::Result<()> {
+    pyo3::append_to_inittab!(luanti);
+    Python::attach(|py| {
+        let sys = py.import("sys")?;
+        let version: String = sys.getattr("version")?.extract()?;
+        info!("running Python {version}");
+
+        // let locals = [("os", py.import("os")?)].into_py_dict(py)?;
+        // let user: String = py.eval(code, None, Some(&locals))?.extract()?;
+        let code = CString::new(include_str!("../plugin.py"))?;
+
+        let module = PyModule::from_code(py, &code, c"plugin.py", c"")?;
+        let on_modchannel_join_fn = module.getattr("on_modchannel_join")?;
+        let on_modchannel_leave_fn = module.getattr("on_modchannel_leave")?;
+        let on_ts_modchannel_msg_fn = module.getattr("on_ts_modchannel_msg")?;
+        let on_playerpos_fn = module.getattr("on_playerpos")?;
+        let on_inventory_action_move_fn = module.getattr("on_inventory_action_move")?;
+        let on_inventory_action_craft_fn = module.getattr("on_inventory_action_craft")?;
+        let on_inventory_action_drop_fn = module.getattr("on_inventory_action_drop")?;
+        let on_ts_chat_message_fn = module.getattr("on_ts_chat_message")?;
+        let on_damage_fn = module.getattr("on_damage")?;
+        let on_player_item_fn = module.getattr("on_player_item")?;
+        let on_respawn_fn = module.getattr("on_respawn")?;
+        let on_interact_fn = module.getattr("on_interact")?;
+        let on_nodemeta_fields_fn = module.getattr("on_nodemeta_fields")?;
+        let on_inventory_fields_fn = module.getattr("on_inventory_fields")?;
+
+        // let t = py.run(&code, None, None)?;
+        // let user: String = py.eval(&code, None, None)?.extract()?;
+
+        while let Some(event) = receiver.blocking_recv() {
+            log::trace!("received plugin event: {event:?}");
+
+            let response = match event {
+                ToPluginEvent::ModchannelJoin(ModchannelJoinSpec { channel_name }) => {
+                    on_modchannel_join_fn.call1((channel_name,))
+                }
+                ToPluginEvent::ModchannelLeave(ModchannelLeaveSpec { channel_name }) => {
+                    on_modchannel_leave_fn.call1((channel_name,))
+                }
+                ToPluginEvent::TSModchannelMsg(TSModchannelMsgSpec {
+                    channel_name,
+                    channel_msg,
+                }) => on_ts_modchannel_msg_fn.call1((channel_name, channel_msg)),
+                ToPluginEvent::Playerpos(PlayerPosCommand {
+                    player_pos:
+                        PlayerPos {
+                            position,
+                            speed,
+                            pitch,
+                            yaw,
+                            keys_pressed,
+                            fov,
+                            wanted_range,
+                            camera_inverted,
+                            movement_speed,
+                            movement_direction,
+                        },
+                }) => on_playerpos_fn.call0(),
+                ToPluginEvent::InventoryAction(InventoryActionSpec { action }) => match action {
+                    InventoryAction::Move {
+                        count,
+                        from_inv,
+                        from_list,
+                        from_i,
+                        to_inv,
+                        to_list,
+                        to_i,
+                    } => on_inventory_action_move_fn.call0(),
+                    InventoryAction::Craft { count, craft_inv } => {
+                        on_inventory_action_craft_fn.call0()
+                    }
+                    InventoryAction::Drop {
+                        count,
+                        from_inv,
+                        from_list,
+                        from_i,
+                    } => on_inventory_action_drop_fn.call0(),
+                },
+                ToPluginEvent::TSChatMessage(TSChatMessageSpec { message }) => {
+                    on_ts_chat_message_fn.call1((message,))
+                }
+                ToPluginEvent::Damage(DamageSpec { damage }) => on_damage_fn.call1((damage,)),
+                ToPluginEvent::PlayerItem(PlayerItemSpec { item }) => {
+                    on_player_item_fn.call1((item,))
+                }
+                ToPluginEvent::Respawn(RespawnSpec) => on_respawn_fn.call0(),
+                ToPluginEvent::Interact(InteractSpec {
+                    action,
+                    item_index,
+                    pointed_thing,
+                    player_pos,
+                }) => on_interact_fn.call0(),
+                ToPluginEvent::NodemetaFields(NodemetaFieldsSpec {
+                    p,
+                    form_name,
+                    fields,
+                }) => on_nodemeta_fields_fn.call0(),
+                ToPluginEvent::InventoryFields(InventoryFieldsSpec {
+                    client_formspec_name,
+                    fields,
+                }) => on_inventory_fields_fn.call0(),
+            };
+
+            if let Err(error) = response {
+                log::error!("failed to handle event: {error}");
+            }
+        }
+
+        Ok(())
+    })
 }
 
 fn tile_def(name: &str) -> TileDef {
@@ -248,5 +423,27 @@ fn content_features(
             tiledef_overlay,
             ..ContentFeatures::new_unknown(name.into())
         }
+    }
+}
+
+#[pyo3::pymodule]
+mod luanti {
+
+    use luanti_protocol::commands::server_to_client::FovSpec;
+    use luanti_server::api::FromPluginEvent;
+    use pyo3::prelude::*;
+
+    use crate::API_SENDER;
+
+    #[pyfunction]
+    fn fov(fov: f32) {
+        API_SENDER
+            .lock()
+            .unwrap()
+            .send(FromPluginEvent::Fov(FovSpec {
+                fov,
+                is_multiplier: true,
+                transition_time: Some(1.0),
+            }));
     }
 }

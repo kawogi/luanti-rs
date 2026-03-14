@@ -1,6 +1,7 @@
 //! Minimal Server implementation serving as prototype
 
 use crate::MediaRegistry;
+use crate::api::{FromPluginEvent, ToPluginEvent};
 use crate::authentication::Authenticator;
 use crate::client_connection::ClientConnection;
 use crate::world::map_block_router::ToRouterMessage;
@@ -9,7 +10,7 @@ use luanti_protocol::LuantiServer;
 use luanti_protocol::types::NodeDefManager;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
 
 /// A server providing access to a single Luanti world
@@ -20,6 +21,8 @@ pub struct LuantiWorldServer {
     runner: Option<JoinHandle<()>>,
     node_def: Arc<NodeDefManager>,
     media: Arc<MediaRegistry>,
+    plugin_event_sender: UnboundedSender<ToPluginEvent>,
+    plugin_event_receiver: Option<UnboundedReceiver<FromPluginEvent>>,
 }
 
 impl LuantiWorldServer {
@@ -30,6 +33,8 @@ impl LuantiWorldServer {
         verbosity: u8,
         node_def: Arc<NodeDefManager>,
         media: Arc<MediaRegistry>,
+        plugin_event_sender: UnboundedSender<ToPluginEvent>,
+        plugin_event_receiver: UnboundedReceiver<FromPluginEvent>,
     ) -> Self {
         Self {
             bind_addr,
@@ -37,6 +42,8 @@ impl LuantiWorldServer {
             runner: None,
             node_def,
             media,
+            plugin_event_sender,
+            plugin_event_receiver: Some(plugin_event_receiver),
         }
     }
 
@@ -64,6 +71,8 @@ impl LuantiWorldServer {
             block_interest_sender,
             node_def_clone,
             media_clone,
+            self.plugin_event_sender.clone(),
+            self.plugin_event_receiver.take().unwrap(),
         ));
         self.runner.replace(runner);
     }
@@ -75,18 +84,37 @@ impl LuantiWorldServer {
         block_interest_sender: UnboundedSender<ToRouterMessage>,
         node_def: Arc<NodeDefManager>,
         media: Arc<MediaRegistry>,
+        plugin_event_sender: UnboundedSender<ToPluginEvent>,
+        from_plugin_event_receiver: UnboundedReceiver<FromPluginEvent>,
     ) {
         let mut server = LuantiServer::new(bind_addr);
         let mut connection_id = 1;
+
+        #[expect(clippy::infinite_loop, reason = "// TODO add a cancellation mechanism")]
         loop {
-            tokio::select! {
-                connection = server.accept() => {
-                    let id = connection_id;
-                    connection_id += 1;
-                    info!("[P{}] New client connected from {:?}", id, connection.remote_addr());
-                    ClientConnection::spawn(id, connection, authenticator.clone(), verbosity, block_interest_sender.clone(), Arc::clone(&node_def), Arc::clone(&media));
-                },
-            }
+            let connection = server.accept().await;
+
+            let id = connection_id;
+            connection_id += 1;
+            info!(
+                "[P{}] New client connected from {:?}",
+                id,
+                connection.remote_addr()
+            );
+
+            ClientConnection::spawn(
+                id,
+                connection,
+                authenticator.clone(),
+                verbosity,
+                block_interest_sender.clone(),
+                Arc::clone(&node_def),
+                Arc::clone(&media),
+                plugin_event_sender.clone(),
+                from_plugin_event_receiver,
+            );
+
+            break;
         }
     }
 }

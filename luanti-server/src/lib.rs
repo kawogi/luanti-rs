@@ -7,6 +7,7 @@
     reason = "//TODO remove before completion of the prototype"
 )]
 
+pub mod api;
 pub mod authentication;
 mod client_connection;
 pub mod server;

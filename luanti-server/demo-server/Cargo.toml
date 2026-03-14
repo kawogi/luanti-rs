@@ -26,6 +26,7 @@ env_logger.workspace = true
 flexstr.workspace = true
 log.workspace = true
 pollster.workspace = true
+pyo3 = { workspace = true, features = ["auto-initialize"] }
 tokio = { workspace = true, features = ["full"] }
 
 [lints]
