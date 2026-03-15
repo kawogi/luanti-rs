@@ -153,6 +153,11 @@ impl<Auth: Authenticator + 'static> ClientConnection<Auth> {
                                 error!("failed to send API command");
                             }
                         }
+                        FromPluginEvent::ShowFormspec(spec) => {
+                            if self.connection.send(spec).is_err() {
+                                error!("failed to send API command");
+                            }
+                        }
                         other => {
                             error!("unhandled API call: {other:?}");
                         }

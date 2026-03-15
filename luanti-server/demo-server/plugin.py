@@ -38,7 +38,8 @@ def on_inventory_action_drop():
 # TSChatMessage, 0x32, Default, true => TSChatMessageSpec,
 def on_ts_chat_message(message: str):
     print(f"on_ts_chat_message: {message}")
-    return
+    if message == "inv":
+        luanti.inv()
 
 # Damage, 0x35, Default, true => DamageSpec,
 def on_damage(damage: int):
