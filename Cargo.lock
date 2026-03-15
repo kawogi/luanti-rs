@@ -952,6 +952,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "luanti-formspec"
+version = "0.2.0"
+
+[[package]]
 name = "luanti-protocol"
 version = "0.2.0"
 dependencies = [
